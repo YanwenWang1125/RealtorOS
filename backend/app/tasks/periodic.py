@@ -8,28 +8,43 @@ to process due tasks and maintain system health.
 from celery import current_task
 from app.tasks.celery_app import celery_app
 from app.services.scheduler_service import SchedulerService
-from app.db.mongodb import get_database
+from app.db.postgresql import init_db, get_session
+import asyncio
 
 @celery_app.task(bind=True)
-async def process_due_tasks(self):
+def process_due_tasks(self):
     """
     Process all tasks that are due for execution.
     This task runs every minute via Celery Beat.
     """
-    pass
+    async def _run():
+        await init_db()
+        async for session in get_session():
+            svc = SchedulerService(session)
+            await svc.get_due_tasks()
+            return True
+    return asyncio.run(_run())
 
 @celery_app.task(bind=True)
-async def cleanup_old_tasks(self):
+def cleanup_old_tasks(self):
     """
     Clean up old completed tasks to maintain database performance.
     This task runs daily.
     """
-    pass
+    async def _run():
+        await init_db()
+        async for session in get_session():
+            # Implement cleanup if needed
+            return True
+    return asyncio.run(_run())
 
 @celery_app.task(bind=True)
-async def health_check_task(self):
+def health_check_task(self):
     """
     Perform system health checks.
     This task runs every 5 minutes.
     """
-    pass
+    async def _run():
+        await init_db()
+        return True
+    return asyncio.run(_run())

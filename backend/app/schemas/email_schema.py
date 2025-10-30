@@ -11,21 +11,28 @@ from pydantic import BaseModel, Field, EmailStr
 
 class EmailPreviewRequest(BaseModel):
     """Schema for email preview requests."""
-    client_id: str = Field(..., description="Client ID")
-    task_id: str = Field(..., description="Task ID")
+    client_id: int = Field(..., description="Client ID")
+    task_id: int = Field(..., description="Task ID")
     agent_instructions: Optional[str] = Field(None, max_length=500)
 
 class EmailSendRequest(BaseModel):
     """Schema for email send requests."""
-    client_id: str = Field(..., description="Client ID")
-    task_id: str = Field(..., description="Task ID")
+    client_id: int = Field(..., description="Client ID")
+    task_id: int = Field(..., description="Task ID")
     agent_instructions: Optional[str] = Field(None, max_length=500)
+    # Extended fields to align with EmailService contract
+    to_email: EmailStr
+    subject: str
+    body: str
+    to_email: EmailStr = Field(..., description="Recipient email")
+    subject: str = Field(..., description="Email subject")
+    body: str = Field(..., description="Email body (HTML)")
 
 class EmailResponse(BaseModel):
     """Schema for email API responses."""
-    id: str
-    task_id: str
-    client_id: str
+    id: int
+    task_id: int
+    client_id: int
     to_email: EmailStr
     subject: str
     body: str

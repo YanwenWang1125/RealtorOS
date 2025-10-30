@@ -7,22 +7,15 @@ for development and testing purposes.
 
 import asyncio
 from datetime import datetime, timedelta
-from app.db.mongodb import connect_to_mongo, get_database
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.postgresql import init_db, get_session
 from app.models.client import Client
 from app.models.task import Task
-from app.models.email_log import EmailLog
 from app.constants.followup_schedules import FOLLOWUP_SCHEDULE
 
 async def seed_database():
-    """Seed the database with demo data."""
-    await connect_to_mongo()
-    db = get_database()
-    
-    # Clear existing data
-    await db.clients.delete_many({})
-    await db.tasks.delete_many({})
-    await db.email_logs.delete_many({})
-    
+    """Seed the database with demo data (PostgreSQL)."""
+    await init_db()
     # Create demo clients
     demo_clients = [
         {
@@ -60,32 +53,39 @@ async def seed_database():
         }
     ]
     
-    # Insert clients
-    client_ids = []
-    for client_data in demo_clients:
-        client = Client(**client_data)
-        result = await db.clients.insert_one(client.dict(by_alias=True))
-        client_ids.append(str(result.inserted_id))
-    
-    # Create follow-up tasks for each client
-    for client_id in client_ids:
-        for followup_type, config in FOLLOWUP_SCHEDULE.items():
-            scheduled_date = datetime.utcnow() + timedelta(days=config["days"])
-            
-            task_data = {
-                "client_id": client_id,
-                "followup_type": followup_type,
-                "scheduled_for": scheduled_date,
-                "status": "pending",
-                "priority": config["priority"],
-                "created_at": datetime.utcnow()
-            }
-            
-            task = Task(**task_data)
-            await db.tasks.insert_one(task.dict(by_alias=True))
-    
-    print(f"Seeded database with {len(demo_clients)} clients and their follow-up tasks")
-    print("Demo data created successfully!")
+    async for session in get_session():
+        # Clear existing data
+        await session.execute("DELETE FROM email_logs")
+        await session.execute("DELETE FROM tasks")
+        await session.execute("DELETE FROM clients")
+        await session.commit()
+
+        # Insert clients
+        client_ids = []
+        for client_data in demo_clients:
+            client = Client(**client_data)
+            session.add(client)
+            await session.flush()
+            client_ids.append(client.id)
+        await session.commit()
+
+        # Create follow-up tasks for each client
+        for client_id in client_ids:
+            for followup_type, config in FOLLOWUP_SCHEDULE.items():
+                scheduled_date = datetime.utcnow() + timedelta(days=config["days"])
+
+                task = Task(
+                    client_id=client_id,
+                    followup_type=followup_type,
+                    scheduled_for=scheduled_date,
+                    status="pending",
+                    priority=config["priority"],
+                )
+                session.add(task)
+        await session.commit()
+
+        print(f"Seeded database with {len(demo_clients)} clients and their follow-up tasks")
+        print("Demo data created successfully!")
 
 if __name__ == "__main__":
     asyncio.run(seed_database())

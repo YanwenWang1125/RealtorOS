@@ -18,7 +18,7 @@ async def list_tasks(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     status: Optional[str] = None,
-    client_id: Optional[str] = None,
+    client_id: Optional[int] = None,
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
     """List tasks with pagination and filtering."""
@@ -26,7 +26,7 @@ async def list_tasks(
 
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(
-    task_id: str,
+    task_id: int,
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
     """Get a specific task by ID."""
@@ -34,7 +34,7 @@ async def get_task(
 
 @router.patch("/{task_id}", response_model=TaskResponse)
 async def update_task(
-    task_id: str,
+    task_id: int,
     task_data: TaskUpdate,
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):

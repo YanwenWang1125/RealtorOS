@@ -9,24 +9,31 @@ from celery import current_task
 from app.tasks.celery_app import celery_app
 from app.services.ai_agent import AIAgent
 from app.services.email_service import EmailService
-from app.db.mongodb import get_database
-from app.models.client import Client
-from app.models.task import Task
+from app.db.postgresql import init_db, get_session
+import asyncio
 
 @celery_app.task(bind=True, max_retries=3)
-async def generate_and_send_email_task(self, task_id: str):
+def generate_and_send_email_task(self, task_id: int):
     """
     Generate and send an email for a specific task.
     
     Args:
         task_id: The ID of the task to process
     """
-    pass
+    async def _run():
+        await init_db()
+        async for session in get_session():
+            email_service = EmailService(session)
+            agent = AIAgent()
+            # Placeholder: generate content via agent using task_id, then send
+            # Extend as needed to fetch client/task
+            return True
+    return asyncio.run(_run())
 
 @celery_app.task(bind=True, max_retries=3)
-async def send_email_task(
+def send_email_task(
     self,
-    email_log_id: str,
+    email_log_id: int,
     to_email: str,
     subject: str,
     body: str
@@ -40,10 +47,16 @@ async def send_email_task(
         subject: Email subject
         body: Email body content
     """
-    pass
+    async def _run():
+        await init_db()
+        async for session in get_session():
+            email_service = EmailService(session)
+            await email_service.update_email_status(email_log_id, "sent")
+            return True
+    return asyncio.run(_run())
 
 @celery_app.task(bind=True, max_retries=3)
-async def process_sendgrid_webhook_task(self, event_type: str, email_log_id: str):
+def process_sendgrid_webhook_task(self, event_type: str, email_log_id: int):
     """
     Process SendGrid webhook events.
     
@@ -51,4 +64,10 @@ async def process_sendgrid_webhook_task(self, event_type: str, email_log_id: str
         event_type: Type of webhook event (delivered, opened, clicked, etc.)
         email_log_id: ID of the email log record to update
     """
-    pass
+    async def _run():
+        await init_db()
+        async for session in get_session():
+            email_service = EmailService(session)
+            await email_service.update_email_status(email_log_id, event_type)
+            return True
+    return asyncio.run(_run())

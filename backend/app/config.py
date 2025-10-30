@@ -18,9 +18,8 @@ class Settings(BaseSettings):
     API_TITLE: str = "RealtorOS API"
     API_VERSION: str = "0.1.0"
     
-    # MongoDB
-    MONGODB_URL: str = "mongodb://mongo:27017"
-    MONGODB_DB: str = "realtoros"
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/realtoros"
     
     # Redis & Celery
     REDIS_URL: str = "redis://redis:6379/0"

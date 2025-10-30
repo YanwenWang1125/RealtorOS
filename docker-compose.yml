@@ -1,17 +1,23 @@
 version: "3.9"
 
 services:
-  # MongoDB
-  mongo:
-    image: mongo:6.0
-    container_name: realtoros-mongo
-    ports:
-      - "27017:27017"
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: realtoros-postgres
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your_secure_password
+      POSTGRES_DB: realtoros
+    ports:
+      - "5432:5432"
     volumes:
-      - mongo_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - realtoros-network
 
@@ -35,14 +41,14 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MONGODB_URL: mongodb://root:rootpassword@mongo:27017/realtoros?authSource=admin
+      DATABASE_URL: postgresql+asyncpg://postgres:your_secure_password@postgres:5432/realtoros
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
     depends_on:
-      - mongo
+      - postgres
       - redis
     volumes:
       - ./backend:/app
@@ -57,14 +63,14 @@ services:
       dockerfile: Dockerfile
     container_name: realtoros-celery-worker
     environment:
-      MONGODB_URL: mongodb://root:rootpassword@mongo:27017/realtoros?authSource=admin
+      DATABASE_URL: postgresql+asyncpg://postgres:your_secure_password@postgres:5432/realtoros
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
     depends_on:
-      - mongo
+      - postgres
       - redis
     volumes:
       - ./backend:/app
@@ -79,14 +85,14 @@ services:
       dockerfile: Dockerfile
     container_name: realtoros-celery-beat
     environment:
-      MONGODB_URL: mongodb://root:rootpassword@mongo:27017/realtoros?authSource=admin
+      DATABASE_URL: postgresql+asyncpg://postgres:your_secure_password@postgres:5432/realtoros
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
     depends_on:
-      - mongo
+      - postgres
       - redis
     volumes:
       - ./backend:/app
@@ -103,7 +109,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - backend
     volumes:
@@ -114,7 +120,7 @@ services:
       - realtoros-network
 
 volumes:
-  mongo_data:
+  postgres_data:
   redis_data:
 
 networks:

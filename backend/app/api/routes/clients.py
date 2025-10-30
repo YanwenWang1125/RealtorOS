@@ -19,7 +19,8 @@ async def create_client(
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """Create a new client."""
-    pass
+    created = await crm_service.create_client(client_data)
+    return created
 
 @router.get("/", response_model=List[ClientResponse])
 async def list_clients(
@@ -29,37 +30,46 @@ async def list_clients(
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """List clients with pagination and filtering."""
-    pass
+    return await crm_service.list_clients(page=page, limit=limit, stage=stage)
 
 @router.get("/{client_id}", response_model=ClientResponse)
 async def get_client(
-    client_id: str,
+    client_id: int,
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """Get a specific client by ID."""
-    pass
+    client = await crm_service.get_client(client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return client
 
 @router.patch("/{client_id}", response_model=ClientResponse)
 async def update_client(
-    client_id: str,
+    client_id: int,
     client_data: ClientUpdate,
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """Update a client's information."""
-    pass
+    updated = await crm_service.update_client(client_id, client_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return updated
 
 @router.delete("/{client_id}")
 async def delete_client(
-    client_id: str,
+    client_id: int,
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """Soft delete a client."""
-    pass
+    ok = await crm_service.delete_client(client_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return {"success": True}
 
 @router.get("/{client_id}/tasks")
 async def get_client_tasks(
-    client_id: str,
+    client_id: int,
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """Get all tasks for a specific client."""
-    pass
+    return await crm_service.get_client_tasks(client_id)

@@ -5,7 +5,7 @@ This module defines Pydantic schemas for dashboard and analytics
 API responses in the RealtorOS system.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 class DashboardStats(BaseModel):

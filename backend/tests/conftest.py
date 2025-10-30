@@ -6,10 +6,13 @@ for all RealtorOS backend tests.
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
-from app.config import settings
-from app.db.mongodb import get_database
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy import text
+from app.models.client import Base as ClientBase
+from app.models.task import Base as TaskBase
+from app.models.email_log import Base as EmailLogBase
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -18,19 +21,21 @@ def event_loop():
     yield loop
     loop.close()
 
-@pytest.fixture
-async def test_db():
-    """Create a test database connection."""
-    client = AsyncIOMotorClient(settings.MONGODB_URL)
-    db = client[f"{settings.MONGODB_DB}_test"]
-    
-    yield db
-    
-    # Cleanup after test
-    await client.drop_database(f"{settings.MONGODB_DB}_test")
-    client.close()
+@pytest_asyncio.fixture
+async def test_session():
+    """Create an in-memory SQLite async session for tests."""
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    async with engine.begin() as conn:
+        # Create tables for each model base
+        await conn.run_sync(ClientBase.metadata.create_all)
+        await conn.run_sync(TaskBase.metadata.create_all)
+        await conn.run_sync(EmailLogBase.metadata.create_all)
+    SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    async with SessionLocal() as session:
+        yield session
+    await engine.dispose()
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def sample_client_data():
     """Sample client data for testing."""
     return {
@@ -43,14 +48,13 @@ async def sample_client_data():
         "notes": "Test client for unit testing"
     }
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def sample_task_data():
     """Sample task data for testing."""
     return {
-        "client_id": "507f1f77bcf86cd799439011",  # Valid ObjectId
+        "client_id": 1,
         "followup_type": "Day 1",
         "scheduled_for": "2024-01-15T10:00:00Z",
-        "status": "pending",
         "priority": "high",
         "notes": "Test task for unit testing"
     }

@@ -9,11 +9,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.routes import clients, tasks, emails, dashboard
+from contextlib import asynccontextmanager
+from app.db.postgresql import init_db, close_db
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan context manager for startup and shutdown events."""
+    # Startup
+    await init_db()
+    yield
+    # Shutdown
+    await close_db()
 
 app = FastAPI(
     title=settings.API_TITLE,
     version=settings.API_VERSION,
-    description="RealtorOS CRM API - Automated follow-up system for real estate agents"
+    description="RealtorOS CRM API - Automated follow-up system for real estate agents",
+    lifespan=lifespan
 )
 
 # CORS middleware

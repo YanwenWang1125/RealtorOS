@@ -43,7 +43,7 @@ async def send_email(
 
 @router.get("/{email_id}", response_model=EmailResponse)
 async def get_email(
-    email_id: str,
+    email_id: int,
     email_service: EmailService = Depends(get_email_service)
 ):
     """Get a specific email by ID."""

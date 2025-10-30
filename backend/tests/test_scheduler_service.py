@@ -1,48 +1,56 @@
 """
-Tests for scheduler service.
-
-This module contains unit tests for the scheduler service
-in the RealtorOS system.
+Tests for Scheduler service (SQLAlchemy + AsyncSession).
 """
 
 import pytest
+from datetime import datetime, timedelta, timezone
 from app.services.scheduler_service import SchedulerService
 from app.schemas.task_schema import TaskCreate, TaskUpdate
 
+
 class TestSchedulerService:
     """Test cases for scheduler service."""
-    
+
     @pytest.mark.asyncio
-    async def test_create_followup_tasks(self, test_db, sample_client_data):
-        """Test creating follow-up tasks for a new client."""
-        pass
-    
+    async def test_create_list_get_update_task(self, test_session):
+        svc = SchedulerService(test_session)
+        # create task
+        tc = TaskCreate(
+            client_id=1,
+            followup_type="Day 1",
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
+            priority="high",
+            notes="note",
+        )
+        created = await svc.create_task(tc)
+        assert isinstance(created.id, int)
+        assert created.status == "pending"
+
+        # list
+        listed = await svc.list_tasks(client_id=1)
+        assert any(t.id == created.id for t in listed)
+
+        # get
+        got = await svc.get_task(created.id)
+        assert got is not None and got.id == created.id
+
+        # update
+        updated = await svc.update_task(created.id, TaskUpdate(status="completed"))
+        assert updated is not None and updated.status == "completed"
+
     @pytest.mark.asyncio
-    async def test_get_task(self, test_db, sample_task_data):
-        """Test getting a task by ID."""
-        pass
-    
-    @pytest.mark.asyncio
-    async def test_list_tasks(self, test_db, sample_task_data):
-        """Test listing tasks with pagination and filtering."""
-        pass
-    
-    @pytest.mark.asyncio
-    async def test_update_task(self, test_db, sample_task_data):
-        """Test updating task information."""
-        pass
-    
-    @pytest.mark.asyncio
-    async def test_create_task(self, test_db, sample_task_data):
-        """Test manually creating a task."""
-        pass
-    
-    @pytest.mark.asyncio
-    async def test_get_due_tasks(self, test_db, sample_task_data):
-        """Test getting tasks that are due for execution."""
-        pass
-    
-    @pytest.mark.asyncio
-    async def test_reschedule_task(self, test_db, sample_task_data):
-        """Test rescheduling a task."""
-        pass
+    async def test_get_due_and_reschedule(self, test_session):
+        svc = SchedulerService(test_session)
+        past = TaskCreate(
+            client_id=2,
+            followup_type="Day 1",
+            scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),
+            priority="medium",
+        )
+        created = await svc.create_task(past)
+        due = await svc.get_due_tasks()
+        assert any(t.id == created.id for t in due)
+
+        new_date = datetime.now(timezone.utc) + timedelta(days=2)
+        res = await svc.reschedule_task(created.id, new_date)
+        assert res is not None and res.scheduled_for == new_date

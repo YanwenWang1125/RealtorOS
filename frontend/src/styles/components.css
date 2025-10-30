@@ -1,0 +1,282 @@
+/**
+ * Component styles for RealtorOS.
+ * 
+ * This file defines component-specific styles and utilities
+ * used throughout the RealtorOS application.
+ */
+
+/* Button Components */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+}
+
+.btn-secondary {
+  @apply btn bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500;
+}
+
+.btn-success {
+  @apply btn bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+}
+
+.btn-warning {
+  @apply btn bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500;
+}
+
+.btn-danger {
+  @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+}
+
+.btn-outline {
+  @apply btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 text-xs;
+}
+
+.btn-lg {
+  @apply px-6 py-3 text-base;
+}
+
+/* Input Components */
+.input {
+  @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500;
+}
+
+.input-error {
+  @apply border-red-300 focus:ring-red-500 focus:border-red-500;
+}
+
+.input-sm {
+  @apply px-2 py-1 text-sm;
+}
+
+.input-lg {
+  @apply px-4 py-3 text-base;
+}
+
+/* Card Components */
+.card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+}
+
+.card-hover {
+  @apply card hover:shadow-md transition-shadow duration-200;
+}
+
+.card-header {
+  @apply border-b border-gray-200 pb-4 mb-4;
+}
+
+.card-footer {
+  @apply border-t border-gray-200 pt-4 mt-4;
+}
+
+/* Badge Components */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply badge bg-blue-100 text-blue-800;
+}
+
+.badge-success {
+  @apply badge bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply badge bg-yellow-100 text-yellow-800;
+}
+
+.badge-danger {
+  @apply badge bg-red-100 text-red-800;
+}
+
+.badge-gray {
+  @apply badge bg-gray-100 text-gray-800;
+}
+
+/* Status Indicators */
+.status-indicator {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.status-pending {
+  @apply status-indicator bg-yellow-100 text-yellow-800;
+}
+
+.status-completed {
+  @apply status-indicator bg-green-100 text-green-800;
+}
+
+.status-skipped {
+  @apply status-indicator bg-gray-100 text-gray-800;
+}
+
+.status-cancelled {
+  @apply status-indicator bg-red-100 text-red-800;
+}
+
+.status-sent {
+  @apply status-indicator bg-blue-100 text-blue-800;
+}
+
+.status-delivered {
+  @apply status-indicator bg-green-100 text-green-800;
+}
+
+.status-opened {
+  @apply status-indicator bg-purple-100 text-purple-800;
+}
+
+.status-clicked {
+  @apply status-indicator bg-indigo-100 text-indigo-800;
+}
+
+.status-failed {
+  @apply status-indicator bg-red-100 text-red-800;
+}
+
+.status-bounced {
+  @apply status-indicator bg-red-100 text-red-800;
+}
+
+/* Priority Indicators */
+.priority-high {
+  @apply status-indicator bg-red-100 text-red-800;
+}
+
+.priority-medium {
+  @apply status-indicator bg-yellow-100 text-yellow-800;
+}
+
+.priority-low {
+  @apply status-indicator bg-green-100 text-green-800;
+}
+
+/* Stage Indicators */
+.stage-lead {
+  @apply status-indicator bg-blue-100 text-blue-800;
+}
+
+.stage-negotiating {
+  @apply status-indicator bg-yellow-100 text-yellow-800;
+}
+
+.stage-under-contract {
+  @apply status-indicator bg-green-100 text-green-800;
+}
+
+.stage-closed {
+  @apply status-indicator bg-gray-100 text-gray-800;
+}
+
+.stage-lost {
+  @apply status-indicator bg-red-100 text-red-800;
+}
+
+/* Loading States */
+.loading-spinner {
+  @apply animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600;
+}
+
+.loading-skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+/* Form Groups */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.form-error {
+  @apply text-sm text-red-600;
+}
+
+.form-help {
+  @apply text-sm text-gray-500;
+}
+
+/* Navigation */
+.nav-link {
+  @apply px-3 py-2 rounded-md text-sm font-medium transition-colors;
+}
+
+.nav-link-active {
+  @apply nav-link bg-blue-100 text-blue-700;
+}
+
+.nav-link-inactive {
+  @apply nav-link text-gray-500 hover:text-gray-700 hover:bg-gray-100;
+}
+
+/* Tables */
+.table {
+  @apply min-w-full divide-y divide-gray-200;
+}
+
+.table-header {
+  @apply bg-gray-50;
+}
+
+.table-header-cell {
+  @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+}
+
+.table-body {
+  @apply bg-white divide-y divide-gray-200;
+}
+
+.table-cell {
+  @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+}
+
+/* Modals */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black bg-opacity-50 transition-opacity;
+}
+
+.modal-container {
+  @apply flex min-h-full items-center justify-center p-4;
+}
+
+.modal-content {
+  @apply relative w-full max-w-lg transform overflow-hidden rounded-lg bg-white shadow-xl transition-all;
+}
+
+/* Animations */
+.fade-in {
+  @apply animate-fade-in;
+}
+
+.slide-in {
+  @apply animate-slide-in;
+}
+
+.scale-in {
+  @apply animate-scale-in;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

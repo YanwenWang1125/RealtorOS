@@ -20,12 +20,32 @@ engine: AsyncEngine | None = None
 SessionLocal: async_sessionmaker[AsyncSession] | None = None
 
 
+def _convert_to_async_url(database_url: str) -> str:
+    """Convert database URL to use async driver if needed."""
+    # If already using async driver, return as-is
+    if "+asyncpg://" in database_url or "+psycopg://" in database_url:
+        return database_url
+    
+    # Convert psycopg2 to asyncpg
+    if "+psycopg2://" in database_url:
+        return database_url.replace("+psycopg2://", "+asyncpg://")
+    
+    # Convert plain postgresql:// to postgresql+asyncpg://
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    
+    # If it's already async or unknown format, return as-is
+    return database_url
+
+
 async def init_db() -> None:
     """Initialize the async engine and session factory."""
     global engine, SessionLocal
     if engine is None:
+        # Convert URL to use async driver (asyncpg)
+        async_url = _convert_to_async_url(settings.DATABASE_URL)
         engine = create_async_engine(
-            settings.DATABASE_URL,
+            async_url,
             echo=False,
             pool_pre_ping=True,
         )

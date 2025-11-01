@@ -7,7 +7,7 @@ and responses in the RealtorOS system.
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 class EmailPreviewRequest(BaseModel):
     """Schema for email preview requests."""
@@ -19,14 +19,10 @@ class EmailSendRequest(BaseModel):
     """Schema for email send requests."""
     client_id: int = Field(..., description="Client ID")
     task_id: int = Field(..., description="Task ID")
-    agent_instructions: Optional[str] = Field(None, max_length=500)
-    # Extended fields to align with EmailService contract
-    to_email: EmailStr
-    subject: str
-    body: str
     to_email: EmailStr = Field(..., description="Recipient email")
     subject: str = Field(..., description="Email subject")
     body: str = Field(..., description="Email body (HTML)")
+    agent_instructions: Optional[str] = Field(None, max_length=500)
 
 class EmailResponse(BaseModel):
     """Schema for email API responses."""
@@ -44,5 +40,4 @@ class EmailResponse(BaseModel):
     clicked_at: Optional[datetime] = None
     error_message: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

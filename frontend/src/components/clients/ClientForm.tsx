@@ -8,7 +8,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Client } from '@/lib/types/client'
+import type { Client } from '@/lib/types'
 
 interface ClientFormProps {
   client?: Client

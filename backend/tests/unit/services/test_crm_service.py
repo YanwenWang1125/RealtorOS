@@ -8,7 +8,7 @@ from pathlib import Path
 
 # Add backend directory to Python path so we can import app
 # This works when running directly with python or with pytest
-backend_dir = Path(__file__).resolve().parent.parent
+backend_dir = Path(__file__).resolve().parent.parent.parent.parent
 backend_dir_str = str(backend_dir)  # Already resolved, convert to string
 
 # Add both the backend directory and parent directory to path

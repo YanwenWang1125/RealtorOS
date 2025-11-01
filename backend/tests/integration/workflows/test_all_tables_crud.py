@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 # Add backend directory to Python path
-backend_dir = Path(__file__).resolve().parent.parent
+backend_dir = Path(__file__).resolve().parent.parent.parent.parent
 backend_dir_str = str(backend_dir)
 if backend_dir_str not in sys.path:
     sys.path.insert(0, backend_dir_str)

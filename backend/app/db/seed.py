@@ -6,13 +6,18 @@ for development and testing purposes.
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete
 from app.db import postgresql
 from app.models.client import Client
 from app.models.task import Task
 from app.models.email_log import EmailLog
 from app.constants.followup_schedules import FOLLOWUP_SCHEDULE
+
+
+def utcnow():
+    """Return timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 async def seed_database():
     """Seed the database with demo data (PostgreSQL)."""
@@ -36,8 +41,8 @@ async def seed_database():
                 "preferred_neighborhoods": ["Downtown", "Riverside"],
                 "bedrooms": 3
             },
-            "created_at": datetime.utcnow() - timedelta(days=5),
-            "last_contacted": datetime.utcnow() - timedelta(days=2)
+            "created_at": utcnow() - timedelta(days=5),
+            "last_contacted": utcnow() - timedelta(days=2)
         },
         {
             "name": "Sarah Johnson",
@@ -52,8 +57,8 @@ async def seed_database():
                 "parking_spaces": 20,
                 "lease_type": "long_term"
             },
-            "created_at": datetime.utcnow() - timedelta(days=10),
-            "last_contacted": datetime.utcnow() - timedelta(hours=6)
+            "created_at": utcnow() - timedelta(days=10),
+            "last_contacted": utcnow() - timedelta(hours=6)
         },
         {
             "name": "Mike Wilson",
@@ -68,8 +73,8 @@ async def seed_database():
                 "financing_preapproved": True,
                 "timeline": "ASAP"
             },
-            "created_at": datetime.utcnow() - timedelta(days=15),
-            "last_contacted": datetime.utcnow() - timedelta(hours=2)
+            "created_at": utcnow() - timedelta(days=15),
+            "last_contacted": utcnow() - timedelta(hours=2)
         },
         {
             "name": "Emily Chen",
@@ -84,8 +89,8 @@ async def seed_database():
                 "school_district": "Springfield ISD",
                 "preferred_style": "ranch"
             },
-            "created_at": datetime.utcnow() - timedelta(days=3),
-            "last_contacted": datetime.utcnow() - timedelta(days=1)
+            "created_at": utcnow() - timedelta(days=3),
+            "last_contacted": utcnow() - timedelta(days=1)
         },
         {
             "name": "Robert Martinez",
@@ -100,8 +105,8 @@ async def seed_database():
                 "zoning": "mixed_use",
                 "development_plans": "commercial_residential"
             },
-            "created_at": datetime.utcnow() - timedelta(days=20),
-            "last_contacted": datetime.utcnow() - timedelta(hours=12)
+            "created_at": utcnow() - timedelta(days=20),
+            "last_contacted": utcnow() - timedelta(hours=12)
         },
         {
             "name": "Lisa Anderson",
@@ -116,8 +121,8 @@ async def seed_database():
                 "final_price": "$425k",
                 "satisfaction_rating": 5
             },
-            "created_at": datetime.utcnow() - timedelta(days=45),
-            "last_contacted": datetime.utcnow() - timedelta(days=30)
+            "created_at": utcnow() - timedelta(days=45),
+            "last_contacted": utcnow() - timedelta(days=30)
         },
         {
             "name": "David Thompson",
@@ -132,8 +137,8 @@ async def seed_database():
                 "target_units": "4-8",
                 "cash_buyer": True
             },
-            "created_at": datetime.utcnow() - timedelta(days=7),
-            "last_contacted": datetime.utcnow() - timedelta(days=3)
+            "created_at": utcnow() - timedelta(days=7),
+            "last_contacted": utcnow() - timedelta(days=3)
         },
         {
             "name": "Jennifer White",
@@ -147,8 +152,8 @@ async def seed_database():
                 "lost_reason": "competitor",
                 "followup_date": "2024-03-01"
             },
-            "created_at": datetime.utcnow() - timedelta(days=30),
-            "last_contacted": datetime.utcnow() - timedelta(days=25)
+            "created_at": utcnow() - timedelta(days=30),
+            "last_contacted": utcnow() - timedelta(days=25)
         }
     ]
     
@@ -177,7 +182,7 @@ async def seed_database():
             total_tasks = 0
             for client_id in client_ids:
                 for followup_type, config in FOLLOWUP_SCHEDULE.items():
-                    scheduled_date = datetime.utcnow() + timedelta(days=config["days"])
+                    scheduled_date = utcnow() + timedelta(days=config["days"])
 
                     task = Task(
                         client_id=client_id,

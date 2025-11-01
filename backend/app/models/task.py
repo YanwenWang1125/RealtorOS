@@ -2,7 +2,7 @@
 Task model using SQLAlchemy ORM for PostgreSQL.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column,
     Integer,
@@ -15,6 +15,11 @@ from sqlalchemy import (
 from app.db.postgresql import Base
 
 
+def utcnow():
+    """Return timezone-aware UTC datetime for column defaults."""
+    return datetime.now(timezone.utc)
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -22,13 +27,13 @@ class Task(Base):
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     email_sent_id = Column(Integer, ForeignKey("email_logs.id"), nullable=True)
     followup_type = Column(String(50), nullable=False)
-    scheduled_for = Column(DateTime, nullable=False, index=True)
+    scheduled_for = Column(DateTime(timezone=True), nullable=False, index=True)
     status = Column(String(50), nullable=False, default="pending", index=True)
     priority = Column(String(20), nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
 
 
 # Composite indexes

@@ -22,7 +22,7 @@ async def list_tasks(
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
     """List tasks with pagination and filtering."""
-    pass
+    return await scheduler_service.list_tasks(page=page, limit=limit, status=status, client_id=client_id)
 
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(
@@ -30,7 +30,10 @@ async def get_task(
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
     """Get a specific task by ID."""
-    pass
+    task = await scheduler_service.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
 
 @router.patch("/{task_id}", response_model=TaskResponse)
 async def update_task(
@@ -39,7 +42,10 @@ async def update_task(
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
     """Update a task (mark complete, reschedule, etc.)."""
-    pass
+    updated = await scheduler_service.update_task(task_id, task_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return updated
 
 @router.post("/", response_model=TaskResponse)
 async def create_task(
@@ -47,4 +53,4 @@ async def create_task(
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
     """Manually create a new task."""
-    pass
+    return await scheduler_service.create_task(task_data)

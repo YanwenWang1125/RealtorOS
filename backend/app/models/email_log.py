@@ -2,7 +2,7 @@
 EmailLog model using SQLAlchemy ORM for PostgreSQL.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column,
     Integer,
@@ -16,6 +16,11 @@ from sqlalchemy import (
 from app.db.postgresql import Base
 
 
+def utcnow():
+    """Return timezone-aware UTC datetime for column defaults."""
+    return datetime.now(timezone.utc)
+
+
 class EmailLog(Base):
     __tablename__ = "email_logs"
 
@@ -27,10 +32,10 @@ class EmailLog(Base):
     body = Column(Text, nullable=False)
     status = Column(String(50), nullable=False, index=True)
     sendgrid_message_id = Column(String(255), nullable=True, index=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    sent_at = Column(DateTime, nullable=True)
-    opened_at = Column(DateTime, nullable=True)
-    clicked_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    opened_at = Column(DateTime(timezone=True), nullable=True)
+    clicked_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
     retry_count = Column(Integer, nullable=False, default=0)
     webhook_events = Column(JSON, nullable=True)

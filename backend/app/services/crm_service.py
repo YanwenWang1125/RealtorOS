@@ -31,7 +31,7 @@ class CRMService:
         return ClientResponse.model_validate(client.__dict__, from_attributes=True)
 
     async def get_client(self, client_id: int) -> Optional[ClientResponse]:
-        stmt = select(Client).where(Client.id == client_id)
+        stmt = select(Client).where(Client.id == client_id, Client.is_deleted == False)  # noqa: E712
         result = await self.session.execute(stmt)
         client = result.scalar_one_or_none()
         if client is None:
@@ -49,12 +49,17 @@ class CRMService:
         return [ClientResponse.model_validate(c.__dict__, from_attributes=True) for c in clients]
 
     async def update_client(self, client_id: int, client_data: ClientUpdate) -> Optional[ClientResponse]:
+        # First check if client exists and is not deleted
+        existing_client = await self.get_client(client_id)
+        if existing_client is None:
+            return None
+        
         update_data = client_data.model_dump(exclude_unset=True)
         if not update_data:
-            return await self.get_client(client_id)
+            return existing_client
         stmt = (
             update(Client)
-            .where(Client.id == client_id)
+            .where(Client.id == client_id, Client.is_deleted == False)  # noqa: E712
             .values(**update_data)
             .execution_options(synchronize_session="fetch")
         )
@@ -63,9 +68,10 @@ class CRMService:
         return await self.get_client(client_id)
 
     async def delete_client(self, client_id: int) -> bool:
+        # Only delete if client exists and is not already deleted
         stmt = (
             update(Client)
-            .where(Client.id == client_id)
+            .where(Client.id == client_id, Client.is_deleted == False)  # noqa: E712
             .values(is_deleted=True)
             .execution_options(synchronize_session="fetch")
         )

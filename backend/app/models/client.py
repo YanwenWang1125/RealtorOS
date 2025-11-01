@@ -2,7 +2,7 @@
 Client model using SQLAlchemy ORM for PostgreSQL.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column,
     Integer,
@@ -14,6 +14,11 @@ from sqlalchemy import (
     Index,
 )
 from app.db.postgresql import Base
+
+
+def utcnow():
+    """Return timezone-aware UTC datetime for column defaults."""
+    return datetime.now(timezone.utc)
 
 
 class Client(Base):
@@ -28,9 +33,9 @@ class Client(Base):
     stage = Column(String(50), nullable=False, index=True)
     notes = Column(Text, nullable=True)
     custom_fields = Column(JSON, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_contacted = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    last_contacted = Column(DateTime(timezone=True), nullable=True)
     is_deleted = Column(Boolean, nullable=False, default=False, index=True)
 
 

@@ -17,7 +17,7 @@ async def get_dashboard_stats(
     dashboard_service: DashboardService = Depends(get_dashboard_service)
 ):
     """Get dashboard statistics and KPIs."""
-    pass
+    return await dashboard_service.get_dashboard_stats()
 
 @router.get("/recent-activity")
 async def get_recent_activity(
@@ -25,4 +25,4 @@ async def get_recent_activity(
     dashboard_service: DashboardService = Depends(get_dashboard_service)
 ):
     """Get recent activity feed."""
-    pass
+    return await dashboard_service.get_recent_activity(limit=limit)

@@ -9,8 +9,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.routes import clients, tasks, emails, dashboard
+from app.utils.logger import setup_logging
 from contextlib import asynccontextmanager
 from app.db.postgresql import init_db, close_db
+
+# Initialize structured logging using LOG_LEVEL from settings
+setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

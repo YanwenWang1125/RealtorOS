@@ -7,7 +7,7 @@ with structured formatting for the RealtorOS system.
 
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 class StructuredFormatter(logging.Formatter):
@@ -16,7 +16,7 @@ class StructuredFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record with structured data."""
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -35,12 +35,20 @@ class StructuredFormatter(logging.Formatter):
         
         return str(log_data)
 
-def setup_logging(log_level: str = "INFO") -> None:
-    """Set up structured logging for the application."""
+def setup_logging() -> None:
+    """Set up structured logging for the application using LOG_LEVEL from settings."""
+    from app.config import settings
+    
+    log_level = settings.LOG_LEVEL.upper()
+    
+    # Validate log level
+    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    if log_level not in valid_levels:
+        log_level = "INFO"  # Default to INFO if invalid
     
     # Create logger
     logger = logging.getLogger("realtoros")
-    logger.setLevel(getattr(logging, log_level.upper()))
+    logger.setLevel(getattr(logging, log_level))
     
     # Remove existing handlers
     for handler in logger.handlers[:]:
@@ -48,7 +56,7 @@ def setup_logging(log_level: str = "INFO") -> None:
     
     # Create console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(getattr(logging, log_level.upper()))
+    console_handler.setLevel(getattr(logging, log_level))
     console_handler.setFormatter(StructuredFormatter())
     
     # Add handler to logger

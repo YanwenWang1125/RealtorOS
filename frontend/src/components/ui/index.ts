@@ -4,10 +4,10 @@
  */
 
 // Core shadcn/ui components
-export * from './button';
-export * from './input';
+export * from './Button';
+export * from './Input';
 export * from './select';
-export * from './card';
+export * from './Card';
 export * from './badge';
 export * from './label';
 export * from './dialog';

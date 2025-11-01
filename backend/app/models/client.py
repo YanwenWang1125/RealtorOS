@@ -26,7 +26,7 @@ class Client(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    email = Column(String(255), nullable=False, unique=True, index=True)
+    email = Column(String(255), nullable=False, index=True)
     phone = Column(String(20), nullable=True)
     property_address = Column(String(200), nullable=False)
     property_type = Column(String(50), nullable=False)

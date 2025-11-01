@@ -11,6 +11,7 @@ from app.schemas.client_schema import ClientCreate, ClientUpdate, ClientResponse
 from app.services.crm_service import CRMService
 from app.api.dependencies import get_crm_service
 from app.tasks.scheduler_tasks import create_followup_tasks_task
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
@@ -20,9 +21,13 @@ async def create_client(
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """Create a new client."""
-    created = await crm_service.create_client(client_data)
-    create_followup_tasks_task.delay(created.id)
-    return created
+    try:
+        created = await crm_service.create_client(client_data)
+        create_followup_tasks_task.delay(created.id)
+        return created
+    except IntegrityError as e:
+        # Handle duplicate email (unique constraint) gracefully
+        raise HTTPException(status_code=409, detail="A client with this email already exists.") from e
 
 @router.get("/", response_model=List[ClientResponse])
 async def list_clients(

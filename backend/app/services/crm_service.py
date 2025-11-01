@@ -15,9 +15,11 @@ class CRMService:
         self.session = session
 
     async def create_client(self, client_data: ClientCreate) -> ClientResponse:
+        # Normalize email to avoid case-related duplicates
+        normalized_email = client_data.email.strip().lower()
         client = Client(
             name=client_data.name,
-            email=client_data.email,
+            email=normalized_email,
             phone=client_data.phone,
             property_address=client_data.property_address,
             property_type=client_data.property_type,

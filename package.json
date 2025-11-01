@@ -1,0 +1,22 @@
+{
+  "scripts": {
+    "dev": "cd frontend && npm run dev"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.90.5",
+    "axios": "^1.13.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.552.0",
+    "react-hook-form": "^7.66.0",
+    "recharts": "^3.3.0",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.1.12",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2"
+  }
+}

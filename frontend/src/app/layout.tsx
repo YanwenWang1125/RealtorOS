@@ -1,41 +1,32 @@
-/**
- * Root layout component for RealtorOS frontend.
- * 
- * This component defines the root layout structure including
- * global styles, metadata, and common layout elements.
- */
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { QueryProvider } from '@/providers/QueryProvider';
+import { ThemeProvider } from '@/providers/ThemeProvider';
+import { ToastProvider } from '@/providers/ToastProvider';
 
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import Header from '@/components/Header'
-import Sidebar from '@/components/Sidebar'
-
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'RealtorOS - CRM for Real Estate Agents',
-  description: 'Automated follow-up system for real estate agents',
-}
+  title: 'RealtorOS',
+  description: 'Real Estate CRM and Follow-up Automation',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          <Header />
-          <div className="flex">
-            <Sidebar />
-            <main className="flex-1 p-6">
-              {children}
-            </main>
-          </div>
-        </div>
+        <ThemeProvider>
+          <QueryProvider>
+            {children}
+            <ToastProvider />
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

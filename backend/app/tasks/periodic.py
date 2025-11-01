@@ -5,24 +5,30 @@ This module contains periodic tasks that run on a schedule
 to process due tasks and maintain system health.
 """
 
+import logging
 from celery import current_task
 from app.tasks.celery_app import celery_app
 from app.services.scheduler_service import SchedulerService
 from app.db.postgresql import init_db, get_session
 import asyncio
 
+logger = logging.getLogger(__name__)
+
 @celery_app.task(bind=True)
 def process_due_tasks(self):
     """
     Process all tasks that are due for execution.
     This task runs every minute via Celery Beat.
+    
+    Automatically generates and sends follow-up emails for due tasks.
     """
     async def _run():
         await init_db()
         async for session in get_session():
             svc = SchedulerService(session)
-            await svc.get_due_tasks()
-            return True
+            count = await svc.process_and_send_due_emails()
+            logger.info(f"Processed {count} due task(s) in this cycle")
+            return count
     return asyncio.run(_run())
 
 @celery_app.task(bind=True)

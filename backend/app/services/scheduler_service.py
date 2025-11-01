@@ -2,13 +2,20 @@
 Scheduler service for task and follow-up management (SQLAlchemy).
 """
 
+import logging
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.task import Task
+from app.models.client import Client
 from app.schemas.task_schema import TaskCreate, TaskUpdate, TaskResponse
+from app.schemas.email_schema import EmailSendRequest
 from app.constants.followup_schedules import FOLLOWUP_SCHEDULE
+from app.services.ai_agent import AIAgent
+from app.services.email_service import EmailService
+
+logger = logging.getLogger(__name__)
 
 
 class SchedulerService:
@@ -120,3 +127,110 @@ class SchedulerService:
         await self.session.execute(stmt)
         await self.session.commit()
         return await self.get_task(task_id)
+
+    async def process_and_send_due_emails(self) -> int:
+        """
+        Process all due tasks and send automated follow-up emails.
+        
+        Queries all tasks where scheduled_for <= now AND status = "pending",
+        generates personalized emails using AIAgent, sends them via EmailService,
+        and marks tasks as completed.
+        
+        Returns:
+            int: Count of successfully processed tasks
+        """
+        now = datetime.now(timezone.utc)
+        
+        # Query all due tasks
+        stmt = select(Task).where(
+            Task.scheduled_for <= now,
+            Task.status == "pending"
+        )
+        result = await self.session.execute(stmt)
+        due_tasks = result.scalars().all()
+        
+        logger.info(f"Found {len(due_tasks)} due task(s) to process")
+        
+        if not due_tasks:
+            return 0
+        
+        # Initialize services
+        ai_agent = AIAgent()
+        email_service = EmailService(self.session)
+        
+        success_count = 0
+        
+        # Process each task
+        for task in due_tasks:
+            try:
+                logger.info(f"Processing task_id={task.id}, client_id={task.client_id}, followup_type={task.followup_type}")
+                
+                # Fetch the client
+                client_stmt = select(Client).where(Client.id == task.client_id)
+                client_result = await self.session.execute(client_stmt)
+                client = client_result.scalar_one_or_none()
+                
+                if not client:
+                    logger.error(f"Client not found for task_id={task.id}, client_id={task.client_id}")
+                    continue
+                
+                if not client.email:
+                    logger.error(f"Client {client.id} has no email address for task_id={task.id}")
+                    continue
+                
+                # Generate email using AIAgent
+                logger.info(f"Generating email for task_id={task.id}, client_id={client.id}")
+                email_content = await ai_agent.generate_email(client, task)
+                
+                if not email_content or "subject" not in email_content or "body" not in email_content:
+                    logger.error(f"Failed to generate email content for task_id={task.id}, client_id={client.id}")
+                    continue
+                
+                # Create email send request
+                email_request = EmailSendRequest(
+                    client_id=client.id,
+                    task_id=task.id,
+                    to_email=client.email,
+                    subject=email_content["subject"],
+                    body=email_content["body"]
+                )
+                
+                # Send email via EmailService
+                logger.info(f"Sending email for task_id={task.id}, client_id={client.id}, to={client.email}")
+                email_response = await email_service.send_email(email_request)
+                
+                # Update task: status="completed", email_sent_id, completed_at
+                stmt = (
+                    update(Task)
+                    .where(Task.id == task.id)
+                    .values(
+                        status="completed",
+                        email_sent_id=email_response.id,
+                        completed_at=now
+                    )
+                    .execution_options(synchronize_session="fetch")
+                )
+                await self.session.execute(stmt)
+                await self.session.commit()
+                
+                logger.info(f"Successfully processed task_id={task.id}, client_id={client.id}, email_id={email_response.id}")
+                success_count += 1
+                
+            except Exception as e:
+                # Get task info before potential session expiration
+                task_id = task.id
+                client_id = task.client_id
+                logger.error(
+                    f"Error processing task_id={task_id}, client_id={client_id}: {str(e)}",
+                    exc_info=True
+                )
+                # Rollback for this task only
+                try:
+                    await self.session.rollback()
+                except Exception as rollback_error:
+                    logger.error(f"Rollback error for task_id={task_id}: {str(rollback_error)}")
+                # Continue processing remaining tasks
+                continue
+        
+        logger.info(f"Processed {success_count} out of {len(due_tasks)} due task(s) successfully")
+        return success_count

@@ -10,6 +10,7 @@ from typing import List, Optional
 from app.schemas.client_schema import ClientCreate, ClientUpdate, ClientResponse
 from app.services.crm_service import CRMService
 from app.api.dependencies import get_crm_service
+from app.tasks.scheduler_tasks import create_followup_tasks_task
 
 router = APIRouter()
 
@@ -20,6 +21,7 @@ async def create_client(
 ):
     """Create a new client."""
     created = await crm_service.create_client(client_data)
+    create_followup_tasks_task.delay(created.id)
     return created
 
 @router.get("/", response_model=List[ClientResponse])

@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     SENDGRID_API_KEY: str = Field(description="SendGrid API key (required for sending emails)")
     SENDGRID_FROM_EMAIL: str = Field(description="Default sender email address")
     SENDGRID_FROM_NAME: str = Field(description="Default sender name")
+    SENDGRID_WEBHOOK_VERIFICATION_KEY: str = Field(description="SendGrid webhook ECDSA public key for signature verification")
     
     # Logging - Required
     LOG_LEVEL: str = Field(description="Logging level (DEBUG/INFO/WARNING/ERROR)")

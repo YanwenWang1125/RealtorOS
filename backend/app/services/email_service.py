@@ -3,6 +3,7 @@ Email service for sending and managing emails (SQLAlchemy + SendGrid).
 """
 
 from typing import List, Optional, Dict, Any
+from datetime import datetime, timezone
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.email_log import EmailLog
@@ -10,6 +11,9 @@ from app.schemas.email_schema import EmailSendRequest, EmailResponse
 from app.config import settings
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class EmailService:
@@ -89,16 +93,90 @@ class EmailService:
         return result.rowcount > 0
 
     async def process_webhook_event(self, event_data: Dict[str, Any]) -> bool:
+        """
+        Process a SendGrid webhook event and update the corresponding EmailLog record.
+        
+        Updates:
+        - opened_at: Set to event timestamp when event == "open" (first open only)
+        - clicked_at: Set to event timestamp when event == "click" (first click only)
+        - webhook_events: Append entire event object to JSON array
+        - status: Update to event type (delivered, opened, clicked, bounced, etc.)
+        
+        Args:
+            event_data: Dictionary containing webhook event data
+            
+        Returns:
+            True if event was processed successfully, False otherwise
+        """
         message_id = event_data.get("sg_message_id") or event_data.get("message_id")
-        status = event_data.get("event")
-        if not message_id or not status:
+        event_type = event_data.get("event", "").lower()
+        
+        if not message_id or not event_type:
+            logger.warning(f"Invalid webhook event: missing message_id or event. Data: {event_data}")
             return False
+        
+        # Find the email log by sendgrid_message_id
+        stmt = select(EmailLog).where(EmailLog.sendgrid_message_id == message_id)
+        result = await self.session.execute(stmt)
+        email_log = result.scalar_one_or_none()
+        
+        if not email_log:
+            logger.warning(f"Email log not found for message_id: {message_id}")
+            return False
+        
+        # Parse timestamp from event (Unix timestamp)
+        event_timestamp = None
+        if "timestamp" in event_data:
+            try:
+                ts = event_data.get("timestamp")
+                if isinstance(ts, (int, float)):
+                    event_timestamp = datetime.fromtimestamp(ts, tz=timezone.utc)
+                elif isinstance(ts, str):
+                    event_timestamp = datetime.fromtimestamp(int(ts), tz=timezone.utc)
+            except (ValueError, TypeError, OSError) as e:
+                logger.warning(f"Failed to parse timestamp from event: {ts}, error: {e}")
+                event_timestamp = datetime.now(timezone.utc)
+        else:
+            event_timestamp = datetime.now(timezone.utc)
+        
+        # Prepare update values
+        update_values = {"status": event_type}
+        
+        # Handle opened_at timestamp (first open only)
+        if event_type == "open" and email_log.opened_at is None:
+            update_values["opened_at"] = event_timestamp
+            logger.info(f"Email {email_log.id} opened at {event_timestamp}")
+        
+        # Handle clicked_at timestamp (first click only)
+        if event_type == "click" and email_log.clicked_at is None:
+            update_values["clicked_at"] = event_timestamp
+            logger.info(f"Email {email_log.id} clicked at {event_timestamp}")
+        
+        # Append event to webhook_events JSON array
+        current_events = email_log.webhook_events if email_log.webhook_events else []
+        if not isinstance(current_events, list):
+            current_events = []
+        
+        # Add full event data to the array
+        current_events.append(event_data)
+        update_values["webhook_events"] = current_events
+        
+        # Map event types to status values
+        # Keep status as the event type (open, click, delivered, bounce, etc.)
+        # This allows tracking the latest event state
+        
+        # Update the email log
         stmt = (
             update(EmailLog)
-            .where(EmailLog.sendgrid_message_id == message_id)
-            .values(status=status)
+            .where(EmailLog.id == email_log.id)
+            .values(**update_values)
             .execution_options(synchronize_session="fetch")
         )
         await self.session.execute(stmt)
         await self.session.commit()
+        
+        logger.info(
+            f"Processed webhook event: {event_type} for email {email_log.id} "
+            f"(message_id: {message_id})"
+        )
         return True

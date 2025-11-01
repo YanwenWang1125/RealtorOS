@@ -171,6 +171,121 @@ class TestCreateClient:
         assert len(created_ids) == 5
         assert len(set(created_ids)) == 5  # All unique IDs
 
+    @pytest.mark.asyncio
+    async def test_create_client_triggers_task_creation(self, async_client: AsyncClient, db_session):
+        """Test that creating a client automatically triggers follow-up task creation."""
+        from unittest.mock import patch, MagicMock
+        
+        # Mock the Celery task
+        with patch('app.api.routes.clients.create_followup_tasks_task') as mock_task:
+            mock_task.delay = MagicMock()
+            
+            client_data = {
+                "name": "Task Trigger Client",
+                "email": "tasktrigger@example.com",
+                "phone": "+1-555-0200",
+                "property_address": "200 Task St, City, ST 12345",
+                "property_type": "residential",
+                "stage": "lead"
+            }
+            response = await async_client.post("/api/clients/", json=client_data)
+            
+            assert response.status_code == 200
+            data = response.json()
+            client_id = data["id"]
+            
+            # Verify the Celery task was called with the correct client_id
+            mock_task.delay.assert_called_once_with(client_id)
+
+    @pytest.mark.asyncio
+    async def test_create_client_creates_followup_tasks(self, async_client: AsyncClient, db_session):
+        """Test that creating a client results in follow-up tasks being created in database."""
+        from unittest.mock import patch, MagicMock
+        from app.services.scheduler_service import SchedulerService
+        
+        # Mock the Celery task to avoid Redis connection
+        with patch('app.api.routes.clients.create_followup_tasks_task') as mock_task:
+            mock_task.delay = MagicMock()
+            
+            client_data = {
+                "name": "Follow-up Client",
+                "email": "followup@example.com",
+                "phone": "+1-555-0201",
+                "property_address": "201 Follow St, City, ST 12345",
+                "property_type": "commercial",
+                "stage": "lead"
+            }
+            response = await async_client.post("/api/clients/", json=client_data)
+            
+            assert response.status_code == 200
+            data = response.json()
+            client_id = data["id"]
+        
+        # Manually trigger task creation to verify the service works correctly
+        # (In production, this is done by the Celery task)
+        scheduler = SchedulerService(db_session)
+        await scheduler.create_followup_tasks(client_id)
+        
+        # Verify tasks were created
+        from sqlalchemy import select
+        from app.models.task import Task
+        
+        stmt = select(Task).where(Task.client_id == client_id)
+        result = await db_session.execute(stmt)
+        tasks = result.scalars().all()
+        
+        # Should have 5 tasks based on follow-up schedule
+        assert len(tasks) == 5
+        
+        # Verify all expected follow-up types are present
+        followup_types = {task.followup_type for task in tasks}
+        expected_types = {"Day 1", "Day 3", "Week 1", "Week 2", "Month 1"}
+        assert followup_types == expected_types
+        
+        # Verify all tasks are pending
+        assert all(task.status == "pending" for task in tasks)
+        
+        # Verify priorities are set correctly
+        priorities = {task.followup_type: task.priority for task in tasks}
+        assert priorities["Day 1"] == "high"
+        assert priorities["Day 3"] == "medium"
+        assert priorities["Week 1"] == "medium"
+        assert priorities["Week 2"] == "low"
+        assert priorities["Month 1"] == "low"
+
+    @pytest.mark.asyncio
+    async def test_create_client_task_creation_all_stages(self, async_client: AsyncClient, db_session):
+        """Test that task creation works for clients in all stages."""
+        from unittest.mock import patch, MagicMock
+        from app.services.scheduler_service import SchedulerService
+        
+        stages = ["lead", "negotiating", "under_contract", "closed", "lost"]
+        
+        with patch('app.api.routes.clients.create_followup_tasks_task') as mock_task:
+            mock_task.delay = MagicMock()
+            
+            for i, stage in enumerate(stages):
+                client_data = {
+                    "name": f"Stage {stage} Client",
+                    "email": f"stage{stage}{i}@example.com",
+                    "phone": f"+1-555-{2000+i}",
+                    "property_address": f"{200+i} {stage} St, City, ST 12345",
+                    "property_type": "residential",
+                    "stage": stage
+                }
+                response = await async_client.post("/api/clients/", json=client_data)
+                
+                assert response.status_code == 200
+                data = response.json()
+                client_id = data["id"]
+                
+                # Verify task was triggered for each client
+                calls = [call[0][0] for call in mock_task.delay.call_args_list]
+                assert client_id in calls
+            
+            # Verify task was called 5 times (once per client)
+            assert mock_task.delay.call_count == 5
+
 
 class TestListClients:
     """Test GET /api/clients/ - List clients endpoint."""

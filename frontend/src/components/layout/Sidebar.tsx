@@ -8,8 +8,7 @@ import {
   LayoutDashboard, 
   Users, 
   CheckSquare, 
-  Mail, 
-  BarChart3 
+  Mail
 } from 'lucide-react';
 
 const navigation = [
@@ -17,7 +16,6 @@ const navigation = [
   { name: 'Clients', href: ROUTES.CLIENTS, icon: Users },
   { name: 'Tasks', href: ROUTES.TASKS, icon: CheckSquare },
   { name: 'Emails', href: ROUTES.EMAILS, icon: Mail },
-  { name: 'Analytics', href: ROUTES.ANALYTICS, icon: BarChart3 },
 ];
 
 export function Sidebar() {

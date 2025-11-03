@@ -820,4 +820,4 @@ For support and questions:
 
 **Built with ❤️ for real estate professionals**
 
-*RealtorOS helps you never miss a follow-up and build stronger relationships with your clients through automated, personalized communication.*
+*RealtorOS helps you never miss a follow-up and build stronger relationships with your clients through automated, personalized communication!*

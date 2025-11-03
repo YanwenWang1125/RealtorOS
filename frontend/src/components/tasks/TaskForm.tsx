@@ -7,13 +7,14 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Task } from '@/lib/types/task'
-import { useClients } from '@/hooks/useClients'
+import { useState } from 'react'
+import type { Task } from '@/lib/types/task.types'
+import { useClients } from '@/lib/hooks/queries/useClients'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface TaskFormProps {
   task?: Task
-  clientId?: string
+  clientId?: number
   onSave: () => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -26,10 +27,10 @@ export default function TaskForm({
   onCancel, 
   isSubmitting = false 
 }: TaskFormProps) {
-  const { clients } = useClients()
+  const { data: clients, isLoading } = useClients({ limit: 1000 })
   
   const [formData, setFormData] = useState({
-    client_id: clientId || task?.client_id || '',
+    client_id: clientId ?? task?.client_id ?? '',
     followup_type: task?.followup_type || 'Day 1',
     scheduled_for: task?.scheduled_for ? 
       new Date(task.scheduled_for).toISOString().slice(0, 16) : 
@@ -117,21 +118,30 @@ export default function TaskForm({
         <label htmlFor="client_id" className="block text-sm font-medium text-gray-700 mb-2">
           Client *
         </label>
-        <select
-          id="client_id"
-          name="client_id"
-          value={formData.client_id}
-          onChange={handleChange}
-          disabled={!!clientId}
-          className={`input-field ${errors.client_id ? 'border-red-500' : ''}`}
+        <Select
+          disabled={isLoading || !!clientId}
+          value={formData.client_id ? String(formData.client_id) : ''}
+          onValueChange={(value) => {
+            setFormData(prev => ({ ...prev, client_id: value }))
+            if (errors.client_id) {
+              setErrors(prev => ({ ...prev, client_id: '' }))
+            }
+          }}
         >
-          <option value="">Select a client</option>
-          {clients?.map(client => (
-            <option key={client.id} value={client.id}>
-              {client.name} - {client.email}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger 
+            id="client_id"
+            className={errors.client_id ? 'border-red-500' : ''}
+          >
+            <SelectValue placeholder="Select a client" />
+          </SelectTrigger>
+          <SelectContent>
+            {clients?.map(client => (
+              <SelectItem key={client.id} value={client.id.toString()}>
+                {client.name} - {client.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {errors.client_id && (
           <p className="mt-1 text-sm text-red-600">{errors.client_id}</p>
         )}

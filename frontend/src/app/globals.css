@@ -99,3 +99,51 @@ body {
 .input-field {
   @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
 }
+
+/* React Big Calendar custom styles */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-header {
+  padding: 10px 3px;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rbc-today {
+  background-color: #fef3c7;
+}
+
+.rbc-event {
+  padding: 2px 5px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.rbc-event:hover {
+  opacity: 1 !important;
+}
+
+/* React Aria Components Calendar styles */
+/* 确保选中日期的文字颜色清晰可见 */
+[data-react-aria-calendar-cell][data-selected],
+button[data-selected="true"] {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+[data-react-aria-calendar-cell][data-selected]:hover,
+button[data-selected="true"]:hover {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* 覆盖 React Aria 可能的默认灰色文字 */
+[data-react-aria-calendar-cell] {
+  color: hsl(var(--foreground));
+}
+
+[data-react-aria-calendar-cell][data-selected] {
+  color: hsl(var(--primary-foreground)) !important;
+}

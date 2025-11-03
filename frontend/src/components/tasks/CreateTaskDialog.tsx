@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useState, useId, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { taskCreateSchema, TaskCreateFormData } from '@/lib/schemas/task.schema';
@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { TimePicker } from '@/components/ui/time-picker';
 import { ClientAutocomplete } from '@/components/tasks/ClientAutocomplete';
 import { PRIORITY_LEVELS, PRIORITY_LABELS } from '@/lib/constants/task.constants';
 
@@ -43,6 +44,7 @@ export function CreateTaskDialog({ open, onOpenChange, defaultClientId }: Create
   const createTask = useCreateTask();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>('09:00');
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<TaskCreateFormData>({
     resolver: zodResolver(taskCreateSchema),
@@ -58,7 +60,63 @@ export function CreateTaskDialog({ open, onOpenChange, defaultClientId }: Create
   });
 
   const clientFieldId = useId();
-  const timeFieldId = useId();
+
+  // Scroll to first error field when validation fails
+  const handleInvalid = (errors: any) => {
+    const errorFields = Object.keys(errors);
+    if (errorFields.length > 0) {
+      setTimeout(() => {
+        const firstErrorField = errorFields[0];
+        let targetElement: HTMLElement | null = null;
+
+        // Strategy 1: Find by data-field attribute (most reliable)
+        targetElement = dialogContentRef.current?.querySelector(
+          `[data-field="${firstErrorField}"]`
+        ) as HTMLElement;
+
+        // Strategy 2: Find FormMessage element and get its parent FormItem
+        if (!targetElement) {
+          const errorMessage = dialogContentRef.current?.querySelector(
+            `[id*="${firstErrorField}"][id*="form-item-message"]`
+          ) as HTMLElement;
+          targetElement = errorMessage?.closest('[data-field]') as HTMLElement;
+        }
+
+        // Strategy 3: For client_id, find by specific ID
+        if (!targetElement && firstErrorField === 'client_id') {
+          const label = dialogContentRef.current?.querySelector(
+            `label[for="${clientFieldId}"]`
+          );
+          targetElement = label?.closest('[data-field], [class*="space-y"]') as HTMLElement;
+        }
+
+        // Strategy 4: Find any form field container
+        if (!targetElement) {
+          targetElement = dialogContentRef.current?.querySelector(
+            `[name="${firstErrorField}"]`
+          )?.closest('[class*="space-y"], [class*="FormItem"]') as HTMLElement;
+        }
+
+        // Scroll to the element
+        if (targetElement) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+
+          // Try to focus the input/select if focusable
+          setTimeout(() => {
+            const focusableElement = targetElement?.querySelector(
+              'input, select, textarea, button'
+            ) as HTMLElement;
+            if (focusableElement && focusableElement.focus) {
+              focusableElement.focus();
+            }
+          }, 300);
+        }
+      }, 150);
+    }
+  };
 
   const handleSubmit = async (data: TaskCreateFormData) => {
     try {
@@ -92,20 +150,26 @@ export function CreateTaskDialog({ open, onOpenChange, defaultClientId }: Create
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        ref={dialogContentRef}
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
         <DialogHeader>
           <DialogTitle>Create Custom Task</DialogTitle>
           <DialogDescription>Add a custom follow-up task for a client.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+          <form 
+            onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} 
+            className="space-y-5"
+          >
             {/* Client */}
             <FormField
               control={form.control}
               name="client_id"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-field="client_id">
                   <FormLabel htmlFor={clientFieldId}>Client *</FormLabel>
                   <FormControl>
                     <ClientAutocomplete
@@ -125,7 +189,7 @@ export function CreateTaskDialog({ open, onOpenChange, defaultClientId }: Create
               control={form.control}
               name="priority"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-field="priority">
                   <FormLabel>Priority *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={String(field.value || 'medium')}>
                     <FormControl>
@@ -160,12 +224,12 @@ export function CreateTaskDialog({ open, onOpenChange, defaultClientId }: Create
 
             {/* Time */}
             <div className="space-y-2">
-              <Label htmlFor={timeFieldId}>Scheduled Time *</Label>
-              <Input
-                id={timeFieldId}
-                type="time"
+              <Label>Scheduled Time *</Label>
+              <TimePicker
                 value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
+                onChange={setSelectedTime}
+                disabled={createTask.isPending}
+                placeholder="Select time"
               />
             </div>
 

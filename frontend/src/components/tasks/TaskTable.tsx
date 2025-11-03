@@ -161,9 +161,12 @@ export function TaskTable({
                 <TableRow
                   key={task.id}
                   className={cn(
-                    'cursor-pointer hover:bg-muted/50',
-                    dateStatus === 'overdue' && task.status === 'pending' && 'bg-red-50',
-                    dateStatus === 'today' && task.status === 'pending' && 'bg-yellow-50'
+                    'cursor-pointer',
+                    dateStatus === 'overdue' && task.status === 'pending' && 'hover:bg-red-50',
+                    dateStatus === 'today' && task.status === 'pending' && 'hover:bg-yellow-50',
+                    !(dateStatus === 'overdue' && task.status === 'pending') && 
+                    !(dateStatus === 'today' && task.status === 'pending') && 
+                    'hover:bg-muted/50'
                   )}
                   onClick={() => setSelectedTask(task)}
                 >

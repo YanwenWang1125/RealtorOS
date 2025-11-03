@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useId } from 'react';
+import { useState } from 'react';
 import { Task } from '@/lib/types/task.types';
 import { useUpdateTask } from '@/lib/hooks/mutations/useUpdateTask';
 import { useToast } from '@/lib/hooks/ui/useToast';
@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/Button';
 import { Calendar } from '@/components/ui/calendar';
-import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
+import { TimePicker } from '@/components/ui/time-picker';
 import { formatDate } from '@/lib/utils/date';
 
 interface TaskRescheduleDialogProps {
@@ -31,7 +31,6 @@ export function TaskRescheduleDialog({ task, open, onOpenChange }: TaskReschedul
   const [selectedTime, setSelectedTime] = useState<string>(
     currentDate.toTimeString().slice(0, 5) // HH:MM
   );
-  const timeFieldId = useId();
 
   const { toast } = useToast();
   const updateTask = useUpdateTask();
@@ -86,12 +85,12 @@ export function TaskRescheduleDialog({ task, open, onOpenChange }: TaskReschedul
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={timeFieldId}>Time</Label>
-            <Input
-              id={timeFieldId}
-              type="time"
+            <Label>Time</Label>
+            <TimePicker
               value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
+              onChange={setSelectedTime}
+              disabled={updateTask.isPending}
+              placeholder="Select time"
             />
           </div>
 

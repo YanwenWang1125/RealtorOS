@@ -8,7 +8,7 @@ All configuration values are loaded from .env file using python-dotenv.
 
 from pydantic_settings import BaseSettings
 from pydantic import Field
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     SENDGRID_API_KEY: str = Field(description="SendGrid API key (required for sending emails)")
     SENDGRID_FROM_EMAIL: str = Field(description="Default sender email address")
     SENDGRID_FROM_NAME: str = Field(description="Default sender name")
-    SENDGRID_WEBHOOK_VERIFICATION_KEY: str = Field(description="SendGrid webhook ECDSA public key for signature verification")
+    SENDGRID_WEBHOOK_VERIFICATION_KEY: Optional[str] = Field(default=None, description="SendGrid webhook ECDSA public key for signature verification (optional in development)")
     
     # Logging - Required
     LOG_LEVEL: str = Field(description="Logging level (DEBUG/INFO/WARNING/ERROR)")

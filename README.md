@@ -4,6 +4,27 @@
 
 RealtorOS helps real estate agents never miss a follow-up by automatically scheduling tasks, generating personalized emails with OpenAI, sending them via SendGrid, and tracking opens, clicks, and engagement through secure webhooks.
 
+---
+
+## Table of Contents
+
+1. [Key Features](#-key-features)
+2. [Architecture](#-architecture)
+3. [Project Structure](#-project-structure)
+4. [Quick Start](#-quick-start)
+5. [Configuration](#-configuration)
+6. [Database Setup](#-database-setup)
+7. [API Documentation](#-api-documentation)
+8. [Features & Capabilities](#-features--capabilities)
+9. [Data Flow & System Design](#-data-flow--system-design)
+10. [Development Guide](#-development-guide)
+11. [Testing](#-testing)
+12. [Deployment](#-deployment)
+13. [Troubleshooting](#-troubleshooting)
+14. [Roadmap](#-roadmap)
+
+---
+
 ## ✨ Key Features
 
 - 🏠 **Complete Client Management** - Full CRUD operations with pipeline stages (lead → closed)
@@ -15,9 +36,13 @@ RealtorOS helps real estate agents never miss a follow-up by automatically sched
 - 🎯 **Task Management** - Track, reschedule, and manage follow-up tasks
 - 📈 **Real-Time Updates** - Live engagement tracking (opens, clicks, bounces, deliveries)
 
+---
+
 ## 🏗️ Architecture
 
-### Backend (FastAPI + Python)
+### Tech Stack
+
+**Backend (FastAPI + Python)**
 - **FastAPI** - Modern, async web framework with automatic OpenAPI documentation
 - **PostgreSQL** - Production-grade relational database with SQLAlchemy ORM
 - **Celery + Redis** - Asynchronous task processing and message queuing
@@ -25,12 +50,40 @@ RealtorOS helps real estate agents never miss a follow-up by automatically sched
 - **SendGrid** - Reliable email delivery with webhook engagement tracking
 - **Alembic** - Database migrations and version control
 
-### Frontend (Next.js + React)
+**Frontend (Next.js + React)**
 - **Next.js 14** - React framework with App Router
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Utility-first styling framework
-- **SWR** - Data fetching and caching
+- **TanStack Query (React Query)** - Data fetching and caching
 - **Axios** - HTTP client for API communication
+- **TipTap** - Rich text editor for email composition
+
+**Infrastructure**
+- **Docker & Docker Compose** - Containerization and orchestration
+- **PostgreSQL** - Relational database (production-ready)
+- **Redis** - Message broker and cache for Celery
+
+### Service Architecture
+
+```
+Frontend (Next.js) → FastAPI Backend → PostgreSQL
+                          ↓
+                    Celery Workers
+                          ↓
+              OpenAI API | SendGrid API
+                          ↓
+                  SendGrid Webhooks → FastAPI
+```
+
+### Key Services
+
+1. **CRM Service** - Client data operations (CRUD)
+2. **Scheduler Service** - Follow-up scheduling and task management
+3. **AI Agent Service** - OpenAI email generation
+4. **Email Service** - SendGrid integration and email logging
+5. **Dashboard Service** - Analytics and KPI aggregation
+
+---
 
 ## 📁 Project Structure
 
@@ -51,11 +104,6 @@ realtoros/
 │   │   │   ├── task.py     # Task model
 │   │   │   └── email_log.py # EmailLog model
 │   │   ├── schemas/        # Pydantic validation schemas
-│   │   │   ├── client_schema.py
-│   │   │   ├── task_schema.py
-│   │   │   ├── email_schema.py
-│   │   │   ├── dashboard_schema.py
-│   │   │   └── webhook_schema.py
 │   │   ├── tasks/          # Celery task definitions
 │   │   │   ├── celery_app.py    # Celery configuration
 │   │   │   ├── scheduler_tasks.py
@@ -83,12 +131,13 @@ realtoros/
 │   │   ├── styles/        # CSS and styling
 │   │   └── types/         # TypeScript type definitions
 │   ├── package.json       # Node.js dependencies
+│   ├── package-lock.json  # Locked dependency versions (DO NOT DELETE)
 │   └── Dockerfile         # Frontend container config
 ├── docker-compose.yml     # Multi-container orchestration
-├── FEATURES.md           # Complete feature documentation
-├── DataWorkFlow.md       # Data flow and architecture diagrams
 └── README.md             # This file
 ```
+
+---
 
 ## 🚀 Quick Start
 
@@ -116,11 +165,11 @@ realtoros/
    # Edit backend/.env with your configuration
    ```
    
-   Required variables (see Configuration section below):
+   Required variables (see [Configuration](#-configuration) section):
    - `DATABASE_URL` - PostgreSQL connection string
    - `OPENAI_API_KEY` - OpenAI API key for email generation
    - `SENDGRID_API_KEY` - SendGrid API key for email delivery
-   - `SENDGRID_WEBHOOK_VERIFICATION_KEY` - SendGrid webhook public key
+   - `SENDGRID_WEBHOOK_VERIFICATION_KEY` - SendGrid webhook public key (optional in development)
    - `SECRET_KEY` - Secret key for encryption/JWT
 
 3. **Create `frontend/.env.local`** (if developing frontend locally)
@@ -214,6 +263,141 @@ realtoros/
    celery -A app.tasks.celery_app beat --loglevel=info
    ```
 
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+#### Backend (.env)
+
+```env
+# FastAPI
+ENVIRONMENT=development
+DEBUG=true
+API_TITLE=RealtorOS API
+API_VERSION=1.0.0
+
+# PostgreSQL Database
+DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/realtoros
+
+# Redis & Celery
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/1
+
+# OpenAI (for email generation)
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4-turbo-preview
+OPENAI_MAX_TOKENS=500
+
+# SendGrid (for email delivery)
+SENDGRID_API_KEY=SG....
+SENDGRID_FROM_EMAIL=agent@yourdomain.com
+SENDGRID_FROM_NAME=Your Real Estate Team
+SENDGRID_WEBHOOK_VERIFICATION_KEY=-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----
+# Note: SENDGRID_WEBHOOK_VERIFICATION_KEY is optional in development
+
+# Logging
+LOG_LEVEL=INFO
+
+# Security
+SECRET_KEY=your-secret-key-minimum-32-characters-long
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# CORS
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+```
+
+**Connection String Format:**
+```
+postgresql+asyncpg://username:password@host:port/database_name
+```
+
+**Examples:**
+- Local: `postgresql+asyncpg://postgres:mypassword@localhost:5432/realtoros`
+- Docker: `postgresql+asyncpg://postgres:mypassword@postgres:5432/realtoros`
+- Remote: `postgresql+asyncpg://postgres:mypassword@db.example.com:5432/realtoros`
+
+#### Frontend (.env.local)
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+---
+
+## 💾 Database Setup
+
+### PostgreSQL Connection
+
+The system uses **PostgreSQL** with **SQLAlchemy ORM** and **asyncpg** driver for async operations.
+
+**Connection String Components:**
+| Part | Value | Example |
+|------|-------|---------|
+| **Protocol** | postgresql+asyncpg:// | For async database operations |
+| **Username** | Your DB user | postgres |
+| **Password** | Your DB password | mypassword |
+| **Host** | Where PostgreSQL runs | localhost or postgres or db.example.com |
+| **Port** | PostgreSQL port | 5432 (default) |
+| **Database** | Your database name | realtoros |
+
+### Database Schema
+
+**Clients Table**
+- `id` (Primary Key)
+- `name`, `email` (unique, indexed), `phone`
+- `property_address`, `property_type`
+- `stage` (lead, negotiating, under_contract, closed, lost)
+- `notes`, `custom_fields` (JSON)
+- `created_at`, `updated_at`, `last_contacted`
+- `is_deleted` (soft delete flag)
+
+**Tasks Table**
+- `id` (Primary Key)
+- `client_id` (Foreign Key → clients.id)
+- `email_sent_id` (Foreign Key → email_logs.id, optional)
+- `followup_type` (Day 1, Day 3, Week 1, Week 2, Month 1, Custom)
+- `scheduled_for` (timestamp, indexed)
+- `status` (pending, completed, skipped, cancelled)
+- `priority` (high, medium, low)
+- `notes`, `created_at`, `updated_at`, `completed_at`
+
+**Email Logs Table**
+- `id` (Primary Key)
+- `task_id` (Foreign Key → tasks.id)
+- `client_id` (Foreign Key → clients.id, indexed)
+- `to_email`, `subject`, `body`
+- `status` (queued, sent, delivered, opened, clicked, bounced, failed, etc.)
+- `sendgrid_message_id` (indexed for webhook lookups)
+- `created_at`, `sent_at`, `opened_at`, `clicked_at`
+- `error_message`, `retry_count`
+- `webhook_events` (JSON array of all webhook events)
+
+### Database Migrations
+
+RealtorOS uses **Alembic** for database migrations.
+
+**Create a new migration:**
+```bash
+cd backend
+alembic revision --autogenerate -m "Description of changes"
+```
+
+**Apply migrations:**
+```bash
+alembic upgrade head
+```
+
+**Rollback migration:**
+```bash
+alembic downgrade -1
+```
+
+---
+
 ## 📚 API Documentation
 
 The API documentation is automatically generated using FastAPI's OpenAPI integration:
@@ -249,69 +433,233 @@ The API documentation is automatically generated using FastAPI's OpenAPI integra
 
 #### Webhooks (Public Endpoint)
 - `POST /webhook/sendgrid` - SendGrid webhook endpoint (signature verified)
+- `GET /webhook/sendgrid/test` - Test endpoint to verify webhook accessibility
 
-## 🔧 Configuration
+---
 
-### Environment Variables
+## 🎯 Features & Capabilities
 
-#### Backend (.env)
+### Client Management
 
-Required variables:
+**Complete CRUD Operations**
+- Create, read, update, and soft-delete clients
+- Pipeline stages: `lead`, `negotiating`, `under_contract`, `closed`, `lost`
+- Filter by stage, search by email
+- Pagination support (default 10 per page, up to 100)
+- Custom fields (JSON) for flexible data tracking
+- Full audit trail with timestamps
 
-```env
-# FastAPI
-ENVIRONMENT=development
-DEBUG=true
-API_TITLE=RealtorOS API
-API_VERSION=1.0.0
+**Client Data Fields**
+- Basic: name, email (unique), phone
+- Property: address, type (residential, commercial, land, other)
+- Pipeline: stage, notes, custom fields
+- Timestamps: created_at, updated_at, last_contacted
 
-# PostgreSQL Database
-DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/realtoros
+### Task & Follow-Up Automation
 
-# Redis & Celery
-REDIS_URL=redis://localhost:6379/0
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/1
+**Automated Task Creation**
+When a new client is created, the system automatically creates 5 follow-up tasks:
+- **Day 1** (High Priority): 1 day after client creation
+- **Day 3** (Medium Priority): 3 days after
+- **Week 1** (Medium Priority): 7 days after
+- **Week 2** (Low Priority): 14 days after
+- **Month 1** (Low Priority): 30 days after
 
-# OpenAI (for email generation)
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4-turbo-preview
-OPENAI_MAX_TOKENS=500
+**Task Management**
+- View all tasks with pagination
+- Filter by status (pending, completed, skipped, cancelled) or client
+- Reschedule tasks
+- Update priority and notes
+- Manual task creation
+- Automatic status update to "completed" after email send
 
-# SendGrid (for email delivery)
-SENDGRID_API_KEY=SG....
-SENDGRID_FROM_EMAIL=agent@yourdomain.com
-SENDGRID_FROM_NAME=Your Real Estate Team
-SENDGRID_WEBHOOK_VERIFICATION_KEY=-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----
+### AI-Powered Email Generation
 
-# Logging
-LOG_LEVEL=INFO
+**OpenAI Integration**
+- Uses GPT-3.5-turbo or GPT-4 (configurable)
+- Async processing for fast generation
+- Configurable max tokens
 
-# Security
-SECRET_KEY=your-secret-key-minimum-32-characters-long
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+**Personalization**
+- Client-specific content (name, property, stage, notes)
+- Follow-up context awareness (Day 1 vs Month 1)
+- Dynamic prompt engineering based on timing
+- Custom instructions support (up to 500 characters)
 
-# CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+**Email Preview**
+- Preview AI-generated emails before sending
+- No email log created on preview
+- Edit before sending
+
+**Fallback Templates**
+- Automatic fallback if OpenAI API fails
+- Ensures email delivery even during API issues
+
+### Email Management & Tracking
+
+**SendGrid Integration**
+- Reliable email delivery
+- HTML email support
+- Automatic message ID tracking
+
+**Email Status Tracking**
+- `queued` → `sent` → `delivered` → `opened` → `clicked`
+- Also tracks: `bounced`, `failed`, `dropped`, `spamreport`, `deferred`
+- First open and first click tracked with timestamps
+
+**Webhook Integration**
+- Secure ECDSA signature verification
+- Timestamp validation (10-minute window, replay attack protection)
+- Automatic status updates from SendGrid events
+- Full event history stored in JSON array
+
+### Dashboard & Analytics
+
+**KPIs and Statistics**
+- Client metrics: Total, Active (lead/negotiating/under_contract)
+- Task metrics: Pending, Completed
+- Email activity: Sent today, Sent this week
+- Engagement: Open rate, Click rate, Conversion rate
+
+**Pipeline Metrics**
+- Stage distribution counts
+- Active vs total clients
+
+**Recent Activity Feed**
+- Email sent events
+- Client and task information
+- Timestamp tracking
+
+---
+
+## 🔄 Data Flow & System Design
+
+### New Client Creation Flow
+
+1. Agent creates client via Frontend → POST `/api/clients`
+2. Backend creates client in PostgreSQL
+3. System **synchronously** creates 5 follow-up tasks
+4. Tasks stored in PostgreSQL with scheduled dates
+5. Frontend receives client data response
+
+**Key Points:**
+- Client creation is **synchronous** (immediate response)
+- Follow-up task creation happens **immediately** (not via Celery)
+- All timestamps in UTC (timezone-aware)
+
+### Automated Email Follow-Up Flow
+
+**Celery Beat Schedule:** Every 60 seconds
+
+1. **Celery Beat** triggers `process_due_tasks`
+2. **Scheduler Service** queries PostgreSQL for due tasks:
+   - `scheduled_for <= NOW()`
+   - `status = 'pending'`
+3. **For each due task:**
+   - Fetch client information
+   - Generate email via **AI Agent** (OpenAI API)
+   - Log email in `email_logs` table (status: `queued`)
+   - Send email via **SendGrid API**
+   - Update email log (status: `sent`, `sendgrid_message_id`, `sent_at`)
+   - Update task (status: `completed`, `email_sent_id`, `completed_at`)
+4. Continue processing all due tasks
+
+**Error Handling:**
+- Individual task failures don't stop processing
+- Fallback email template if OpenAI fails
+- Database rollbacks for failed tasks
+- Comprehensive logging
+
+### SendGrid Webhook Engagement Flow
+
+1. **SendGrid** sends HTTP POST to `/webhook/sendgrid`
+   - Headers: ECDSA signature, timestamp
+   - Body: Array of event objects
+
+2. **Backend** verifies signature:
+   - Extract signature and timestamp
+   - Verify ECDSA signature using public key
+   - Validate timestamp (< 10 minutes old)
+
+3. **For each event:**
+   - Find `EmailLog` by `sendgrid_message_id`
+   - Update status based on event type:
+     - `open` → Set `opened_at` (first open only)
+     - `click` → Set `clicked_at` (first click only)
+   - Append event to `webhook_events` JSON array
+   - Update email status
+
+4. **Response:** Always returns 200 OK (to prevent SendGrid retries)
+
+**Key Points:**
+- ECDSA signature verification required (bypassed in development mode if no signature)
+- Idempotent processing (can handle duplicate events)
+- Full event history preserved
+- Timestamp validation prevents replay attacks
+
+### Database Relationships
+
+```
+clients (1) ──→ (N) tasks
+tasks (1) ──→ (1) email_logs
+clients (1) ──→ (N) email_logs
 ```
 
-**Connection String Format:**
-```
-postgresql+asyncpg://username:password@host:port/database_name
-```
+**Indexes for Performance:**
+- `clients`: `stage`, `email`, `is_deleted` (composite indexes)
+- `tasks`: `client_id`, `status`, `scheduled_for` (composite indexes)
+- `email_logs`: `status`, `client_id`, `sendgrid_message_id`
 
-**SendGrid Webhook Setup:**
-1. Go to SendGrid Dashboard → Settings → Mail Settings → Event Webhook
-2. Set HTTP POST URL: `https://yourdomain.com/webhook/sendgrid`
-3. Enable events: Delivered, Opened, Clicked, Bounced, Dropped, Spam Reports
-4. Copy the verification key (ECDSA public key) to `SENDGRID_WEBHOOK_VERIFICATION_KEY`
+---
 
-#### Frontend (.env.local)
+## 🛠️ Development Guide
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+### Code Style
+
+- **Backend**: Follow PEP 8, use type hints, async/await patterns
+- **Frontend**: Follow React best practices, use TypeScript strictly
+
+### Adding New Features
+
+1. Create database model in `app/models/`
+2. Create Pydantic schemas in `app/schemas/`
+3. Add business logic in `app/services/`
+4. Create API routes in `app/api/routes/`
+5. Add tests in `tests/`
+6. Create migration: `alembic revision --autogenerate -m "Description"`
+7. Apply migration: `alembic upgrade head`
+
+### SendGrid Webhook Setup
+
+For **local development**, use **ngrok** to expose your local server:
+
+1. **Install ngrok**
+   ```bash
+   # Download from https://ngrok.com/download
+   # Or use: brew install ngrok / choco install ngrok
+   ```
+
+2. **Start ngrok tunnel**
+   ```bash
+   ngrok http 8000
+   # Copy the HTTPS URL (e.g., https://abc123.ngrok.io)
+   ```
+
+3. **Configure SendGrid Webhook**
+   - Go to SendGrid Dashboard → Settings → Mail Settings → Event Webhook
+   - Set HTTP POST URL: `https://abc123.ngrok.io/webhook/sendgrid`
+   - Enable events: Delivered, Opened, Clicked, Bounced, Dropped, Spam Reports
+   - Copy the verification key (ECDSA public key) to `SENDGRID_WEBHOOK_VERIFICATION_KEY`
+
+4. **Test webhook**
+   ```bash
+   curl https://abc123.ngrok.io/webhook/sendgrid/test
+   # Should return: {"status": "ok", "message": "Webhook endpoint is accessible"}
+   ```
+
+**Note:** In development mode, signature verification is bypassed if no signature is provided. In production, always use proper signature verification.
+
+---
 
 ## 🧪 Testing
 
@@ -339,22 +687,31 @@ pytest tests/unit/services/test_email_service.py -v
 
 For tests, the system uses an in-memory SQLite database or a test PostgreSQL database configured via environment variables.
 
+---
+
 ## 📦 Deployment
 
-### Production Docker Compose
+### Production Checklist
 
-```bash
-# Use production environment variables
-docker-compose -f docker-compose.prod.yml up -d
-```
+- [ ] Set `ENVIRONMENT=production` and `DEBUG=false`
+- [ ] Use strong `SECRET_KEY` (minimum 32 characters)
+- [ ] Configure production PostgreSQL database
+- [ ] Set up Redis for Celery
+- [ ] Configure SendGrid webhook URL (public HTTPS URL)
+- [ ] Set up SendGrid webhook verification key
+- [ ] Configure CORS origins for production domain
+- [ ] Run database migrations (`alembic upgrade head`)
+- [ ] Set up logging/monitoring (e.g., Sentry, CloudWatch)
+- [ ] Configure SSL/TLS certificates
+- [ ] Set up health check endpoints
+- [ ] Configure backup strategy for PostgreSQL
 
-### Individual Service Deployment
+### Deployment Platforms
 
 #### Backend (FastAPI)
 - **Platforms**: AWS ECS, DigitalOcean App Platform, Railway, Render, Fly.io
 - **Requirements**: PostgreSQL database, Redis instance
-- **Environment**: Set all required environment variables
-- **Process**: Run `uvicorn app.main:app --host 0.0.0.0 --port 8000` (with Gunicorn for production)
+- **Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8000` (with Gunicorn for production)
 
 #### Frontend (Next.js)
 - **Platforms**: Vercel (recommended), Netlify, AWS S3 + CloudFront
@@ -378,100 +735,33 @@ docker-compose -f docker-compose.prod.yml up -d
 - **Deployment**: Single instance (required for scheduling)
 - **Command**: `celery -A app.tasks.celery_app beat --loglevel=info`
 
-### Production Checklist
+---
 
-- [ ] Set `ENVIRONMENT=production` and `DEBUG=false`
-- [ ] Use strong `SECRET_KEY` (minimum 32 characters)
-- [ ] Configure production PostgreSQL database
-- [ ] Set up Redis for Celery
-- [ ] Configure SendGrid webhook URL
-- [ ] Set up SendGrid webhook verification key
-- [ ] Configure CORS origins for production domain
-- [ ] Run database migrations (`alembic upgrade head`)
-- [ ] Set up logging/monitoring (e.g., Sentry, CloudWatch)
-- [ ] Configure SSL/TLS certificates
-- [ ] Set up health check endpoints
-- [ ] Configure backup strategy for PostgreSQL
+## 🔍 Troubleshooting
 
-## 📖 Documentation
+### Common Issues
 
-- **[FEATURES.md](FEATURES.md)** - Complete feature documentation from a realtor's perspective
-- **[DataWorkFlow.md](DataWorkFlow.md)** - Data flow diagrams, architecture, and service interactions
-- **API Documentation** - Auto-generated at `/docs` and `/redoc` endpoints
+**Issue: SendGrid webhooks not received in local development**
+- **Solution**: Use ngrok to expose local server to SendGrid. See [SendGrid Webhook Setup](#sendgrid-webhook-setup)
 
-## 🔄 How It Works
+**Issue: Tasks not being created automatically for new clients**
+- **Solution**: Ensure the client creation endpoint is calling `scheduler_service.create_followup_tasks()` synchronously. Check backend logs.
 
-1. **Add a Client**: When you create a client, the system automatically creates 5 follow-up tasks (Day 1, Day 3, Week 1, Week 2, Month 1)
+**Issue: Email engagement timeline showing nothing**
+- **Solution**: Ensure `sent_at` timestamp is set when email is sent. Check `email_service.py` - should refresh email_log after updating status.
 
-2. **Automated Processing**: Celery Beat runs every minute, checking for due tasks
+**Issue: Module not found errors (e.g., @tiptap/react)**
+- **Solution**: Run `npm install` in the frontend directory. Ensure `package-lock.json` is committed to version control.
 
-3. **AI Email Generation**: For each due task, the system:
-   - Fetches client information
-   - Generates personalized email using OpenAI
-   - Sends email via SendGrid
-   - Updates task status to "completed"
+**Issue: SSR/Hydration errors with TipTap editor**
+- **Solution**: Set `immediatelyRender: false` in `useEditor` hook configuration.
 
-4. **Engagement Tracking**: SendGrid sends webhooks when emails are:
-   - Delivered
-   - Opened (first open tracked)
-   - Clicked (first click tracked)
-   - Bounced or marked as spam
+**Issue: Database connection errors**
+- **Solution**: Verify `DATABASE_URL` format: `postgresql+asyncpg://username:password@host:port/database_name`
+- Check PostgreSQL is running and accessible
+- Verify network connectivity in Docker containers
 
-5. **Dashboard Updates**: Real-time metrics update as events are received
-
-## 🛠️ Development
-
-### Database Migrations
-
-Create a new migration:
-```bash
-cd backend
-alembic revision --autogenerate -m "Description of changes"
-```
-
-Apply migrations:
-```bash
-alembic upgrade head
-```
-
-Rollback migration:
-```bash
-alembic downgrade -1
-```
-
-### Code Style
-
-- **Backend**: Follow PEP 8, use type hints, async/await patterns
-- **Frontend**: Follow React best practices, use TypeScript strictly
-
-### Adding New Features
-
-1. Create database model in `app/models/`
-2. Create Pydantic schemas in `app/schemas/`
-3. Add business logic in `app/services/`
-4. Create API routes in `app/api/routes/`
-5. Add tests in `tests/`
-6. Create migration: `alembic revision --autogenerate`
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the documentation at `/docs`
-- Review [FEATURES.md](FEATURES.md) for feature details
-- Review [DataWorkFlow.md](DataWorkFlow.md) for architecture
+---
 
 ## 🗺️ Roadmap
 
@@ -500,6 +790,31 @@ For support and questions:
 - [ ] Advanced reporting
 - [ ] Client activity timeline
 - [ ] Document management
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue in the repository
+- Check the API documentation at `/docs` and `/redoc`
+- Review this README for setup and troubleshooting
 
 ---
 

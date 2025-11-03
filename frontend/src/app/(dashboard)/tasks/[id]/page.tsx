@@ -9,21 +9,21 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useTasks } from '@/hooks/useTasks'
-import { useClients } from '@/hooks/useClients'
-import { useEmails } from '@/hooks/useEmails'
-import TaskForm from '@/components/TaskForm'
-import EmailPreview from '@/components/EmailPreview'
-import Modal from '@/components/Modal'
+import { useTasks } from '@/lib/hooks/queries/useTasks'
+import { useClients } from '@/lib/hooks/queries/useClients'
+import { useEmails } from '@/lib/hooks/queries/useEmails'
+import TaskForm from '@/components/tasks/TaskForm'
+import EmailPreview from '@/components/emails/EmailPreview'
+import Modal from '@/components/ui/Modal'
 
 export default function TaskDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const taskId = params.id as string
+  const taskId = parseInt(params.id as string)
   
-  const { tasks, loading: tasksLoading, error: tasksError } = useTasks()
-  const { clients } = useClients()
-  const { emails } = useEmails()
+  const { data: tasks = [], isLoading: tasksLoading, isError: tasksError, error } = useTasks()
+  const { data: clients = [] } = useClients()
+  const { data: emails = [] } = useEmails()
   
   const [isEditing, setIsEditing] = useState(false)
   const [showEmailModal, setShowEmailModal] = useState(false)
@@ -33,7 +33,7 @@ export default function TaskDetailPage() {
   const taskEmails = emails?.filter(e => e.task_id === taskId) || []
 
   if (tasksLoading) return <div>Loading task...</div>
-  if (tasksError) return <div>Error loading task: {tasksError.message}</div>
+  if (tasksError) return <div>Error loading task: {error?.message || 'Unknown error'}</div>
   if (!task) return <div>Task not found</div>
 
   const handleComplete = async () => {

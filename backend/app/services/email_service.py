@@ -44,6 +44,9 @@ class EmailService:
             await self.update_email_status(email_log.id, "sent", sendgrid_message_id=message_id)
         except Exception as e:
             await self.update_email_status(email_log.id, "failed", error_message=str(e))
+        
+        # Refresh email_log to get updated timestamps
+        await self.session.refresh(email_log)
 
         return EmailResponse.model_validate(email_log.__dict__, from_attributes=True)
 
@@ -82,10 +85,36 @@ class EmailService:
         return email
 
     async def update_email_status(self, email_id: int, status: str, sendgrid_message_id: Optional[str] = None, error_message: Optional[str] = None) -> bool:
+        now = datetime.now(timezone.utc)
+        
+        # Fetch current email log to check existing timestamps
+        stmt_select = select(EmailLog).where(EmailLog.id == email_id)
+        result_select = await self.session.execute(stmt_select)
+        email_log = result_select.scalar_one_or_none()
+        
+        if not email_log:
+            logger.warning(f"Email log not found for id: {email_id}")
+            return False
+        
+        # Prepare update values
+        update_values = {
+            "status": status,
+            "sendgrid_message_id": sendgrid_message_id,
+            "error_message": error_message
+        }
+        
+        # Set timestamp based on status (only if not already set)
+        if status == "sent" and email_log.sent_at is None:
+            update_values["sent_at"] = now
+        elif status == "opened" and email_log.opened_at is None:
+            update_values["opened_at"] = now
+        elif status == "clicked" and email_log.clicked_at is None:
+            update_values["clicked_at"] = now
+        
         stmt = (
             update(EmailLog)
             .where(EmailLog.id == email_id)
-            .values(status=status, sendgrid_message_id=sendgrid_message_id, error_message=error_message)
+            .values(**update_values)
             .execution_options(synchronize_session="fetch")
         )
         result = await self.session.execute(stmt)

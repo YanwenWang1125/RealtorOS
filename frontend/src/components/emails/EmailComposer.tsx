@@ -17,6 +17,7 @@ export function EmailComposer({ value, onChange, readOnly = false }: EmailCompos
     extensions: [StarterKit],
     content: value,
     editable: !readOnly,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },

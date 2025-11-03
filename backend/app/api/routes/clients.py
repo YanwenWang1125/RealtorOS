@@ -9,21 +9,32 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from app.schemas.client_schema import ClientCreate, ClientUpdate, ClientResponse
 from app.services.crm_service import CRMService
-from app.api.dependencies import get_crm_service
-from app.tasks.scheduler_tasks import create_followup_tasks_task
+from app.services.scheduler_service import SchedulerService
+from app.api.dependencies import get_crm_service, get_scheduler_service
 from sqlalchemy.exc import IntegrityError
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/", response_model=ClientResponse)
 async def create_client(
     client_data: ClientCreate,
-    crm_service: CRMService = Depends(get_crm_service)
+    crm_service: CRMService = Depends(get_crm_service),
+    scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
-    """Create a new client."""
+    """Create a new client and automatically create follow-up tasks."""
     try:
         created = await crm_service.create_client(client_data)
-        create_followup_tasks_task.delay(created.id)
+        
+        # Create follow-up tasks synchronously
+        try:
+            tasks = await scheduler_service.create_followup_tasks(created.id)
+            logger.info(f"Created {len(tasks)} follow-up tasks for client {created.id}")
+        except Exception as e:
+            # Log error but don't fail client creation if task creation fails
+            logger.error(f"Failed to create follow-up tasks for client {created.id}: {str(e)}", exc_info=True)
+        
         return created
     except IntegrityError as e:
         # Handle duplicate email (unique constraint) gracefully

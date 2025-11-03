@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Task } from '@/lib/types/task.types';
 import { useUpdateTask } from '@/lib/hooks/mutations/useUpdateTask';
+import { useClient } from '@/lib/hooks/queries/useClients';
 import { useToast } from '@/lib/hooks/ui/useToast';
 import {
   DropdownMenu,
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/Button';
 import { TaskRescheduleDialog } from '@/components/tasks/TaskRescheduleDialog';
+import { EmailPreviewModal } from '@/components/emails/EmailPreviewModal';
 import { MoreVertical, Calendar, CheckCircle, XCircle, SkipForward, Mail } from 'lucide-react';
 
 interface TaskActionsMenuProps {
@@ -23,6 +25,11 @@ export function TaskActionsMenu({ task }: TaskActionsMenuProps) {
   const { toast } = useToast();
   const updateTask = useUpdateTask();
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  // Fetch client data eagerly if email can be sent (to reduce delay when user clicks)
+  const { data: client } = useClient(task.client_id, { 
+    enabled: !task.email_sent_id || emailModalOpen 
+  });
 
   const handleStatusChange = async (status: 'completed' | 'skipped' | 'cancelled') => {
     try {
@@ -41,6 +48,18 @@ export function TaskActionsMenu({ task }: TaskActionsMenuProps) {
         variant: "destructive",
       });
     }
+  };
+
+  const handleSendEmail = () => {
+    if (!client) {
+      toast({
+        title: "Loading client data",
+        description: "Please wait a moment and try again.",
+      });
+      setEmailModalOpen(true); // Still open to trigger client fetch
+      return;
+    }
+    setEmailModalOpen(true);
   };
 
   return (
@@ -79,7 +98,7 @@ export function TaskActionsMenu({ task }: TaskActionsMenuProps) {
               {!task.email_sent_id && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSendEmail}>
                     <Mail className="h-4 w-4 mr-2" />
                     Send Email
                   </DropdownMenuItem>
@@ -95,6 +114,17 @@ export function TaskActionsMenu({ task }: TaskActionsMenuProps) {
         open={rescheduleOpen}
         onOpenChange={setRescheduleOpen}
       />
+
+      {client && (
+        <EmailPreviewModal
+          open={emailModalOpen}
+          onOpenChange={setEmailModalOpen}
+          clientId={client.id}
+          clientEmail={client.email}
+          clientName={client.name}
+          taskId={task.id}
+        />
+      )}
     </>
   );
 }

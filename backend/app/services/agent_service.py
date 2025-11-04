@@ -81,11 +81,19 @@ class AgentService:
     async def login_google(self, google_token: str) -> TokenResponse:
         """Login or register with Google OAuth."""
         # Verify Google token
-        google_info = verify_google_token(google_token)
+        try:
+            google_info = verify_google_token(google_token)
+        except ValueError as e:
+            # Configuration error
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(e)
+            )
+        
         if not google_info:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid Google token"
+                detail="Invalid Google token. Please ensure the token is valid and the backend GOOGLE_CLIENT_ID matches the frontend NEXT_PUBLIC_GOOGLE_CLIENT_ID."
             )
 
         # Try to find existing agent by google_sub or email

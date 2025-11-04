@@ -6,6 +6,9 @@ from google.auth.transport import requests
 from google.oauth2 import id_token
 from app.config import settings
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def verify_google_token(token: str) -> Optional[dict]:
@@ -17,6 +20,7 @@ def verify_google_token(token: str) -> Optional[dict]:
         None if verification fails
     """
     if not settings.GOOGLE_CLIENT_ID or settings.GOOGLE_CLIENT_ID == "":
+        logger.error("GOOGLE_CLIENT_ID is not configured in backend .env file")
         raise ValueError("GOOGLE_CLIENT_ID is not configured. Google OAuth is not available.")
     
     try:
@@ -27,7 +31,8 @@ def verify_google_token(token: str) -> Optional[dict]:
         )
 
         # Verify the token was issued by Google
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+        if idinfo.get('iss') not in ['accounts.google.com', 'https://accounts.google.com']:
+            logger.warning(f"Invalid token issuer: {idinfo.get('iss')}")
             return None
 
         return {
@@ -36,6 +41,10 @@ def verify_google_token(token: str) -> Optional[dict]:
             'name': idinfo.get('name', idinfo['email'].split('@')[0]),
             'picture': idinfo.get('picture')
         }
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"Google token verification failed: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error during Google token verification: {str(e)}")
         return None
 

@@ -1,14 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
 import { ROUTES } from '@/lib/constants/routes';
+import { useAuthStore } from '@/store/useAuthStore';
 import { 
   LayoutDashboard, 
   Users, 
   CheckSquare, 
-  Mail
+  Mail,
+  User,
+  LogOut
 } from 'lucide-react';
 
 const navigation = [
@@ -20,6 +23,13 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { agent, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   return (
     <aside className="hidden w-64 border-r bg-white md:flex md:flex-col">
@@ -49,6 +59,38 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="border-t p-4 space-y-2">
+        <Link
+          href="/profile"
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            pathname === '/profile'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+          )}
+        >
+          <User className="h-5 w-5" />
+          Profile
+        </Link>
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-red-600 hover:bg-red-50"
+        >
+          <LogOut className="h-5 w-5" />
+          Logout
+        </button>
+        {agent && (
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground px-3 py-1 truncate">
+              {agent.name}
+            </p>
+            <p className="text-xs text-muted-foreground px-3 py-1 truncate">
+              {agent.email}
+            </p>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

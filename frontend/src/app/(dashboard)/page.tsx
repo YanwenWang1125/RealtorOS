@@ -15,7 +15,7 @@ import { formatDateTime } from '@/lib/utils/format';
 
 export default function DashboardPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const {
     data: stats,
@@ -37,7 +37,12 @@ export default function DashboardPage() {
     refetchIntervalInBackground: false
   });
 
-  // Update last updated timestamp
+  // Initialize lastUpdated on mount (client-side only)
+  useEffect(() => {
+    setLastUpdated(new Date());
+  }, []);
+
+  // Update last updated timestamp when stats are fetched
   useEffect(() => {
     if (stats) {
       setLastUpdated(new Date());
@@ -58,9 +63,11 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Last updated: {formatDateTime(lastUpdated)}
-          </p>
+          {lastUpdated && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Last updated: {formatDateTime(lastUpdated)}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-4">

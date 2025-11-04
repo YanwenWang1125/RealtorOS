@@ -7,11 +7,12 @@ for development and testing purposes.
 
 import asyncio
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from app.db import postgresql
 from app.models.client import Client
 from app.models.task import Task
 from app.models.email_log import EmailLog
+from app.models.agent import Agent
 from app.constants.followup_schedules import FOLLOWUP_SCHEDULE
 
 
@@ -159,6 +160,28 @@ async def seed_database():
     
     async with postgresql.SessionLocal() as session:
         try:
+            # Ensure system agent exists
+            stmt = select(Agent).where(Agent.email == "system@realtoros.com")
+            result = await session.execute(stmt)
+            system_agent = result.scalar_one_or_none()
+            
+            if not system_agent:
+                system_agent = Agent(
+                    email="system@realtoros.com",
+                    name="System Agent",
+                    auth_provider="email",
+                    is_active=True
+                )
+                session.add(system_agent)
+                await session.commit()
+                await session.refresh(system_agent)
+                print("Created system agent...")
+            else:
+                print("System agent already exists...")
+            
+            # Get agent_id for clients (use system agent)
+            agent_id = system_agent.id
+            
             # Clear existing data (using proper SQLAlchemy syntax)
             await session.execute(delete(EmailLog))
             await session.execute(delete(Task))
@@ -170,7 +193,7 @@ async def seed_database():
             # Insert clients
             client_ids = []
             for client_data in demo_clients:
-                client = Client(**client_data)
+                client = Client(**client_data, agent_id=agent_id)
                 session.add(client)
                 await session.flush()  # Flush to get the ID
                 client_ids.append(client.id)
@@ -186,6 +209,7 @@ async def seed_database():
 
                     task = Task(
                         client_id=client_id,
+                        agent_id=agent_id,
                         followup_type=followup_type,
                         scheduled_for=scheduled_date,
                         status="pending",

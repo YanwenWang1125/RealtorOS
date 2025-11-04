@@ -38,7 +38,20 @@ async def google_login(
     agent_service: AgentService = Depends(get_agent_service)
 ):
     """Login or register with Google OAuth."""
-    return await agent_service.login_google(request.credential)
+    try:
+        return await agent_service.login_google(request.credential)
+    except HTTPException as e:
+        # Re-raise HTTP exceptions as-is
+        raise e
+    except Exception as e:
+        # Log unexpected errors
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected error in Google login: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during Google authentication: {str(e)}"
+        )
 
 
 @router.get("/me", response_model=AgentResponse)

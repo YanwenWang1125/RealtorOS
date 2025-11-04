@@ -15,18 +15,34 @@ class DashboardService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_dashboard_stats(self) -> DashboardStats:
+    async def get_dashboard_stats(self, agent_id: int) -> DashboardStats:
         from datetime import datetime, timedelta, timezone
         
-        total_clients = await self._scalar(select(func.count(Client.id)).where(Client.is_deleted == False))  # noqa: E712
+        total_clients = await self._scalar(
+            select(func.count(Client.id)).where(
+                Client.agent_id == agent_id,
+                Client.is_deleted == False  # noqa: E712
+            )
+        )
         active_clients = await self._scalar(
             select(func.count(Client.id)).where(
+                Client.agent_id == agent_id,
                 Client.is_deleted == False,  # noqa: E712
                 Client.stage.in_(["lead", "negotiating", "under_contract"])
             )
         )
-        pending_tasks = await self._scalar(select(func.count(Task.id)).where(Task.status == "pending"))
-        completed_tasks = await self._scalar(select(func.count(Task.id)).where(Task.status == "completed"))
+        pending_tasks = await self._scalar(
+            select(func.count(Task.id)).where(
+                Task.agent_id == agent_id,
+                Task.status == "pending"
+            )
+        )
+        completed_tasks = await self._scalar(
+            select(func.count(Task.id)).where(
+                Task.agent_id == agent_id,
+                Task.status == "completed"
+            )
+        )
         
         # Emails sent today (timezone-aware UTC)
         now = datetime.now(timezone.utc)
@@ -34,6 +50,7 @@ class DashboardService:
         today_end = today_start + timedelta(days=1)
         emails_sent_today = await self._scalar(
             select(func.count(EmailLog.id)).where(
+                EmailLog.agent_id == agent_id,
                 EmailLog.status == "sent",
                 EmailLog.created_at >= today_start,
                 EmailLog.created_at < today_end
@@ -44,15 +61,31 @@ class DashboardService:
         week_start = today_start - timedelta(days=today_start.weekday())
         emails_sent_this_week = await self._scalar(
             select(func.count(EmailLog.id)).where(
+                EmailLog.agent_id == agent_id,
                 EmailLog.status == "sent",
                 EmailLog.created_at >= week_start
             )
         )
         
         # Open rate and click rate
-        total_emails = await self._scalar(select(func.count(EmailLog.id)).where(EmailLog.status.in_(["sent", "delivered", "opened", "clicked"])))
-        opened_emails = await self._scalar(select(func.count(EmailLog.id)).where(EmailLog.status == "opened"))
-        clicked_emails = await self._scalar(select(func.count(EmailLog.id)).where(EmailLog.status == "clicked"))
+        total_emails = await self._scalar(
+            select(func.count(EmailLog.id)).where(
+                EmailLog.agent_id == agent_id,
+                EmailLog.status.in_(["sent", "delivered", "opened", "clicked"])
+            )
+        )
+        opened_emails = await self._scalar(
+            select(func.count(EmailLog.id)).where(
+                EmailLog.agent_id == agent_id,
+                EmailLog.status == "opened"
+            )
+        )
+        clicked_emails = await self._scalar(
+            select(func.count(EmailLog.id)).where(
+                EmailLog.agent_id == agent_id,
+                EmailLog.status == "clicked"
+            )
+        )
         
         open_rate = (opened_emails or 0) / (total_emails or 1) * 100 if total_emails else 0.0
         click_rate = (clicked_emails or 0) / (total_emails or 1) * 100 if total_emails else 0.0
@@ -60,12 +93,14 @@ class DashboardService:
         # Conversion rate (leads that became closed)
         total_leads = await self._scalar(
             select(func.count(Client.id)).where(
+                Client.agent_id == agent_id,
                 Client.stage == "lead",
                 Client.is_deleted == False  # noqa: E712
             )
         )
         closed_deals = await self._scalar(
             select(func.count(Client.id)).where(
+                Client.agent_id == agent_id,
                 Client.stage == "closed",
                 Client.is_deleted == False  # noqa: E712
             )
@@ -84,7 +119,7 @@ class DashboardService:
             conversion_rate=round(conversion_rate, 2)
         )
 
-    async def get_recent_activity(self, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_recent_activity(self, agent_id: int, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent activity feed with client information."""
         from app.models.client import Client
         
@@ -92,6 +127,7 @@ class DashboardService:
         stmt = (
             select(EmailLog, Client.name)
             .join(Client, EmailLog.client_id == Client.id)
+            .where(EmailLog.agent_id == agent_id)
             .order_by(EmailLog.created_at.desc())
             .limit(limit)
         )

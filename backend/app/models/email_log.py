@@ -25,8 +25,11 @@ class EmailLog(Base):
     __tablename__ = "email_logs"
 
     id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    from_name = Column(String(200), nullable=True)  # Store agent name at send time
+    from_email = Column(String(255), nullable=True)  # Store agent email at send time
     to_email = Column(String(255), nullable=False)
     subject = Column(String(200), nullable=False)
     body = Column(Text, nullable=False)

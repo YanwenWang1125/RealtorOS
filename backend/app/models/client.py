@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     JSON,
     Index,
+    ForeignKey,
 )
 from app.db.postgresql import Base
 
@@ -25,6 +26,7 @@ class Client(Base):
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False, index=True)
     name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False, index=True)
     phone = Column(String(20), nullable=True)
@@ -42,3 +44,4 @@ class Client(Base):
 # Composite indexes
 Index("ix_clients_stage_is_deleted", Client.stage, Client.is_deleted)
 Index("ix_clients_email_is_deleted", Client.email, Client.is_deleted)
+Index("ix_clients_agent_stage", Client.agent_id, Client.stage)

@@ -38,6 +38,7 @@ class ClientUpdate(BaseModel):
 class ClientResponse(ClientBase):
     """Schema for client API responses."""
     id: int
+    agent_id: int
     created_at: datetime
     updated_at: datetime
     last_contacted: Optional[datetime] = None

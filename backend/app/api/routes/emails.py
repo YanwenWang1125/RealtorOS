@@ -14,7 +14,8 @@ from app.services.ai_agent import AIAgent
 from app.services.email_service import EmailService
 from app.services.crm_service import CRMService
 from app.services.scheduler_service import SchedulerService
-from app.api.dependencies import get_ai_agent, get_email_service, get_crm_service, get_scheduler_service
+from app.api.dependencies import get_ai_agent, get_email_service, get_crm_service, get_scheduler_service, get_current_agent
+from app.models.agent import Agent
 from app.utils.webhook_security import verify_sendgrid_signature
 from app.config import settings
 from app.utils.logger import get_logger
@@ -42,14 +43,16 @@ async def list_emails(
     limit: int = Query(10, ge=1, le=100),
     client_id: Optional[int] = Query(None),
     status: Optional[str] = None,
+    agent: Agent = Depends(get_current_agent),
     email_service: EmailService = Depends(get_email_service)
 ):
     """List email history with pagination and filtering."""
-    return await email_service.list_emails(page=page, limit=limit, client_id=client_id, status=status)
+    return await email_service.list_emails(agent.id, page=page, limit=limit, client_id=client_id, status=status)
 
 @router.post("/preview")
 async def preview_email(
     request: EmailPreviewRequest,
+    agent: Agent = Depends(get_current_agent),
     ai_agent: AIAgent = Depends(get_ai_agent),
     crm_service: CRMService = Depends(get_crm_service),
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
@@ -59,36 +62,48 @@ async def preview_email(
     from app.models.client import Client
     from app.models.task import Task
     
-    # Get client and task
-    client_stmt = select(Client).where(Client.id == request.client_id, Client.is_deleted == False)  # noqa: E712
+    # Get client and task (verify they belong to agent)
+    client_stmt = select(Client).where(
+        Client.id == request.client_id,
+        Client.agent_id == agent.id,
+        Client.is_deleted == False  # noqa: E712
+    )
     client_result = await crm_service.session.execute(client_stmt)
     client = client_result.scalar_one_or_none()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    task_stmt = select(Task).where(Task.id == request.task_id)
+    task_stmt = select(Task).where(Task.id == request.task_id, Task.agent_id == agent.id)
     task_result = await scheduler_service.session.execute(task_stmt)
     task = task_result.scalar_one_or_none()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
     # Generate preview using AI agent
-    preview = await ai_agent.generate_email_preview(client, task, request.agent_instructions)
+    preview = await ai_agent.generate_email_preview(client, task, agent, request.agent_instructions)
     return preview
 
 @router.post("/send")
 async def send_email(
     request: EmailSendRequest,
+    agent: Agent = Depends(get_current_agent),
     email_service: EmailService = Depends(get_email_service),
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
     """Generate and send an email, then mark the associated task as completed."""
     from datetime import datetime, timezone
-    from sqlalchemy import update
+    from sqlalchemy import select, update
     from app.models.task import Task
     
+    # Verify task belongs to agent
+    task_stmt = select(Task).where(Task.id == request.task_id, Task.agent_id == agent.id)
+    task_result = await scheduler_service.session.execute(task_stmt)
+    task = task_result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
     # Send the email
-    email_response = await email_service.send_email(request)
+    email_response = await email_service.send_email(request, agent)
     
     # If email was sent successfully, update the task to completed
     if email_response.status == "sent" and request.task_id:
@@ -116,10 +131,11 @@ async def send_email(
 @router.get("/{email_id}", response_model=EmailResponse)
 async def get_email(
     email_id: int,
+    agent: Agent = Depends(get_current_agent),
     email_service: EmailService = Depends(get_email_service)
 ):
     """Get a specific email by ID."""
-    email = await email_service.get_email(email_id)
+    email = await email_service.get_email(email_id, agent.id)
     if not email:
         raise HTTPException(status_code=404, detail="Email not found")
     return email

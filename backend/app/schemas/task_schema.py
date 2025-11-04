@@ -31,6 +31,7 @@ class TaskUpdate(BaseModel):
 class TaskResponse(TaskBase):
     """Schema for task API responses."""
     id: int
+    agent_id: int
     status: str
     created_at: datetime
     updated_at: datetime

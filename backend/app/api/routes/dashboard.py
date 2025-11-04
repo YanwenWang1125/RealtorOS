@@ -8,21 +8,24 @@ in the RealtorOS CRM system.
 from fastapi import APIRouter, Depends
 from app.schemas.dashboard_schema import DashboardStats
 from app.services.dashboard_service import DashboardService
-from app.api.dependencies import get_dashboard_service
+from app.api.dependencies import get_dashboard_service, get_current_agent
+from app.models.agent import Agent
 
 router = APIRouter()
 
 @router.get("/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
+    agent: Agent = Depends(get_current_agent),
     dashboard_service: DashboardService = Depends(get_dashboard_service)
 ):
     """Get dashboard statistics and KPIs."""
-    return await dashboard_service.get_dashboard_stats()
+    return await dashboard_service.get_dashboard_stats(agent.id)
 
 @router.get("/recent-activity")
 async def get_recent_activity(
     limit: int = 10,
+    agent: Agent = Depends(get_current_agent),
     dashboard_service: DashboardService = Depends(get_dashboard_service)
 ):
     """Get recent activity feed."""
-    return await dashboard_service.get_recent_activity(limit=limit)
+    return await dashboard_service.get_recent_activity(agent.id, limit=limit)

@@ -10,6 +10,7 @@ import logging
 from typing import Dict, Optional
 from app.models.client import Client
 from app.models.task import Task
+from app.models.agent import Agent
 from app.config import settings
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
@@ -29,6 +30,7 @@ class AIAgent:
         self, 
         client: Client, 
         task: Task, 
+        agent: Agent,
         agent_instructions: Optional[str] = None
     ) -> str:
         """
@@ -69,6 +71,26 @@ class AIAgent:
             if custom_info:
                 prompt_parts.append(f"Additional Information: {', '.join(custom_info)}")
         
+        prompt_parts.append("")
+        prompt_parts.append("=== AGENT INFORMATION ===")
+        prompt_parts.append(f"Agent Name: {agent.name}")
+        prompt_parts.append(f"Agent Title: {agent.title or 'Real Estate Agent'}")
+        prompt_parts.append(f"Agent Company: {agent.company or ''}")
+        prompt_parts.append(f"Agent Phone: {agent.phone or ''}")
+        prompt_parts.append(f"Agent Email: {agent.email}")
+        prompt_parts.append("")
+        prompt_parts.append("IMPORTANT: Sign the email with the agent's name and details. Use a professional signature like:")
+        prompt_parts.append("")
+        prompt_parts.append("Best regards,")
+        prompt_parts.append(f"{agent.name}")
+        prompt_parts.append(f"{agent.title or 'Real Estate Agent'}")
+        if agent.company:
+            prompt_parts.append(f"{agent.company}")
+        if agent.phone:
+            prompt_parts.append(f"Phone: {agent.phone}")
+        prompt_parts.append(f"Email: {agent.email}")
+        prompt_parts.append("")
+        prompt_parts.append("DO NOT use placeholders like [Your Name] or [Your Company]. Use the actual agent information provided above.")
         prompt_parts.append("")
         prompt_parts.append("=== FOLLOW-UP TYPE ===")
         
@@ -262,6 +284,7 @@ class AIAgent:
         self,
         client: Client,
         task: Task,
+        agent: Agent,
         agent_instructions: Optional[str] = None
     ) -> Dict[str, str]:
         """
@@ -279,7 +302,7 @@ class AIAgent:
         
         try:
             # Build the prompt
-            prompt = self._build_prompt(client, task, agent_instructions)
+            prompt = self._build_prompt(client, task, agent, agent_instructions)
             
             # Call OpenAI API
             try:
@@ -336,6 +359,7 @@ class AIAgent:
         self,
         client: Client,
         task: Task,
+        agent: Agent,
         agent_instructions: Optional[str] = None
     ) -> Dict[str, str]:
         """
@@ -355,7 +379,7 @@ class AIAgent:
         
         try:
             # Build the prompt
-            prompt = self._build_prompt(client, task, agent_instructions)
+            prompt = self._build_prompt(client, task, agent, agent_instructions)
             
             # Call OpenAI API with slightly reduced tokens for faster preview
             try:

@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy import text
 from app.db.postgresql import Base
 # Import all models so they register with Base.metadata
-from app.models import client, task, email_log  # noqa: F401
+from app.models import client, task, email_log, agent  # noqa: F401
 
 @pytest.fixture(scope="session")
 def event_loop():

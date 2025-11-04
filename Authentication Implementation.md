@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ```
 
 ---
-
+ 
 ### Step 1.2: Update Environment Variables
 
 Add to `backend/.env`:

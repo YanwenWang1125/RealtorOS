@@ -14,10 +14,11 @@ class CRMService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_client(self, client_data: ClientCreate) -> ClientResponse:
+    async def create_client(self, client_data: ClientCreate, agent_id: int) -> ClientResponse:
         # Normalize email to avoid case-related duplicates
         normalized_email = client_data.email.strip().lower()
         client = Client(
+            agent_id=agent_id,
             name=client_data.name,
             email=normalized_email,
             phone=client_data.phone,
@@ -32,17 +33,24 @@ class CRMService:
         await self.session.refresh(client)
         return ClientResponse.model_validate(client.__dict__, from_attributes=True)
 
-    async def get_client(self, client_id: int) -> Optional[ClientResponse]:
-        stmt = select(Client).where(Client.id == client_id, Client.is_deleted == False)  # noqa: E712
+    async def get_client(self, client_id: int, agent_id: int) -> Optional[ClientResponse]:
+        stmt = select(Client).where(
+            Client.id == client_id,
+            Client.agent_id == agent_id,
+            Client.is_deleted == False  # noqa: E712
+        )
         result = await self.session.execute(stmt)
         client = result.scalar_one_or_none()
         if client is None:
             return None
         return ClientResponse.model_validate(client.__dict__, from_attributes=True)
 
-    async def list_clients(self, page: int = 1, limit: int = 10, stage: Optional[str] = None) -> List[ClientResponse]:
+    async def list_clients(self, agent_id: int, page: int = 1, limit: int = 10, stage: Optional[str] = None) -> List[ClientResponse]:
         offset = (page - 1) * limit
-        stmt = select(Client).where(Client.is_deleted == False)  # noqa: E712
+        stmt = select(Client).where(
+            Client.agent_id == agent_id,
+            Client.is_deleted == False  # noqa: E712
+        )
         if stage:
             stmt = stmt.where(Client.stage == stage)
         stmt = stmt.offset(offset).limit(limit)
@@ -50,9 +58,9 @@ class CRMService:
         clients = result.scalars().all()
         return [ClientResponse.model_validate(c.__dict__, from_attributes=True) for c in clients]
 
-    async def update_client(self, client_id: int, client_data: ClientUpdate) -> Optional[ClientResponse]:
+    async def update_client(self, client_id: int, client_data: ClientUpdate, agent_id: int) -> Optional[ClientResponse]:
         # First check if client exists and is not deleted
-        existing_client = await self.get_client(client_id)
+        existing_client = await self.get_client(client_id, agent_id)
         if existing_client is None:
             return None
         
@@ -61,19 +69,27 @@ class CRMService:
             return existing_client
         stmt = (
             update(Client)
-            .where(Client.id == client_id, Client.is_deleted == False)  # noqa: E712
+            .where(
+                Client.id == client_id,
+                Client.agent_id == agent_id,
+                Client.is_deleted == False  # noqa: E712
+            )
             .values(**update_data)
             .execution_options(synchronize_session="fetch")
         )
         await self.session.execute(stmt)
         await self.session.commit()
-        return await self.get_client(client_id)
+        return await self.get_client(client_id, agent_id)
 
-    async def delete_client(self, client_id: int) -> bool:
+    async def delete_client(self, client_id: int, agent_id: int) -> bool:
         # Only delete if client exists and is not already deleted
         stmt = (
             update(Client)
-            .where(Client.id == client_id, Client.is_deleted == False)  # noqa: E712
+            .where(
+                Client.id == client_id,
+                Client.agent_id == agent_id,
+                Client.is_deleted == False  # noqa: E712
+            )
             .values(is_deleted=True)
             .execution_options(synchronize_session="fetch")
         )
@@ -81,8 +97,11 @@ class CRMService:
         await self.session.commit()
         return result.rowcount > 0
 
-    async def get_client_tasks(self, client_id: int) -> List[Dict[str, Any]]:
-        stmt = select(Task).where(Task.client_id == client_id)
+    async def get_client_tasks(self, client_id: int, agent_id: int) -> List[Dict[str, Any]]:
+        stmt = select(Task).where(
+            Task.client_id == client_id,
+            Task.agent_id == agent_id
+        )
         result = await self.session.execute(stmt)
         tasks = result.scalars().all()
         return [

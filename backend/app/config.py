@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     SENDGRID_FROM_NAME: str = Field(description="Default sender name")
     SENDGRID_WEBHOOK_VERIFICATION_KEY: Optional[str] = Field(default=None, description="SendGrid webhook ECDSA public key for signature verification (optional in development)")
     
+    # Google OAuth - Optional (can be set later for Google Sign-In)
+    GOOGLE_CLIENT_ID: Optional[str] = Field(default="", description="Google OAuth Client ID (optional)")
+    GOOGLE_CLIENT_SECRET: Optional[str] = Field(default="", description="Google OAuth Client Secret (optional)")
+    
     # Logging - Required
     LOG_LEVEL: str = Field(description="Logging level (DEBUG/INFO/WARNING/ERROR)")
     
@@ -95,7 +99,7 @@ try:
 except Exception as e:
     raise ValueError(
         f"Failed to load configuration from .env file: {e}\n"
-        f"Please ensure all required fields are set in {env_path}\n"
+        f"Please ensure all required fields are set in your .env file\n"
         f"You can copy .env.example to .env as a starting point."
     ) from e
 

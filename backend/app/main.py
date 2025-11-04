@@ -8,7 +8,7 @@ and configuration for the RealtorOS CRM system.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api.routes import clients, tasks, emails, dashboard
+from app.api.routes import clients, tasks, emails, dashboard, agents
 from app.utils.logger import setup_logging
 from contextlib import asynccontextmanager
 from app.db.postgresql import init_db, close_db
@@ -42,6 +42,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(clients.router, prefix="/api/clients", tags=["clients"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(emails.router, prefix="/api/emails", tags=["emails"])

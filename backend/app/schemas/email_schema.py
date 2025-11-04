@@ -27,8 +27,11 @@ class EmailSendRequest(BaseModel):
 class EmailResponse(BaseModel):
     """Schema for email API responses."""
     id: int
+    agent_id: int
     task_id: int
     client_id: int
+    from_name: Optional[str] = None
+    from_email: Optional[str] = None
     to_email: EmailStr
     subject: str
     body: str

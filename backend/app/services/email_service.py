@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.email_log import EmailLog
+from app.models.agent import Agent
 from app.schemas.email_schema import EmailSendRequest, EmailResponse
 from app.config import settings
 from sendgrid import SendGridAPIClient
@@ -23,17 +24,20 @@ class EmailService:
         self.from_email = settings.SENDGRID_FROM_EMAIL
         self.from_name = settings.SENDGRID_FROM_NAME
 
-    async def send_email(self, email_data: EmailSendRequest) -> EmailResponse:
+    async def send_email(self, email_data: EmailSendRequest, agent: Agent) -> EmailResponse:
         email_log = await self.log_email(
             task_id=email_data.task_id,
             client_id=email_data.client_id,
+            agent_id=agent.id,
             to_email=email_data.to_email,
             subject=email_data.subject,
             body=email_data.body,
+            from_name=agent.name,
+            from_email=agent.email,
         )
 
         message = Mail(
-            from_email=(self.from_email, self.from_name),
+            from_email=(agent.email, agent.name),
             to_emails=email_data.to_email,
             subject=email_data.subject,
             html_content=email_data.body,
@@ -58,9 +62,9 @@ class EmailService:
             return None
         return EmailResponse.model_validate(email.__dict__, from_attributes=True)
 
-    async def list_emails(self, page: int = 1, limit: int = 10, client_id: Optional[int] = None, status: Optional[str] = None) -> List[EmailResponse]:
+    async def list_emails(self, agent_id: int, page: int = 1, limit: int = 10, client_id: Optional[int] = None, status: Optional[str] = None) -> List[EmailResponse]:
         offset = (page - 1) * limit
-        stmt = select(EmailLog)
+        stmt = select(EmailLog).where(EmailLog.agent_id == agent_id)
         if client_id:
             stmt = stmt.where(EmailLog.client_id == client_id)
         if status:
@@ -70,13 +74,24 @@ class EmailService:
         emails = result.scalars().all()
         return [EmailResponse.model_validate(e.__dict__, from_attributes=True) for e in emails]
 
-    async def log_email(self, task_id: int, client_id: int, to_email: str, subject: str, body: str) -> EmailLog:
+    async def get_email(self, email_id: int, agent_id: int) -> Optional[EmailResponse]:
+        stmt = select(EmailLog).where(EmailLog.id == email_id, EmailLog.agent_id == agent_id)
+        result = await self.session.execute(stmt)
+        email = result.scalar_one_or_none()
+        if email is None:
+            return None
+        return EmailResponse.model_validate(email.__dict__, from_attributes=True)
+
+    async def log_email(self, task_id: int, client_id: int, agent_id: int, to_email: str, subject: str, body: str, from_name: str, from_email: str) -> EmailLog:
         email = EmailLog(
             task_id=task_id,
             client_id=client_id,
+            agent_id=agent_id,
             to_email=to_email,
             subject=subject,
             body=body,
+            from_name=from_name,
+            from_email=from_email,
             status="queued",
         )
         self.session.add(email)

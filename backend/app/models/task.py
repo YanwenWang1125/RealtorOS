@@ -24,6 +24,7 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     email_sent_id = Column(Integer, ForeignKey("email_logs.id"), nullable=True)
     followup_type = Column(String(50), nullable=False)

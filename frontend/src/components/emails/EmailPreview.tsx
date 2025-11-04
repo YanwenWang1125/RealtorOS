@@ -8,9 +8,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Task } from '@/lib/types/task'
-import { Client } from '@/lib/types/client'
-import { Email } from '@/lib/types/email'
+import { Task } from '@/lib/types/task.types'
+import { Client } from '@/lib/types/client.types'
+import { Email } from '@/lib/types/email.types'
 
 interface EmailPreviewProps {
   task?: Task

@@ -8,8 +8,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Task } from '@/lib/types/task'
-import { Client } from '@/lib/types/client'
+import { Task } from '@/lib/types/task.types'
+import { Client } from '@/lib/types/client.types'
 
 interface TaskCardProps {
   task: Task

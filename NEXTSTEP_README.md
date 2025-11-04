@@ -526,8 +526,8 @@ This section outlines the complete implementation plan for adding multi-agent su
 **Tasks:**
 1. Update seed script (`backend/app/db/seed.py`):
    - Create demo agent with known credentials:
-     - DEMO_Email: `demo@realtoros.com`
-     - DEMO_Password: `demo123`
+     - Email: `demo@realtoros.com`
+     - Password: `demo123`
      - Full profile: name, title, company, etc.
    - Create sample clients/tasks/emails for demo agent
 

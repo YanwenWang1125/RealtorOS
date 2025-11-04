@@ -11,93 +11,85 @@
 
 @layer base {
   :root {
+    /* Base / Background: White #FFFFFF */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Text / Neutral Dark: Darker for better readability - #2A2A2A */
+    --foreground: 0 0% 16%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 16%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 0 0% 16%;
+    /* Primary Colour: Navy Blue #1A3E63 */
+    --primary: 211 58% 25%;
+    --primary-foreground: 0 0% 100%;
+    /* Secondary Colour: Teal/Blue-Green #00A8A8 */
+    --secondary: 180 100% 33%;
+    --secondary-foreground: 0 0% 100%;
+    /* Background Light Neutral: Soft Grey #F5F7FA */
+    --muted: 210 20% 97%;
+    --muted-foreground: 0 0% 45%;
+    /* Accent Colour: Mustard Yellow #D9A441 */
+    --accent: 41 68% 55%;
+    --accent-foreground: 0 0% 29%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 211 58% 25%;
     --radius: 0.5rem;
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 214, 219, 220;
+    --foreground-rgb: 42, 42, 42;
+    --background-start-rgb: 245, 247, 250;
     --background-end-rgb: 255, 255, 255;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
-
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    /* Dark mode background - slightly lighter navy */
+    --background: 211 58% 10%;
+    --foreground: 0 0% 95%;
+    --card: 211 58% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 211 58% 10%;
+    --popover-foreground: 0 0% 95%;
+    /* Primary (Navy) - lighter for dark mode */
+    --primary: 211 58% 60%;
+    --primary-foreground: 0 0% 100%;
+    /* Secondary (Teal) - lighter for dark mode */
+    --secondary: 180 100% 45%;
+    --secondary-foreground: 0 0% 100%;
+    /* Muted - dark navy */
+    --muted: 211 58% 15%;
+    --muted-foreground: 0 0% 75%;
+    /* Accent (Mustard) - lighter for dark mode */
+    --accent: 41 68% 65%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 211 58% 20%;
+    --input: 211 58% 20%;
+    --ring: 211 58% 60%;
   }
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
 }
 
 /* Custom component styles */
 .btn-primary {
-  @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+  @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-4 rounded-lg transition-colors;
 }
 
 .btn-secondary {
-  @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors;
+  @apply bg-muted hover:bg-muted/80 text-foreground font-medium py-2 px-4 rounded-lg transition-colors;
 }
 
 .card {
-  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+  @apply bg-white rounded-lg shadow-sm border border-border p-6;
 }
 
 .input-field {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  @apply w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
 }
 
 /* React Big Calendar custom styles */
@@ -169,4 +161,119 @@ button[data-selected="true"]:hover {
 
 .ProseMirror em {
   font-style: italic;
+}
+
+/* Landing Page Animations */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-breathe {
+  animation: breathe 8s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -74,9 +74,9 @@ export default function EmailPreview({ task, client, email, onClose }: EmailPrev
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Email Preview</h2>
+          <h2 className="text-lg font-semibold text-foreground">Email Preview</h2>
           {client && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-600">
               To: {client.name} ({client.email})
             </p>
           )}
@@ -102,16 +102,16 @@ export default function EmailPreview({ task, client, email, onClose }: EmailPrev
       </div>
 
       {/* Email Content */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="bg-muted px-4 py-3 border-b border-border">
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-700">Subject:</span>
-            <span className="text-sm text-gray-900">{emailContent.subject || 'No subject'}</span>
+            <span className="text-sm font-medium text-foreground">Subject:</span>
+            <span className="text-sm text-foreground">{emailContent.subject || 'No subject'}</span>
           </div>
         </div>
         <div className="p-4">
           <div className="prose max-w-none">
-            <pre className="whitespace-pre-wrap text-sm text-gray-900 font-sans">
+            <pre className="whitespace-pre-wrap text-sm text-foreground font-sans">
               {emailContent.body || 'No content generated yet. Click "Generate Email" to create content.'}
             </pre>
           </div>
@@ -120,40 +120,40 @@ export default function EmailPreview({ task, client, email, onClose }: EmailPrev
 
       {/* Email Metadata */}
       {email && (
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Email Details</h3>
+        <div className="bg-muted rounded-lg p-4">
+          <h3 className="text-sm font-medium text-foreground mb-2">Email Details</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">Status:</span>
+              <span className="text-muted-foreground">Status:</span>
               <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
                 email.status === 'sent' ? 'bg-green-100 text-green-800' :
-                email.status === 'delivered' ? 'bg-blue-100 text-blue-800' :
+                email.status === 'delivered' ? 'bg-primary/10 text-primary' :
                 email.status === 'opened' ? 'bg-purple-100 text-purple-800' :
                 email.status === 'clicked' ? 'bg-indigo-100 text-indigo-800' :
                 email.status === 'failed' ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'
+                'bg-muted text-muted-foreground'
               }`}>
                 {email.status.toUpperCase()}
               </span>
             </div>
             <div>
-              <span className="text-gray-500">Sent:</span>
-              <span className="ml-2 text-gray-900">
+              <span className="text-muted-foreground">Sent:</span>
+              <span className="ml-2 text-foreground">
                 {email.sent_at ? new Date(email.sent_at).toLocaleString() : 'Not sent'}
               </span>
             </div>
             {email.opened_at && (
               <div>
-                <span className="text-gray-500">Opened:</span>
-                <span className="ml-2 text-gray-900">
+                <span className="text-muted-foreground">Opened:</span>
+                <span className="ml-2 text-foreground">
                   {new Date(email.opened_at).toLocaleString()}
                 </span>
               </div>
             )}
             {email.clicked_at && (
               <div>
-                <span className="text-gray-500">Clicked:</span>
-                <span className="ml-2 text-gray-900">
+                <span className="text-muted-foreground">Clicked:</span>
+                <span className="ml-2 text-foreground">
                   {new Date(email.clicked_at).toLocaleString()}
                 </span>
               </div>
@@ -163,7 +163,7 @@ export default function EmailPreview({ task, client, email, onClose }: EmailPrev
       )}
 
       {/* Actions */}
-      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+      <div className="flex justify-end space-x-3 pt-4 border-t border-border">
         <button
           onClick={onClose}
           className="btn-secondary"

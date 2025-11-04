@@ -95,7 +95,7 @@ export default function ProfilePage() {
               <label htmlFor="email" className="text-sm font-medium">
                 Email (cannot be changed)
               </label>
-              <Input id="email" value={agent?.email || ''} disabled className="bg-gray-100" />
+              <Input id="email" value={agent?.email || ''} disabled className="bg-muted" />
             </div>
 
             <div className="space-y-2">

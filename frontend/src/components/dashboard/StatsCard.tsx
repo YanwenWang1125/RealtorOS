@@ -18,7 +18,7 @@ export function StatsCard({
   title,
   value,
   icon: Icon,
-  color = 'text-blue-600',
+  color = 'text-primary',
   link,
   description
 }: StatsCardProps) {

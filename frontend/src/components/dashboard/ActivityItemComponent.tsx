@@ -20,7 +20,7 @@ const activityIcons = {
 const activityColors = {
   email_sent: 'text-purple-600 bg-purple-100',
   email: 'text-purple-600 bg-purple-100',
-  client_created: 'text-blue-600 bg-blue-100',
+  client_created: 'text-primary bg-primary/10',
   task_completed: 'text-green-600 bg-green-100',
   email_opened: 'text-teal-600 bg-teal-100',
   email_clicked: 'text-indigo-600 bg-indigo-100'
@@ -28,7 +28,7 @@ const activityColors = {
 
 export function ActivityItemComponent({ activity }: ActivityItemComponentProps) {
   const Icon = activityIcons[activity.type as keyof typeof activityIcons] || Mail;
-  const colorClass = activityColors[activity.type as keyof typeof activityColors] || 'text-gray-600 bg-gray-100';
+  const colorClass = activityColors[activity.type as keyof typeof activityColors] || 'text-muted-foreground bg-muted';
 
   // Determine link based on activity type
   let link = '#';

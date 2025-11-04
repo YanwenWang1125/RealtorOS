@@ -25,7 +25,7 @@ export function StatsGrid({ stats, isLoading }: StatsGridProps) {
       value: stats.total_clients,
       icon: Users,
       link: '/clients',
-      color: 'text-blue-600'
+      color: 'text-primary'
     },
     {
       title: 'Active Clients',

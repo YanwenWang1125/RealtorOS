@@ -117,8 +117,8 @@ export function ClientAutocomplete({
               setOpen(false);
             }}
             className={cn(
-              'flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent',
-              numericValue === null && 'bg-accent/30'
+              'flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm hover:bg-secondary/10',
+              numericValue === null && 'bg-secondary/10'
             )}
           >
             <Check
@@ -149,8 +149,8 @@ export function ClientAutocomplete({
                   setOpen(false);
                 }}
                 className={cn(
-                  'flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent',
-                  numericValue === client.id && 'bg-accent/30'
+                  'flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm hover:bg-secondary/10',
+                  numericValue === client.id && 'bg-secondary/10'
                 )}
               >
                 <Check

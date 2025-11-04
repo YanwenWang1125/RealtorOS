@@ -21,8 +21,8 @@ export default function DashboardStats() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="card animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+            <div className="h-8 bg-muted rounded w-1/3"></div>
           </div>
         ))}
       </div>
@@ -114,9 +114,9 @@ export default function DashboardStats() {
                 <span className="text-2xl">{stat.icon}</span>
               </div>
               <div className="ml-4 flex-1">
-                <p className="text-sm font-medium text-gray-500">{stat.name}</p>
+                <p className="text-sm font-medium text-muted-foreground">{stat.name}</p>
                 <div className="flex items-baseline">
-                  <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                  <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
                   <p className={`ml-2 text-sm font-medium ${
                     stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
                   }`}>
@@ -132,32 +132,32 @@ export default function DashboardStats() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+            <button className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted rounded-lg border border-border hover:border-primary transition-colors">
               <div className="flex items-center space-x-3">
                 <span className="text-lg">👤</span>
                 <div>
                   <p className="font-medium">Add New Client</p>
-                  <p className="text-gray-500">Create a new client profile</p>
+                  <p className="text-muted-foreground">Create a new client profile</p>
                 </div>
               </div>
             </button>
-            <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+            <button className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted rounded-lg border border-border hover:border-primary transition-colors">
               <div className="flex items-center space-x-3">
                 <span className="text-lg">✅</span>
                 <div>
                   <p className="font-medium">Create Task</p>
-                  <p className="text-gray-500">Schedule a new follow-up</p>
+                  <p className="text-muted-foreground">Schedule a new follow-up</p>
                 </div>
               </div>
             </button>
-            <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+            <button className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted rounded-lg border border-border hover:border-primary transition-colors">
               <div className="flex items-center space-x-3">
                 <span className="text-lg">📧</span>
                 <div>
                   <p className="font-medium">Send Email</p>
-                  <p className="text-gray-500">Send a manual email</p>
+                  <p className="text-muted-foreground">Send a manual email</p>
                 </div>
               </div>
             </button>
@@ -165,34 +165,34 @@ export default function DashboardStats() {
         </div>
 
         <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
           <div className="space-y-3">
             <div className="flex items-center space-x-3 text-sm">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <div>
-                <p className="text-gray-900">New client added: John Smith</p>
-                <p className="text-gray-500">2 hours ago</p>
+                <p className="text-foreground">New client added: John Smith</p>
+                <p className="text-muted-foreground">2 hours ago</p>
               </div>
             </div>
             <div className="flex items-center space-x-3 text-sm">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
               <div>
-                <p className="text-gray-900">Follow-up email sent</p>
-                <p className="text-gray-500">4 hours ago</p>
+                <p className="text-foreground">Follow-up email sent</p>
+                <p className="text-muted-foreground">4 hours ago</p>
               </div>
             </div>
             <div className="flex items-center space-x-3 text-sm">
               <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
               <div>
-                <p className="text-gray-900">Task completed: Week 1 follow-up</p>
-                <p className="text-gray-500">1 day ago</p>
+                <p className="text-foreground">Task completed: Week 1 follow-up</p>
+                <p className="text-muted-foreground">1 day ago</p>
               </div>
             </div>
             <div className="flex items-center space-x-3 text-sm">
               <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
               <div>
-                <p className="text-gray-900">Email opened by client</p>
-                <p className="text-gray-500">2 days ago</p>
+                <p className="text-foreground">Email opened by client</p>
+                <p className="text-muted-foreground">2 days ago</p>
               </div>
             </div>
           </div>

@@ -150,7 +150,7 @@ export function TimePicker({
                     "w-10 py-1 rounded-md text-sm transition-colors duration-150",
                     h === hour
                       ? "bg-primary text-primary-foreground"
-                      : "hover:bg-accent hover:text-accent-foreground"
+                      : "hover:bg-secondary/10 hover:text-secondary"
                   )}
                 >
                   {h}
@@ -184,7 +184,7 @@ export function TimePicker({
                     "w-10 py-1 rounded-md text-sm transition-colors duration-150",
                     m === minute
                       ? "bg-primary text-primary-foreground"
-                      : "hover:bg-accent hover:text-accent-foreground"
+                      : "hover:bg-secondary/10 hover:text-secondary"
                   )}
                 >
                   {m}

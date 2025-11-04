@@ -14,7 +14,7 @@ export function QuickActions() {
       description: 'Add a new client to your CRM',
       icon: UserPlus,
       onClick: () => router.push('/clients/new'),
-      color: 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+      color: 'bg-primary/10 text-primary hover:bg-primary/20'
     },
     {
       label: 'Send Email',

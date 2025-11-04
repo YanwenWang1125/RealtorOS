@@ -54,7 +54,7 @@ export function EmailEngagementTimeline({ email }: EmailEngagementTimelineProps)
                       'w-10 h-10 rounded-full flex items-center justify-center',
                       step.completed
                         ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-400'
+                        : 'bg-muted text-muted-foreground'
                     )}
                   >
                     <Icon className="h-5 w-5" />
@@ -67,7 +67,7 @@ export function EmailEngagementTimeline({ email }: EmailEngagementTimelineProps)
                         'flex-1 h-1 mx-2',
                         step.completed && steps[index + 1].completed
                           ? 'bg-green-500'
-                          : 'bg-gray-200'
+                          : 'bg-muted'
                       )}
                     />
                   )}

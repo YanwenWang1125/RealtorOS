@@ -132,7 +132,7 @@ export function EmailTable({
               return (
                 <TableRow
                   key={email.id}
-                  className="cursor-pointer hover:bg-muted/50"
+                  className="cursor-pointer hover:bg-secondary/10 hover:text-secondary transition-colors"
                   onClick={() => router.push(`/emails/${email.id}`)}
                 >
                   <TableCell className="font-medium">

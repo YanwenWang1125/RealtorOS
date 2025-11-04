@@ -24,11 +24,11 @@ export default function TaskCard({ task, client }: TaskCardProps) {
       case 'completed':
         return 'bg-green-100 text-green-800'
       case 'skipped':
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-muted text-muted-foreground'
       case 'cancelled':
         return 'bg-red-100 text-red-800'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-muted text-muted-foreground'
     }
   }
 
@@ -41,19 +41,19 @@ export default function TaskCard({ task, client }: TaskCardProps) {
       case 'low':
         return 'bg-green-100 text-green-800'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-muted text-muted-foreground'
     }
   }
 
   const isOverdue = new Date(task.scheduled_for) < new Date() && task.status === 'pending'
 
   return (
-    <div className={`card hover:shadow-md transition-shadow ${isOverdue ? 'border-l-4 border-red-500' : ''}`}>
+    <div className={`card hover:bg-secondary/10 hover:text-secondary hover:shadow-md transition-all ${isOverdue ? 'border-l-4 border-red-500' : ''}`}>
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">{task.followup_type}</h3>
+          <h3 className="text-lg font-semibold text-foreground">{task.followup_type}</h3>
           {client && (
-            <p className="text-sm text-gray-600">{client.name}</p>
+            <p className="text-sm text-muted-foreground">{client.name}</p>
           )}
         </div>
         <div className="flex space-x-2">
@@ -67,7 +67,7 @@ export default function TaskCard({ task, client }: TaskCardProps) {
       </div>
 
       <div className="space-y-2 mb-4">
-        <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm text-muted-foreground">
           <span className="w-4 h-4 mr-2">📅</span>
           <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
             {new Date(task.scheduled_for).toLocaleString()}
@@ -75,17 +75,17 @@ export default function TaskCard({ task, client }: TaskCardProps) {
           </span>
         </div>
         {task.notes && (
-          <div className="flex items-start text-sm text-gray-600">
+          <div className="flex items-start text-sm text-muted-foreground">
             <span className="w-4 h-4 mr-2 mt-0.5">📝</span>
             <span className="line-clamp-2">{task.notes}</span>
           </div>
         )}
       </div>
 
-      <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+      <div className="flex justify-between items-center pt-4 border-t border-border">
         <Link
           href={`/tasks/${task.id}`}
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          className="text-primary hover:text-primary/80 text-sm font-medium"
         >
           View Details
         </Link>
@@ -95,12 +95,12 @@ export default function TaskCard({ task, client }: TaskCardProps) {
               <button className="text-green-600 hover:text-green-800 text-sm">
                 Complete
               </button>
-              <button className="text-gray-600 hover:text-gray-800 text-sm">
+              <button className="text-muted-foreground hover:text-foreground text-sm">
                 Skip
               </button>
             </>
           )}
-          <button className="text-gray-600 hover:text-gray-800 text-sm">
+          <button className="text-muted-foreground hover:text-foreground text-sm">
             Reschedule
           </button>
         </div>

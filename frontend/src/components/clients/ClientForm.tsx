@@ -23,6 +23,17 @@ export default function ClientForm({
   onCancel, 
   isSubmitting = false 
 }: ClientFormProps) {
+  // Format current datetime for datetime-local input (YYYY-MM-DDTHH:mm)
+  const getCurrentDateTimeLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [formData, setFormData] = useState({
     name: client?.name || '',
     email: client?.email || '',
@@ -30,7 +41,10 @@ export default function ClientForm({
     property_address: client?.property_address || '',
     property_type: client?.property_type || 'residential',
     stage: client?.stage || 'lead',
-    notes: client?.notes || ''
+    notes: client?.notes || '',
+    last_contacted: client?.last_contacted 
+      ? new Date(client.last_contacted).toISOString().slice(0, 16)
+      : getCurrentDateTimeLocal()
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -38,15 +52,13 @@ export default function ClientForm({
   const propertyTypes = [
     { value: 'residential', label: 'Residential' },
     { value: 'commercial', label: 'Commercial' },
-    { value: 'land', label: 'Land' },
+    { value: 'rental', label: 'Rental' },
     { value: 'other', label: 'Other' }
   ]
 
   const stages = [
     { value: 'lead', label: 'Lead' },
-    { value: 'negotiating', label: 'Negotiating' },
-    { value: 'under_contract', label: 'Under Contract' },
-    { value: 'closed', label: 'Closed' },
+    { value: 'archived', label: 'Archived' },
     { value: 'lost', label: 'Lost' }
   ]
 
@@ -105,7 +117,7 @@ export default function ClientForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
             Full Name *
           </label>
           <input
@@ -123,7 +135,7 @@ export default function ClientForm({
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
             Email Address *
           </label>
           <input
@@ -143,7 +155,7 @@ export default function ClientForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-2">
             Phone Number
           </label>
           <input
@@ -158,7 +170,7 @@ export default function ClientForm({
         </div>
 
         <div>
-          <label htmlFor="property_type" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="property_type" className="block text-sm font-medium text-foreground mb-2">
             Property Type *
           </label>
           <select
@@ -181,7 +193,7 @@ export default function ClientForm({
       </div>
 
       <div>
-        <label htmlFor="property_address" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="property_address" className="block text-sm font-medium text-foreground mb-2">
           Property Address *
         </label>
         <input
@@ -200,7 +212,7 @@ export default function ClientForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="stage" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="stage" className="block text-sm font-medium text-foreground mb-2">
             Current Stage *
           </label>
           <select
@@ -222,21 +234,22 @@ export default function ClientForm({
         </div>
 
         <div>
-          <label htmlFor="last_contacted" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="last_contacted" className="block text-sm font-medium text-foreground mb-2">
             Last Contacted
           </label>
           <input
             type="datetime-local"
             id="last_contacted"
             name="last_contacted"
+            value={formData.last_contacted}
+            onChange={handleChange}
             className="input-field"
-            placeholder="Optional"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-2">
           Notes
         </label>
         <textarea
@@ -250,7 +263,7 @@ export default function ClientForm({
         />
       </div>
 
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+      <div className="flex justify-end space-x-3 pt-6 border-t border-border">
         <button
           type="button"
           onClick={onCancel}

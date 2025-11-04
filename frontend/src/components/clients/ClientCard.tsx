@@ -15,7 +15,7 @@ export function ClientCard({ client }: ClientCardProps) {
 
   return (
     <Card
-      className="hover:shadow-md transition-shadow cursor-pointer"
+      className="hover:bg-secondary/10 hover:text-secondary hover:shadow-md transition-all cursor-pointer"
       onClick={() => router.push(`/clients/${client.id}`)}
     >
       <CardContent className="pt-6">

@@ -165,11 +165,11 @@ function Calendar({
                         date={date}
                         className={cn(
                           "h-9 w-full flex items-center justify-center text-sm rounded-md",
-                          "hover:bg-accent focus:bg-accent focus:outline-none",
+                          "hover:bg-secondary/10 focus:bg-secondary/10 focus:outline-none",
                           // 选中状态：确保文字颜色清晰可见
                           isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground !text-primary-foreground",
                           // 今天但未选中
-                          isToday && !isSelected && "bg-accent text-accent-foreground",
+                          isToday && !isSelected && "bg-secondary/10 text-secondary",
                           // 禁用状态
                           isDisabled && "text-muted-foreground opacity-50 cursor-not-allowed",
                           // 其他月份

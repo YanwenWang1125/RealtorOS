@@ -31,11 +31,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Login to RealtorOS</CardTitle>
-          <CardDescription>Sign in with Google or your email</CardDescription>
+          <CardTitle className="text-2xl text-center">Login to RealtorOS</CardTitle>
+          <CardDescription className="text-center">Sign in with Google or your email</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Google Sign-In */}
@@ -58,7 +58,7 @@ export default function LoginPage() {
           {/* Email/Password Form */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
+              <label htmlFor="email" className="text-sm font-medium text-center block">
                 Email
               </label>
               <Input
@@ -71,7 +71,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
+              <label htmlFor="password" className="text-sm font-medium text-center block">
                 Password
               </label>
               <Input

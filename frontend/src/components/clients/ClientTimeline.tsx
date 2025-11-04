@@ -32,14 +32,14 @@ export function ClientTimeline({ tasks }: { tasks: Task[] }) {
                 "w-3 h-3 rounded-full flex-shrink-0 mt-1",
                 task.status === 'completed' ? "bg-green-500" :
                 task.status === 'pending' ? "bg-yellow-500" :
-                "bg-gray-300"
+                "bg-muted"
               )}
             />
             {index < sortedTasks.length - 1 && (
               <div className="w-px h-full bg-border mt-1 min-h-[40px]" />
             )}
           </div>
-          <Card className="flex-1">
+          <Card className="flex-1 hover:bg-secondary/10 hover:text-secondary transition-all cursor-pointer">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>

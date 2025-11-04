@@ -50,13 +50,13 @@ export default function Modal({ title, children, onClose, size = 'md' }: ModalPr
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className={`relative w-full ${sizeClasses[size]} transform overflow-hidden rounded-lg bg-white shadow-xl transition-all`}>
+        <div className={`relative w-full ${sizeClasses[size]} transform overflow-hidden rounded-lg bg-card shadow-xl transition-all`}>
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <span className="sr-only">Close</span>
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

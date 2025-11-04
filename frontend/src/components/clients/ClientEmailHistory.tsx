@@ -20,7 +20,7 @@ export function ClientEmailHistory({ emails }: { emails: Email[] }) {
   return (
     <div className="space-y-2">
       {emails.map(email => (
-        <Card key={email.id} className="hover:bg-accent cursor-pointer transition-colors">
+        <Card key={email.id} className="hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-all">
           <CardContent className="pt-6">
             <div className="flex justify-between items-start">
               <div className="flex-1">

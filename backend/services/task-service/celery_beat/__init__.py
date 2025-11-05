@@ -1,0 +1,4 @@
+"""
+Celery Beat entry point.
+"""
+

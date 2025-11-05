@@ -1,0 +1,30 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copy package files first (for better caching)
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies)
+# This will be used when volumes override the directory
+RUN npm ci
+
+# Expose port
+EXPOSE 3000
+
+# Set environment variables (can be overridden in docker-compose)
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create a startup script in a location that won't be overridden by volumes
+RUN echo '#!/bin/sh\n\
+cd /app\n\
+if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/next" ]; then\n\
+  echo "Installing dependencies..."\n\
+  npm ci\n\
+fi\n\
+exec npm run dev' > /usr/local/bin/start-dev.sh && chmod +x /usr/local/bin/start-dev.sh
+
+# Start development server
+CMD ["/usr/local/bin/start-dev.sh"]
+

@@ -7,14 +7,14 @@
 
 'use client'
 
-import { useClients } from '@/hooks/useClients'
-import { useTasks } from '@/hooks/useTasks'
-import { useEmails } from '@/hooks/useEmails'
+import { useClients } from '@/lib/hooks/queries/useClients'
+import { useTasks } from '@/lib/hooks/queries/useTasks'
+import { useEmails } from '@/lib/hooks/queries/useEmails'
 
 export default function DashboardStats() {
-  const { clients, loading: clientsLoading } = useClients()
-  const { tasks, loading: tasksLoading } = useTasks()
-  const { emails, loading: emailsLoading } = useEmails()
+  const { data: clients = [], isLoading: clientsLoading } = useClients({ limit: 1000 })
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks({ limit: 1000 })
+  const { data: emails = [], isLoading: emailsLoading } = useEmails({ limit: 1000 })
 
   if (clientsLoading || tasksLoading || emailsLoading) {
     return (
@@ -29,21 +29,21 @@ export default function DashboardStats() {
     )
   }
 
-  const totalClients = clients?.length || 0
-  const activeClients = clients?.filter(c => c.stage !== 'closed' && c.stage !== 'lost').length || 0
-  const pendingTasks = tasks?.filter(t => t.status === 'pending').length || 0
-  const completedTasks = tasks?.filter(t => t.status === 'completed').length || 0
-  const totalEmails = emails?.length || 0
-  const emailsToday = emails?.filter(e => {
+  const totalClients = clients.length || 0
+  const activeClients = clients.filter(c => c.stage !== 'closed' && c.stage !== 'lost').length || 0
+  const pendingTasks = tasks.filter(t => t.status === 'pending').length || 0
+  const completedTasks = tasks.filter(t => t.status === 'completed').length || 0
+  const totalEmails = emails.length || 0
+  const emailsToday = emails.filter(e => {
     const today = new Date()
     const emailDate = new Date(e.created_at)
     return emailDate.toDateString() === today.toDateString()
   }).length || 0
 
   const openRate = totalEmails > 0 ? 
-    Math.round((emails?.filter(e => e.opened_at).length || 0) / totalEmails * 100) : 0
+    Math.round((emails.filter(e => e.opened_at).length || 0) / totalEmails * 100) : 0
   const clickRate = totalEmails > 0 ? 
-    Math.round((emails?.filter(e => e.clicked_at).length || 0) / totalEmails * 100) : 0
+    Math.round((emails.filter(e => e.clicked_at).length || 0) / totalEmails * 100) : 0
 
   const stats = [
     {

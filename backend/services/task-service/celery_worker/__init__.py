@@ -1,0 +1,4 @@
+"""
+Celery Worker entry point.
+"""
+

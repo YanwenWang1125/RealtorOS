@@ -7,22 +7,22 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import { useTasks } from '@/hooks/useTasks'
-import TaskCard from '@/components/TaskCard'
-import TaskForm from '@/components/TaskForm'
-import Modal from '@/components/Modal'
+import { useTasks } from '@/lib/hooks/queries/useTasks'
+import TaskCard from '@/components/tasks/TaskCard'
+import TaskForm from '@/components/tasks/TaskForm'
+import Modal from '@/components/ui/Modal'
 
 export default function ClientTasksPage() {
   const params = useParams()
   const clientId = params.id as string
   
-  const { tasks, loading, error } = useTasks()
+  const { data: tasks = [], isLoading: loading, isError, error } = useTasks({ client_id: parseInt(clientId) })
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
   
-  const clientTasks = tasks?.filter(task => task.client_id === clientId) || []
+  const clientTasks = tasks.filter(task => task.client_id === parseInt(clientId))
   
   const filteredTasks = clientTasks.filter(task => {
     if (filterStatus === 'all') return true
@@ -30,7 +30,7 @@ export default function ClientTasksPage() {
   })
 
   if (loading) return <div>Loading tasks...</div>
-  if (error) return <div>Error loading tasks: {error.message}</div>
+  if (isError) return <div>Error loading tasks: {error?.message || 'Unknown error'}</div>
 
   return (
     <div className="space-y-6">
@@ -97,7 +97,7 @@ export default function ClientTasksPage() {
           onClose={() => setShowCreateModal(false)}
         >
           <TaskForm
-            clientId={clientId}
+            clientId={parseInt(clientId)}
             onSave={() => setShowCreateModal(false)}
             onCancel={() => setShowCreateModal(false)}
           />

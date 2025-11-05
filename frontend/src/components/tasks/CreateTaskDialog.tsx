@@ -49,12 +49,12 @@ export function CreateTaskDialog({ open, onOpenChange, defaultClientId }: Create
   const form = useForm<TaskCreateFormData>({
     resolver: zodResolver(taskCreateSchema),
     defaultValues: {
-      client_id: defaultClientId ?? null,
+      ...(defaultClientId && { client_id: defaultClientId }),
       followup_type: 'Custom',
       scheduled_for: new Date().toISOString(),
       priority: 'medium',
       notes: '',
-    },
+    } as Partial<TaskCreateFormData>,
     mode: 'onSubmit',
     reValidateMode: 'onChange',
   });

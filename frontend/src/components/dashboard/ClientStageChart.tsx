@@ -33,9 +33,12 @@ export function ClientStageChart({ stats, isLoading }: ClientStageChartProps) {
       stageCounts[client.stage] = (stageCounts[client.stage] || 0) + 1;
     });
 
+    const total = Object.values(stageCounts).reduce((sum, count) => sum + count, 0);
+
     return Object.entries(stageCounts).map(([stage, count]) => ({
       name: CLIENT_STAGE_LABELS[stage as keyof typeof CLIENT_STAGE_LABELS],
       value: count,
+      percent: total > 0 ? (count / total) * 100 : 0,
       stage
     }));
   }, [clients]);
@@ -66,7 +69,12 @@ export function ClientStageChart({ stats, isLoading }: ClientStageChartProps) {
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              // @ts-expect-error - recharts PieLabelRenderProps type definition is incomplete
+              // The label function receives the data entry which includes our custom 'percent' field
+              label={(entry: { name: string; percent: number }) => {
+                const percent = entry.percent || 0;
+                return `${entry.name}: ${percent.toFixed(0)}%`;
+              }}
               outerRadius={80}
               fill="#8884d8"
               dataKey="value"

@@ -32,7 +32,8 @@ function Calendar({
   const [value, setValue] = React.useState<CalendarDate | null>(() => {
     if (!selected) return null
     try {
-      return fromDate(selected, getLocalTimeZone())
+      const zonedDate = fromDate(selected, getLocalTimeZone())
+      return new CalendarDate(zonedDate.year, zonedDate.month, zonedDate.day)
     } catch {
       return null
     }
@@ -42,7 +43,8 @@ function Calendar({
   const [focusedDate, setFocusedDate] = React.useState<CalendarDate>(() => {
     if (selected) {
       try {
-        return fromDate(selected, getLocalTimeZone())
+        const zonedDate = fromDate(selected, getLocalTimeZone())
+        return new CalendarDate(zonedDate.year, zonedDate.month, zonedDate.day)
       } catch {
         return today(getLocalTimeZone())
       }
@@ -54,7 +56,8 @@ function Calendar({
   React.useEffect(() => {
     if (selected) {
       try {
-        const newValue = fromDate(selected, getLocalTimeZone())
+        const zonedDate = fromDate(selected, getLocalTimeZone())
+        const newValue = new CalendarDate(zonedDate.year, zonedDate.month, zonedDate.day)
         setValue(newValue)
         setFocusedDate(newValue)
       } catch {
@@ -87,12 +90,14 @@ function Calendar({
       <AriaCalendar
         value={value || undefined}
         onChange={handleChange}
+        // @ts-expect-error - react-aria-components CalendarProps may use isDisabled instead of isDateDisabled
         isDateDisabled={isDateDisabled}
         {...props}
       >
         {(state) => {
           // 使用 visibleRange 或 focusedDate，如果不存在则使用内部状态
-          const currentMonth = state.visibleRange?.start || state.focusedDate || focusedDate
+          // @ts-expect-error - react-aria-components CalendarRenderProps type may not include all properties
+          const currentMonth: CalendarDate = state.visibleRange?.start || state.focusedDate || focusedDate
           
           // 格式化月份和年份：转换为 Date 后格式化
           const jsDate = currentMonth.toDate(getLocalTimeZone())
@@ -109,9 +114,6 @@ function Calendar({
                   onPress={() => {
                     const newDate = focusedDate.subtract({ months: 1 })
                     setFocusedDate(newDate)
-                    if (state.setFocusedDate) {
-                      state.setFocusedDate(newDate)
-                    }
                   }}
                   className={cn(
                     buttonVariants({ variant: "outline" }),
@@ -128,9 +130,6 @@ function Calendar({
                   onPress={() => {
                     const newDate = focusedDate.add({ months: 1 })
                     setFocusedDate(newDate)
-                    if (state.setFocusedDate) {
-                      state.setFocusedDate(newDate)
-                    }
                   }}
                   className={cn(
                     buttonVariants({ variant: "outline" }),
@@ -156,8 +155,15 @@ function Calendar({
                     const isDisabled = isDateDisabled(date)
                     const isOutsideMonth = date.month !== currentMonth.month
 
+                    // 如果不需要显示外部日期，返回一个不可见的元素而不是null
                     if (!showOutsideDays && isOutsideMonth) {
-                      return null
+                      return (
+                        <CalendarCell
+                          date={date}
+                          className="hidden"
+                          aria-hidden="true"
+                        />
+                      )
                     }
 
                     return (

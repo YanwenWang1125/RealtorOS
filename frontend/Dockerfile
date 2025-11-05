@@ -1,30 +1,65 @@
-FROM node:18-alpine
+FROM node:20-slim AS base
 
-# Set working directory
+# Install dependencies only when needed
+FROM base AS deps
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including devDependencies for build)
+RUN npm ci
 
-# Copy source code
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Set environment variables for build
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_CRM_URL
+ARG NEXT_PUBLIC_TASK_URL
+ARG NEXT_PUBLIC_EMAIL_URL
+ARG NEXT_PUBLIC_ANALYTICS_URL
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_CRM_URL=$NEXT_PUBLIC_CRM_URL
+ENV NEXT_PUBLIC_TASK_URL=$NEXT_PUBLIC_TASK_URL
+ENV NEXT_PUBLIC_EMAIL_URL=$NEXT_PUBLIC_EMAIL_URL
+ENV NEXT_PUBLIC_ANALYTICS_URL=$NEXT_PUBLIC_ANALYTICS_URL
 
 # Build the application
 RUN npm run build
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
 
-# Change ownership of the app directory
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Change ownership
 RUN chown -R nextjs:nodejs /app
+
 USER nextjs
 
-# Expose port
+# Expose port (Azure Web App uses PORT environment variable)
 EXPOSE 3000
 
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

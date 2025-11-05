@@ -5,6 +5,6 @@
  * the RealtorOS frontend application.
  */
 
-export * from './client'
-export * from './task'
-export * from './email'
+export * from '../lib/types/client.types'
+export * from '../lib/types/task.types'
+export * from '../lib/types/email.types'

@@ -33,8 +33,8 @@ export function ClientEmailHistory({ emails }: { emails: Email[] }) {
                 <Badge className={EMAIL_STATUS_COLORS[email.status]}>
                   {EMAIL_STATUS_LABELS[email.status]}
                 </Badge>
-                {email.opened_at && <Eye className="h-4 w-4 text-green-500" title="Opened" />}
-                {email.clicked_at && <MousePointer className="h-4 w-4 text-purple-500" title="Clicked" />}
+                {email.opened_at && <Eye className="h-4 w-4 text-green-500" aria-label="Opened" />}
+                {email.clicked_at && <MousePointer className="h-4 w-4 text-purple-500" aria-label="Clicked" />}
               </div>
             </div>
           </CardContent>

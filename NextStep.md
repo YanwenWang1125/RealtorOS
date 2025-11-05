@@ -158,3 +158,22 @@ birthday celebration
 ---
 
 > 📅 **Next milestone:** Achieve P0–P2 completion to enable first production-ready MVP build.
+
+## 🎯 最终建议
+
+### 对于你的项目（RealtorOS）：
+
+**短期（现在）：**
+1. ✅ **保持共享数据库**（降低成本，简化开发）
+2. ✅ **实现服务间HTTP调用**（使用httpx，为未来做准备）
+3. ✅ **部署到Azure Container Apps**（支持未来扩展）
+
+**中期（6-12个月）：**
+1. 如果email-service负载高 → 独立数据库
+2. 如果task-service负载高 → 独立数据库
+3. 其他服务继续共享数据库
+
+**长期（规模扩大后）：**
+1. 所有服务独立数据库
+2. 实现事件驱动架构（Azure Service Bus）
+3. 添加API网关（Azure API Management）

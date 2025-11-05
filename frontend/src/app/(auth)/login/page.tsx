@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLoginEmail, useLoginGoogle } from '@/lib/hooks/mutations/useAuth';
 import { GoogleLogin } from '@react-oauth/google';
 import { Button } from '@/components/ui/Button';
@@ -8,11 +8,19 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import Link from 'next/link';
 
+// Disable static generation for this page since it uses Google OAuth
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
   const { mutate: loginEmail, isPending: isEmailPending } = useLoginEmail();
   const { mutate: loginGoogle } = useLoginGoogle();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleEmailLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +48,12 @@ export default function LoginPage() {
         <CardContent className="space-y-6">
           {/* Google Sign-In */}
           <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-            />
+            {isMounted && (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+              />
+            )}
           </div>
 
           <div className="relative">

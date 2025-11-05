@@ -210,11 +210,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8001  # Auth service
-      NEXT_PUBLIC_CRM_URL: http://localhost:8002
-      NEXT_PUBLIC_TASK_URL: http://localhost:8003
-      NEXT_PUBLIC_EMAIL_URL: http://localhost:8004
-      NEXT_PUBLIC_ANALYTICS_URL: http://localhost:8006
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001}
+      NEXT_PUBLIC_CRM_URL: ${NEXT_PUBLIC_CRM_URL:-http://localhost:8002}
+      NEXT_PUBLIC_TASK_URL: ${NEXT_PUBLIC_TASK_URL:-http://localhost:8003}
+      NEXT_PUBLIC_EMAIL_URL: ${NEXT_PUBLIC_EMAIL_URL:-http://localhost:8004}
+      NEXT_PUBLIC_ANALYTICS_URL: ${NEXT_PUBLIC_ANALYTICS_URL:-http://localhost:8006}
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     depends_on:
       - auth-service

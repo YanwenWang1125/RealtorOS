@@ -70,9 +70,14 @@ export function EmailPreviewModal({
       setBody(preview.body);
       setIsEditMode(false);
     } catch (error: any) {
+      console.error('Email preview error:', error);
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message ||
+                          error.message ||
+                          "AI service may be unavailable. Please try again.";
       toast({
         title: "Error generating email",
-        description: error.response?.data?.detail || "AI service may be unavailable. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       // Set fallback template on error

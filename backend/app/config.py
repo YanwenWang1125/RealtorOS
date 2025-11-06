@@ -42,11 +42,6 @@ class Settings(BaseSettings):
     # Database (PostgreSQL) - Required
     DATABASE_URL: str = Field(description="PostgreSQL database connection URL")
     
-    # Redis & Celery - Required
-    REDIS_URL: str = Field(description="Redis connection URL")
-    CELERY_BROKER_URL: str = Field(description="Celery broker URL")
-    CELERY_RESULT_BACKEND: str = Field(description="Celery result backend URL")
-    
     # OpenAI - Required for email generation
     OPENAI_API_KEY: str = Field(description="OpenAI API key (required for email generation)")
     OPENAI_MODEL: str = Field(description="OpenAI model to use")

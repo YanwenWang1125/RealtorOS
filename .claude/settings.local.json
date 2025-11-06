@@ -3,7 +3,9 @@
     "allow": [
       "Bash(NUL)",
       "Bash(test:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

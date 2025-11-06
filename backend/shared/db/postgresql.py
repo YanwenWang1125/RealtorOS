@@ -48,6 +48,21 @@ async def init_db() -> None:
         if not database_url:
             raise ValueError("DATABASE_URL environment variable is required")
         
+        # Check if DATABASE_URL contains an unresolved Key Vault reference
+        # This happens when Azure Container Apps doesn't resolve the reference properly
+        if database_url.startswith("keyvaultref:") or database_url.startswith("secretref:"):
+            raise ValueError(
+                f"DATABASE_URL contains an unresolved Azure Key Vault reference: {database_url}\n"
+                f"This indicates that the Azure Container App environment variable was not properly configured.\n"
+                f"The environment variable should reference a secret that points to Key Vault, not contain the reference directly.\n"
+                f"Please run the fix script: azure/deployment/fix-keyvault-references.ps1\n"
+                f"Or manually configure the secret reference using:\n"
+                f"  az containerapp secret set --name <app-name> --resource-group <rg> "
+                f"--secrets \"database-url=keyvaultref:<kv-name>,secretname:PostgreSQL-ConnectionString\"\n"
+                f"  az containerapp update --name <app-name> --resource-group <rg> "
+                f"--set-env-vars \"DATABASE_URL=secretref:database-url\""
+            )
+        
         # Convert URL to use async driver (asyncpg)
         async_url = _convert_to_async_url(database_url)
         engine = create_async_engine(

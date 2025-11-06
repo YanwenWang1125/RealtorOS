@@ -15,9 +15,12 @@ if str(backend_dir) not in sys.path:
 
 import pytest
 import pytest_asyncio
+import os
+import warnings
 from httpx import AsyncClient
 from app.main import app
 from app.db import postgresql
+from app.config import settings
 from sqlalchemy import delete
 from app.models.client import Client
 from app.models.task import Task
@@ -26,7 +29,35 @@ from app.models.agent import Agent
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session():
-    """Create a real database session for integration testing."""
+    """
+    Create a real database session for integration testing.
+    
+    ⚠️ WARNING: This fixture DELETES ALL DATA from the database before and after each test!
+    Make sure you're using a TEST database, not your production/development database.
+    
+    To use a separate test database, set TEST_DATABASE_URL in your .env file.
+    """
+    # Safety check: Warn if using production database
+    db_url = settings.DATABASE_URL.lower()
+    if any(keyword in db_url for keyword in ["production", "prod", "live"]):
+        pytest.fail(
+            "❌ SAFETY CHECK FAILED: Integration tests detected PRODUCTION database!\n"
+            "Integration tests DELETE ALL DATA. Use a TEST database instead.\n"
+            "Set TEST_DATABASE_URL in your .env file to use a separate test database."
+        )
+    
+    # Check if TEST_DATABASE_URL is set (recommended)
+    test_db_url = os.getenv("TEST_DATABASE_URL")
+    if not test_db_url:
+        warnings.warn(
+            "⚠️ WARNING: Integration tests are using your DEVELOPMENT database!\n"
+            "All data will be DELETED before and after each test.\n"
+            "To prevent this, set TEST_DATABASE_URL in your .env file.\n"
+            "Example: TEST_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/realtoros_test",
+            UserWarning,
+            stacklevel=2
+        )
+    
     await postgresql.init_db()
     if postgresql.SessionLocal is None:
         raise RuntimeError("Database not initialized. SessionLocal is None.")

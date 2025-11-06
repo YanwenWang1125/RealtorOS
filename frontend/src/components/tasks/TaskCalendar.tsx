@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Calendar as BigCalendar, dateFnsLocalizer } from 'react-big-calendar';
+import { Calendar as BigCalendar, dateFnsLocalizer, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { Task } from '@/lib/types/task.types';
@@ -28,6 +28,8 @@ interface TaskCalendarProps {
 
 export function TaskCalendar({ tasks, isLoading }: TaskCalendarProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<View>('month');
   // Backend enforces limit <= 100
   const { data: clients } = useClients({ limit: 100 });
 
@@ -94,7 +96,11 @@ export function TaskCalendar({ tasks, isLoading }: TaskCalendarProps) {
           eventPropGetter={eventStyleGetter}
           onSelectEvent={(event) => setSelectedTask(event.resource)}
           views={['month', 'week', 'day']}
-          defaultView="month"
+          view={currentView}
+          onView={setCurrentView}
+          date={currentDate}
+          onNavigate={setCurrentDate}
+          defaultDate={new Date()}
         />
       </div>
 

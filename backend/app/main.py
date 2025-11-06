@@ -12,6 +12,7 @@ from app.api.routes import clients, tasks, emails, dashboard, agents
 from app.utils.logger import setup_logging
 from contextlib import asynccontextmanager
 from app.db.postgresql import init_db, close_db
+from app.scheduler import start_scheduler, stop_scheduler, get_scheduler_status
 
 # Initialize structured logging using LOG_LEVEL from settings
 setup_logging()
@@ -21,8 +22,10 @@ async def lifespan(app: FastAPI):
     """Application lifespan context manager for startup and shutdown events."""
     # Startup
     await init_db()
+    start_scheduler()  # Start APScheduler
     yield
     # Shutdown
+    stop_scheduler()   # Stop APScheduler
     await close_db()
 
 app = FastAPI(
@@ -64,3 +67,8 @@ async def root():
 async def health_check():
     """Health check endpoint for monitoring."""
     return {"status": "healthy"}
+
+@app.get("/health/scheduler")
+async def scheduler_health():
+    """Scheduler health check endpoint for monitoring."""
+    return get_scheduler_status()

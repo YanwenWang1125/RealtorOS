@@ -21,183 +21,39 @@ services:
     networks:
       - realtoros-network
 
-  # Redis
-  redis:
-    image: redis:7.0-alpine
-    container_name: realtoros-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - realtoros-network
-
-  # Auth Service
-  auth-service:
+  # FastAPI Backend (with integrated APScheduler)
+  backend:
     build:
       context: ./backend
-      dockerfile: ./services/auth-service/Dockerfile
-    container_name: realtoros-auth-service
+      dockerfile: Dockerfile
+    container_name: realtoros-backend
     ports:
-      - "8001:8000"
+      - "8000:8000"
     environment:
+      # Database
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-      JWT_SECRET: ${SECRET_KEY:-your-secret-key-change-in-production}
-      JWT_ALGORITHM: ${ALGORITHM:-HS256}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      # Application
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-    depends_on:
-      - postgres
-    networks:
-      - realtoros-network
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
 
-  # CRM Service
-  crm-service:
-    build:
-      context: ./backend
-      dockerfile: ./services/crm-service/Dockerfile
-    container_name: realtoros-crm-service
-    ports:
-      - "8002:8000"
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-      JWT_SECRET: ${SECRET_KEY:-your-secret-key-change-in-production}
-      JWT_ALGORITHM: ${ALGORITHM:-HS256}
-      AUTH_SERVICE_URL: http://auth-service:8000
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-    depends_on:
-      - postgres
-      - auth-service
-    networks:
-      - realtoros-network
-
-  # Task Service
-  task-service:
-    build:
-      context: ./backend
-      dockerfile: ./services/task-service/Dockerfile
-    container_name: realtoros-task-service
-    ports:
-      - "8003:8000"
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-      JWT_SECRET: ${SECRET_KEY:-your-secret-key-change-in-production}
-      JWT_ALGORITHM: ${ALGORITHM:-HS256}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-    depends_on:
-      - postgres
-      - redis
-      - auth-service
-    networks:
-      - realtoros-network
-
-  # Task Service Celery Worker (DISABLED - not fully implemented)
-  # task-service-worker:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: ./services/task-service/Dockerfile.worker
-  #   container_name: realtoros-task-worker
-  #   environment:
-  #     DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-  #     REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-  #     CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-  #     CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
-  #     LOG_LEVEL: ${LOG_LEVEL:-INFO}
-  #   depends_on:
-  #     - postgres
-  #     - redis
-  #     - task-service
-  #   networks:
-  #     - realtoros-network
-
-  # Task Service Celery Beat (DISABLED - not fully implemented)
-  # task-service-beat:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: ./services/task-service/Dockerfile.beat
-  #   container_name: realtoros-task-beat
-  #   environment:
-  #     DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-  #     REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-  #     CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-  #     CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
-  #     LOG_LEVEL: ${LOG_LEVEL:-INFO}
-  #   depends_on:
-  #     - postgres
-  #     - redis
-  #     - task-service
-  #   networks:
-  #     - realtoros-network
-
-  # Email Service
-  email-service:
-    build:
-      context: ./backend
-      dockerfile: ./services/email-service/Dockerfile
-    container_name: realtoros-email-service
-    ports:
-      - "8004:8000"
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-      JWT_SECRET: ${SECRET_KEY:-your-secret-key-change-in-production}
-      JWT_ALGORITHM: ${ALGORITHM:-HS256}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
-      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL}
-      SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME}
+      # External APIs
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4}
-      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-500}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-    depends_on:
-      - postgres
-      - auth-service
-    networks:
-      - realtoros-network
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
 
-  # Webhook Service
-  webhook-service:
-    build:
-      context: ./backend
-      dockerfile: ./services/webhook-service/Dockerfile
-    container_name: realtoros-webhook-service
-    ports:
-      - "8005:8000"
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-      SENDGRID_WEBHOOK_VERIFICATION_KEY: ${SENDGRID_WEBHOOK_VERIFICATION_KEY:-}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-    depends_on:
-      - postgres
-    networks:
-      - realtoros-network
+      # Security
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
 
-  # Analytics Service
-  analytics-service:
-    build:
-      context: ./backend
-      dockerfile: ./services/analytics-service/Dockerfile
-    container_name: realtoros-analytics-service
-    ports:
-      - "8006:8000"
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/${POSTGRES_DB:-realtoros}}
-      JWT_SECRET: ${SECRET_KEY:-your-secret-key-change-in-production}
-      JWT_ALGORITHM: ${ALGORITHM:-HS256}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
+      # OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     depends_on:
       - postgres
-      - auth-service
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - realtoros-network
 
@@ -210,15 +66,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001}
-      NEXT_PUBLIC_CRM_URL: ${NEXT_PUBLIC_CRM_URL:-http://localhost:8002}
-      NEXT_PUBLIC_TASK_URL: ${NEXT_PUBLIC_TASK_URL:-http://localhost:8003}
-      NEXT_PUBLIC_EMAIL_URL: ${NEXT_PUBLIC_EMAIL_URL:-http://localhost:8004}
-      NEXT_PUBLIC_ANALYTICS_URL: ${NEXT_PUBLIC_ANALYTICS_URL:-http://localhost:8006}
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
-      - auth-service
-      - crm-service
+      - backend
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -228,7 +78,6 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
 
 networks:
   realtoros-network:

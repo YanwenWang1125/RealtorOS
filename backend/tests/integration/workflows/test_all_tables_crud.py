@@ -1146,7 +1146,7 @@ class TestEmailLogRead:
             subject="Status Test",
             body="Body"
         )
-        await services["email"].update_email_status(email_log.id, "sent", sendgrid_message_id="msg123")
+        await services["email"].update_email_status(email_log.id, "sent", ses_message_id="msg123")
         emails = await services["email"].list_emails(status="sent")
         assert len(emails) >= 1
         assert any(e.id == email_log.id for e in emails)
@@ -1202,7 +1202,7 @@ class TestEmailLogUpdate:
 
     @pytest.mark.asyncio
     async def test_e12_update_email_status_with_message_id(self, services, sample_client):
-        """Test 64: Update email status with SendGrid message ID."""
+        """Test 64: Update email status with SES message ID."""
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
@@ -1217,9 +1217,9 @@ class TestEmailLogUpdate:
             subject="Message ID Test",
             body="Body"
         )
-        await services["email"].update_email_status(email_log.id, "sent", sendgrid_message_id="sg-123456")
+        await services["email"].update_email_status(email_log.id, "sent", ses_message_id="ses-123456")
         updated = await services["email"].get_email(email_log.id)
-        assert updated.sendgrid_message_id == "sg-123456"
+        assert updated.ses_message_id == "ses-123456"
 
     @pytest.mark.asyncio
     async def test_e13_update_email_status_with_error(self, services, sample_client):
@@ -1293,7 +1293,7 @@ class TestEmailLogComplex:
             subject="Lifecycle Test",
             body="Body"
         )
-        await services["email"].update_email_status(email_log.id, "sent", sendgrid_message_id="lifecycle-123")
+        await services["email"].update_email_status(email_log.id, "sent", ses_message_id="lifecycle-123")
         updated = await services["email"].get_email(email_log.id)
         assert updated.status == "sent"
 

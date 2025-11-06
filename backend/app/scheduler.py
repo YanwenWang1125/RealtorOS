@@ -47,7 +47,7 @@ async def process_due_tasks_job():
     For each task, it:
     1. Fetches client and agent information
     2. Generates personalized email using AI
-    3. Sends email via SendGrid
+    3. Sends email via Amazon SES
     4. Marks task as completed
     """
     from app.db.postgresql import SessionLocal, init_db

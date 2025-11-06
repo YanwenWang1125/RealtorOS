@@ -215,6 +215,8 @@ class AIAgent:
                 subject = data.get("subject", "").strip()
                 body = data.get("body", "").strip()
                 
+                logger.debug(f"Successfully parsed JSON response - subject: {subject[:50]}..., body length: {len(body)}")
+                
                 # Validate that we got both subject and body
                 if not subject or not body:
                     logger.warning("JSON parsed but missing subject or body, falling back to text parsing")
@@ -298,33 +300,49 @@ class AIAgent:
         Returns:
             Dictionary with 'subject', 'body', and 'preview' keys
         """
-        logger.info(f"Generating email for client_id={client.id}, task_id={task.id}, followup_type={task.followup_type}")
+        logger.info(f"Generating email for client_id={client.id}, task_id={task.id}, followup_type={task.followup_type}, model={self.model}")
         
         try:
             # Build the prompt
             prompt = self._build_prompt(client, task, agent, agent_instructions)
+            logger.debug(f"Prompt length: {len(prompt)} characters")
             
             # Call OpenAI API
             try:
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
+                # Check if model supports JSON mode (gpt-3.5-turbo-1106+, gpt-4-turbo-preview+, gpt-4-0125-preview+, gpt-4o)
+                json_mode_models = ["gpt-3.5-turbo-1106", "gpt-4-turbo-preview", "gpt-4-0125-preview", "gpt-4o", "gpt-4o-mini"]
+                supports_json_mode = any(model_name in self.model.lower() for model_name in json_mode_models)
+                
+                # Build messages with JSON instruction if supported
+                system_message = "You are a professional real estate agent assistant. " \
+                               "You write personalized, professional follow-up emails that build relationships " \
+                               "and provide value to clients. Your tone is friendly, professional, and helpful, " \
+                               "never pushy or salesy."
+                
+                if supports_json_mode:
+                    system_message += " IMPORTANT: You must respond with valid JSON only, no markdown or code blocks."
+                
+                api_params = {
+                    "model": self.model,
+                    "messages": [
                         {
                             "role": "system",
-                            "content": "You are a professional real estate agent assistant. "
-                                     "You write personalized, professional follow-up emails that build relationships "
-                                     "and provide value to clients. Your tone is friendly, professional, and helpful, "
-                                     "never pushy or salesy."
+                            "content": system_message
                         },
                         {
                             "role": "user",
                             "content": prompt
                         }
                     ],
-                    max_tokens=self.max_tokens,
-                    temperature=0.7,  # Creative but focused
-                    response_format={"type": "json_object"}  # Request JSON format for better parsing
-                )
+                    "max_tokens": self.max_tokens,
+                    "temperature": 0.7
+                }
+                
+                # Only add response_format if model supports it
+                if supports_json_mode:
+                    api_params["response_format"] = {"type": "json_object"}
+                
+                response = await self.client.chat.completions.create(**api_params)
                 
                 # Parse the response
                 result = self._parse_openai_response(response)
@@ -334,8 +352,9 @@ class AIAgent:
                 
             except Exception as api_error:
                 error_msg = str(api_error)
+                error_type = type(api_error).__name__
                 logger.error(
-                    f"OpenAI API error for client_id={client.id}, task_id={task.id}: {error_msg}",
+                    f"OpenAI API error for client_id={client.id}, task_id={task.id}: {error_type}: {error_msg}",
                     exc_info=True
                 )
                 
@@ -344,6 +363,33 @@ class AIAgent:
                     logger.warning("OpenAI rate limit encountered. Consider implementing retry logic.")
                 elif "authentication" in error_msg.lower() or "401" in error_msg or "403" in error_msg:
                     logger.error("OpenAI authentication error. Check OPENAI_API_KEY configuration.")
+                elif "response_format" in error_msg.lower() or "json" in error_msg.lower():
+                    logger.warning(f"JSON mode not supported by model {self.model}. Retrying without JSON mode...")
+                    # Retry without JSON mode
+                    try:
+                        response = await self.client.chat.completions.create(
+                            model=self.model,
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": "You are a professional real estate agent assistant. "
+                                             "You write personalized, professional follow-up emails that build relationships "
+                                             "and provide value to clients. Your tone is friendly, professional, and helpful, "
+                                             "never pushy or salesy."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": prompt
+                                }
+                            ],
+                            max_tokens=self.max_tokens,
+                            temperature=0.7
+                        )
+                        result = self._parse_openai_response(response)
+                        logger.info(f"Successfully generated email (without JSON mode) for client_id={client.id}, task_id={task.id}")
+                        return result
+                    except Exception as retry_error:
+                        logger.error(f"Retry without JSON mode also failed: {retry_error}")
                 
                 # Return fallback email
                 return self._get_fallback_email(client, task)
@@ -375,33 +421,52 @@ class AIAgent:
         Returns:
             Dictionary with 'subject', 'body', and 'preview' keys
         """
-        logger.info(f"Generating email preview for client_id={client.id}, task_id={task.id}")
+        logger.info(f"Generating email preview for client_id={client.id}, task_id={task.id}, model={self.model}")
         
         try:
             # Build the prompt
             prompt = self._build_prompt(client, task, agent, agent_instructions)
+            logger.debug(f"Prompt length: {len(prompt)} characters")
             
             # Call OpenAI API with slightly reduced tokens for faster preview
             try:
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
+                # Check if model supports JSON mode
+                json_mode_models = ["gpt-3.5-turbo-1106", "gpt-4-turbo-preview", "gpt-4-0125-preview", "gpt-4o", "gpt-4o-mini"]
+                supports_json_mode = any(model_name in self.model.lower() for model_name in json_mode_models)
+                
+                # Build messages with JSON instruction if supported
+                system_message = "You are a professional real estate agent assistant. " \
+                               "You write personalized, professional follow-up emails that build relationships " \
+                               "and provide value to clients. Your tone is friendly, professional, and helpful, " \
+                               "never pushy or salesy."
+                
+                if supports_json_mode:
+                    system_message += " IMPORTANT: You must respond with valid JSON only, no markdown or code blocks."
+                
+                # Use at least 500 tokens for preview to ensure complete responses
+                preview_max_tokens = max(500, min(800, self.max_tokens))
+                
+                api_params = {
+                    "model": self.model,
+                    "messages": [
                         {
                             "role": "system",
-                            "content": "You are a professional real estate agent assistant. "
-                                     "You write personalized, professional follow-up emails that build relationships "
-                                     "and provide value to clients. Your tone is friendly, professional, and helpful, "
-                                     "never pushy or salesy."
+                            "content": system_message
                         },
                         {
                             "role": "user",
                             "content": prompt
                         }
                     ],
-                    max_tokens=min(300, self.max_tokens),  # Reduced for faster preview
-                    temperature=0.7,
-                    response_format={"type": "json_object"}
-                )
+                    "max_tokens": preview_max_tokens,
+                    "temperature": 0.7
+                }
+                
+                # Only add response_format if model supports it
+                if supports_json_mode:
+                    api_params["response_format"] = {"type": "json_object"}
+                
+                response = await self.client.chat.completions.create(**api_params)
                 
                 # Parse the response
                 result = self._parse_openai_response(response)
@@ -411,10 +476,41 @@ class AIAgent:
                 
             except Exception as api_error:
                 error_msg = str(api_error)
+                error_type = type(api_error).__name__
                 logger.error(
-                    f"OpenAI API error generating preview for client_id={client.id}, task_id={task.id}: {error_msg}",
+                    f"OpenAI API error generating preview for client_id={client.id}, task_id={task.id}: {error_type}: {error_msg}",
                     exc_info=True
                 )
+                
+                # Handle JSON mode errors
+                if "response_format" in error_msg.lower() or "json" in error_msg.lower():
+                    logger.warning(f"JSON mode not supported by model {self.model}. Retrying without JSON mode...")
+                    try:
+                        # Retry without JSON mode
+                        response = await self.client.chat.completions.create(
+                            model=self.model,
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": "You are a professional real estate agent assistant. "
+                                             "You write personalized, professional follow-up emails that build relationships "
+                                             "and provide value to clients. Your tone is friendly, professional, and helpful, "
+                                             "never pushy or salesy."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": prompt
+                                }
+                            ],
+                            max_tokens=max(500, min(800, self.max_tokens)),
+                            temperature=0.7
+                        )
+                        result = self._parse_openai_response(response)
+                        logger.info(f"Successfully generated email preview (without JSON mode) for client_id={client.id}, task_id={task.id}")
+                        return result
+                    except Exception as retry_error:
+                        logger.error(f"Retry without JSON mode also failed: {retry_error}")
+                
                 return self._get_fallback_email(client, task)
                 
         except Exception as e:

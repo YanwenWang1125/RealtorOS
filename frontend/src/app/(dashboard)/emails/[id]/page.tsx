@@ -12,7 +12,8 @@ import { EmailBodyRenderer } from '@/components/emails/EmailBodyRenderer';
 import { EmailEngagementTimeline } from '@/components/emails/EmailEngagementTimeline';
 import { EmailWebhookLog } from '@/components/emails/EmailWebhookLog';
 import { formatDateTime } from '@/lib/utils/format';
-import { ArrowLeft, User, Calendar } from 'lucide-react';
+import { ArrowLeft, User, Calendar, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 
 export default function EmailDetailPage() {
@@ -100,6 +101,27 @@ export default function EmailDetailPage() {
         )}
         <span>Email</span>
       </div>
+
+      {/* Error Message Alert */}
+      {email.status === 'failed' && email.error_message && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Send Failed:</strong> {email.error_message}
+            {email.error_message.includes('MessageRejected') && (
+              <div className="mt-2 text-sm">
+                <p className="font-semibold">This is likely due to AWS SES Sandbox Mode restrictions.</p>
+                <p className="mt-1">In sandbox mode, you can only send emails to verified recipient addresses.</p>
+                <p className="mt-1">To fix this:</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Verify the recipient email address in AWS SES Console, or</li>
+                  <li>Request production access from AWS SES to send to any email address</li>
+                </ul>
+              </div>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Engagement Timeline */}
       <EmailEngagementTimeline email={email} />

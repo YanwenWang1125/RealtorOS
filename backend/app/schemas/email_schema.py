@@ -36,7 +36,7 @@ class EmailResponse(BaseModel):
     subject: str
     body: str
     status: str
-    sendgrid_message_id: Optional[str] = None
+    ses_message_id: Optional[str] = None
     created_at: datetime
     sent_at: Optional[datetime] = None
     opened_at: Optional[datetime] = None

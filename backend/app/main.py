@@ -51,9 +51,6 @@ app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(emails.router, prefix="/api/emails", tags=["emails"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 
-# Include webhook router (public endpoint, no /api prefix)
-app.include_router(emails.webhook_router, prefix="/webhook", tags=["webhooks"])
-
 @app.get("/")
 async def root():
     """Root endpoint with API information."""

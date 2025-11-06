@@ -5,37 +5,20 @@ This module provides endpoints for email generation, sending, and history
 in the RealtorOS CRM system.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
-import json
 from app.schemas.email_schema import EmailPreviewRequest, EmailSendRequest, EmailResponse
-from app.schemas.webhook_schema import SendGridWebhookEvent
 from app.services.ai_agent import AIAgent
 from app.services.email_service import EmailService
 from app.services.crm_service import CRMService
 from app.services.scheduler_service import SchedulerService
 from app.api.dependencies import get_ai_agent, get_email_service, get_crm_service, get_scheduler_service, get_current_agent
 from app.models.agent import Agent
-from app.utils.webhook_security import verify_sendgrid_signature
-from app.config import settings
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 router = APIRouter()
-
-# Separate router for webhook endpoints (public, no /api prefix)
-webhook_router = APIRouter()
-
-@webhook_router.get("/sendgrid/test")
-async def test_webhook_endpoint():
-    """Test endpoint to verify webhook URL is accessible."""
-    return {
-        "status": "ok",
-        "message": "Webhook endpoint is accessible",
-        "endpoint": "/webhook/sendgrid",
-        "note": "For local development, use ngrok or similar to expose this URL to SendGrid"
-    }
 
 @router.get("/", response_model=List[EmailResponse])
 async def list_emails(
@@ -49,6 +32,8 @@ async def list_emails(
     """List email history with pagination and filtering."""
     return await email_service.list_emails(agent.id, page=page, limit=limit, client_id=client_id, status=status)
 
+# IMPORTANT: /preview and /send must be defined BEFORE /{email_id} 
+# to avoid FastAPI matching "preview" or "send" as email_id
 @router.post("/preview")
 async def preview_email(
     request: EmailPreviewRequest,
@@ -128,6 +113,7 @@ async def send_email(
     
     return email_response
 
+# This route must be LAST to avoid matching /preview or /send as email_id
 @router.get("/{email_id}", response_model=EmailResponse)
 async def get_email(
     email_id: int,
@@ -141,142 +127,3 @@ async def get_email(
     return email
 
 
-@webhook_router.post("/sendgrid")
-async def sendgrid_webhook(
-    request: Request,
-    email_service: EmailService = Depends(get_email_service),
-    x_twilio_email_event_webhook_signature: Optional[str] = Header(None, alias="X-Twilio-Email-Event-Webhook-Signature"),
-    x_twilio_email_event_webhook_timestamp: Optional[str] = Header(None, alias="X-Twilio-Email-Event-Webhook-Timestamp"),
-):
-    """
-    SendGrid webhook endpoint for email engagement tracking.
-    
-    This endpoint receives POST requests from SendGrid with email event data
-    (opened, clicked, bounced, delivered, etc.). The endpoint verifies the
-    ECDSA signature to ensure requests are authentic.
-    
-    Events processed:
-    - processed: Message received, ready for delivery
-    - delivered: Successfully delivered
-    - open: Recipient opened email
-    - click: Recipient clicked link
-    - bounce: Server rejected message
-    - dropped: Message dropped (invalid email, spam)
-    - deferred: Temporarily rejected
-    - spamreport: Marked as spam
-    
-    Security:
-    - Verifies ECDSA signature using SENDGRID_WEBHOOK_VERIFICATION_KEY
-    - Validates timestamp (rejects requests older than 10 minutes)
-    - Returns 401 if signature verification fails
-    
-    Returns:
-        HTTP 200: Events processed successfully
-        HTTP 401: Signature verification failed
-        HTTP 400: Invalid request format
-    """
-    try:
-        # Get raw request body for signature verification
-        raw_body = await request.body()
-        
-        # Extract required headers
-        signature = x_twilio_email_event_webhook_signature
-        timestamp = x_twilio_email_event_webhook_timestamp
-        
-        # In development, allow bypassing signature verification for testing
-        # In production, signature verification is required
-        if settings.ENVIRONMENT == "development" and not signature:
-            logger.warning("Running in development mode - signature verification bypassed")
-        else:
-            if not signature or not timestamp:
-                logger.warning("Missing required webhook headers: signature or timestamp")
-                raise HTTPException(
-                    status_code=401,
-                    detail="Missing required webhook headers"
-                )
-            
-            # Verify ECDSA signature
-            public_key = settings.SENDGRID_WEBHOOK_VERIFICATION_KEY
-            if public_key and not verify_sendgrid_signature(raw_body, signature, timestamp, public_key):
-                logger.warning(
-                    f"Webhook signature verification failed. "
-                    f"Signature: {signature[:20]}..., Timestamp: {timestamp}"
-                )
-                raise HTTPException(
-                    status_code=401,
-                    detail="Invalid webhook signature"
-                )
-            elif not public_key:
-                logger.warning("SENDGRID_WEBHOOK_VERIFICATION_KEY not set - skipping signature verification")
-        
-        # Parse webhook payload (array of events)
-        try:
-            events_data = json.loads(raw_body.decode('utf-8'))
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse webhook payload as JSON: {e}")
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid JSON payload"
-            )
-        
-        # Validate events_data is a list
-        if not isinstance(events_data, list):
-            events_data = [events_data]
-        
-        # Process each event
-        processed_count = 0
-        failed_count = 0
-        
-        for event_dict in events_data:
-            try:
-                # Validate event structure using Pydantic schema
-                event = SendGridWebhookEvent(**event_dict)
-                
-                # Process webhook event
-                success = await email_service.process_webhook_event(event_dict)
-                
-                if success:
-                    processed_count += 1
-                    logger.info(
-                        f"Successfully processed webhook event: {event.event} "
-                        f"for message {event.sg_message_id}"
-                    )
-                else:
-                    failed_count += 1
-                    logger.warning(
-                        f"Failed to process webhook event: {event.event} "
-                        f"for message {event.sg_message_id}"
-                    )
-                    
-            except Exception as e:
-                failed_count += 1
-                logger.error(
-                    f"Error processing webhook event: {e}",
-                    exc_info=True,
-                    extra={"event_data": event_dict}
-                )
-                # Continue processing remaining events
-        
-        logger.info(
-            f"Webhook processing complete: {processed_count} succeeded, "
-            f"{failed_count} failed out of {len(events_data)} events"
-        )
-        
-        # Always return 200 to prevent SendGrid retries
-        # (even if some events failed, we've logged them)
-        return {
-            "status": "success",
-            "processed": processed_count,
-            "failed": failed_count,
-            "total": len(events_data)
-        }
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in webhook endpoint: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error processing webhook"
-        )

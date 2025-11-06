@@ -1,5 +1,5 @@
 """
-Email service for sending and managing emails (SQLAlchemy + SendGrid).
+Email service for sending and managing emails (SQLAlchemy + Amazon SES).
 """
 
 from typing import List, Optional, Dict, Any
@@ -10,8 +10,8 @@ from app.models.email_log import EmailLog
 from app.models.agent import Agent
 from app.schemas.email_schema import EmailSendRequest, EmailResponse
 from app.config import settings
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -20,9 +20,15 @@ logger = get_logger(__name__)
 class EmailService:
     def __init__(self, session: AsyncSession):
         self.session = session
-        self.sg = SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
-        self.from_email = settings.SENDGRID_FROM_EMAIL
-        self.from_name = settings.SENDGRID_FROM_NAME
+        # Initialize SES client with AWS credentials from settings
+        self.ses = boto3.client(
+            'ses',
+            region_name=settings.AWS_REGION,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+        )
+        self.from_email = settings.SES_FROM_EMAIL
+        self.from_name = settings.SES_FROM_NAME
 
     async def send_email(self, email_data: EmailSendRequest, agent: Agent) -> EmailResponse:
         email_log = await self.log_email(
@@ -36,17 +42,30 @@ class EmailService:
             from_email=agent.email,
         )
 
-        message = Mail(
-            from_email=(agent.email, agent.name),
-            to_emails=email_data.to_email,
-            subject=email_data.subject,
-            html_content=email_data.body,
-        )
         try:
-            response = self.sg.send(message)
-            message_id = response.headers.get("X-Message-Id") or response.headers.get("X-Message-ID")
-            await self.update_email_status(email_log.id, "sent", sendgrid_message_id=message_id)
+            # Send email via Amazon SES
+            response = self.ses.send_email(
+                Source=f"{agent.name} <{agent.email}>",
+                Destination={'ToAddresses': [email_data.to_email]},
+                Message={
+                    'Subject': {'Data': email_data.subject},
+                    'Body': {'Html': {'Data': email_data.body}}
+                }
+            )
+            # Get MessageId from SES response
+            message_id = response['MessageId']
+            await self.update_email_status(email_log.id, "sent", ses_message_id=message_id)
+        except NoCredentialsError as e:
+            error_msg = "AWS credentials not found. Please configure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY."
+            logger.error(error_msg)
+            await self.update_email_status(email_log.id, "failed", error_message=error_msg)
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            error_message = e.response.get('Error', {}).get('Message', str(e))
+            logger.error(f"AWS SES error ({error_code}): {error_message}")
+            await self.update_email_status(email_log.id, "failed", error_message=f"{error_code}: {error_message}")
         except Exception as e:
+            logger.error(f"Unexpected error sending email: {e}", exc_info=True)
             await self.update_email_status(email_log.id, "failed", error_message=str(e))
         
         # Refresh email_log to get updated timestamps
@@ -99,7 +118,7 @@ class EmailService:
         await self.session.refresh(email)
         return email
 
-    async def update_email_status(self, email_id: int, status: str, sendgrid_message_id: Optional[str] = None, error_message: Optional[str] = None) -> bool:
+    async def update_email_status(self, email_id: int, status: str, ses_message_id: Optional[str] = None, error_message: Optional[str] = None) -> bool:
         now = datetime.now(timezone.utc)
         
         # Fetch current email log to check existing timestamps
@@ -114,7 +133,7 @@ class EmailService:
         # Prepare update values
         update_values = {
             "status": status,
-            "sendgrid_message_id": sendgrid_message_id,
+            "ses_message_id": ses_message_id,
             "error_message": error_message
         }
         
@@ -138,7 +157,10 @@ class EmailService:
 
     async def process_webhook_event(self, event_data: Dict[str, Any]) -> bool:
         """
-        Process a SendGrid webhook event and update the corresponding EmailLog record.
+        Process an SES SNS notification event and update the corresponding EmailLog record.
+        
+        Note: SES event tracking uses SNS notifications (different from SendGrid webhooks).
+        This method supports both legacy SendGrid format and SES SNS format.
         
         Updates:
         - opened_at: Set to event timestamp when event == "open" (first open only)
@@ -147,20 +169,29 @@ class EmailService:
         - status: Update to event type (delivered, opened, clicked, bounced, etc.)
         
         Args:
-            event_data: Dictionary containing webhook event data
+            event_data: Dictionary containing webhook event data (SNS or legacy format)
             
         Returns:
             True if event was processed successfully, False otherwise
         """
-        message_id = event_data.get("sg_message_id") or event_data.get("message_id")
-        event_type = event_data.get("event", "").lower()
+        # Support both SES SNS format and legacy SendGrid format
+        message_id = (
+            event_data.get("mail", {}).get("messageId") or  # SES SNS format
+            event_data.get("ses_message_id") or  # Legacy format
+            event_data.get("sg_message_id") or  # Legacy SendGrid format
+            event_data.get("message_id")
+        )
+        event_type = (
+            event_data.get("eventType", "").lower() or  # SES SNS format
+            event_data.get("event", "").lower()  # Legacy format
+        )
         
         if not message_id or not event_type:
             logger.warning(f"Invalid webhook event: missing message_id or event. Data: {event_data}")
             return False
         
-        # Find the email log by sendgrid_message_id
-        stmt = select(EmailLog).where(EmailLog.sendgrid_message_id == message_id)
+        # Find the email log by ses_message_id
+        stmt = select(EmailLog).where(EmailLog.ses_message_id == message_id)
         result = await self.session.execute(stmt)
         email_log = result.scalar_one_or_none()
         

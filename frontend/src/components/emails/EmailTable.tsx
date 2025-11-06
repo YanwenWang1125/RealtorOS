@@ -157,7 +157,17 @@ export function EmailTable({
                     {email.to_email}
                   </TableCell>
                   <TableCell>
-                    <EmailStatusBadge status={email.status} />
+                    <div className="flex items-center gap-2">
+                      <EmailStatusBadge status={email.status} />
+                      {email.status === 'failed' && email.error_message && (
+                        <span 
+                          className="text-xs text-muted-foreground cursor-help" 
+                          title={email.error_message}
+                        >
+                          ⚠️
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {email.sent_at ? (

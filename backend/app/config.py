@@ -47,11 +47,12 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = Field(description="OpenAI model to use")
     OPENAI_MAX_TOKENS: int = Field(description="Maximum tokens for OpenAI requests")
     
-    # SendGrid - Required for sending emails
-    SENDGRID_API_KEY: str = Field(description="SendGrid API key (required for sending emails)")
-    SENDGRID_FROM_EMAIL: str = Field(description="Default sender email address")
-    SENDGRID_FROM_NAME: str = Field(description="Default sender name")
-    SENDGRID_WEBHOOK_VERIFICATION_KEY: Optional[str] = Field(default=None, description="SendGrid webhook ECDSA public key for signature verification (optional in development)")
+    # Amazon SES - Required for sending emails
+    AWS_REGION: str = Field(description="AWS region for SES (e.g., 'us-east-1')")
+    SES_FROM_EMAIL: str = Field(description="Default sender email address (must be verified in SES)")
+    SES_FROM_NAME: str = Field(default="RealtorOS", description="Default sender name")
+    AWS_ACCESS_KEY_ID: str = Field(description="AWS access key ID for SES authentication")
+    AWS_SECRET_ACCESS_KEY: str = Field(description="AWS secret access key for SES authentication")
     
     # Google OAuth - Optional (can be set later for Google Sign-In)
     GOOGLE_CLIENT_ID: Optional[str] = Field(default="", description="Google OAuth Client ID (optional)")
@@ -109,9 +110,9 @@ if not settings.OPENAI_API_KEY and settings.ENVIRONMENT != "test":
     import warnings
     warnings.warn("OPENAI_API_KEY is not set. Email generation will not work.")
 
-if not settings.SENDGRID_API_KEY and settings.ENVIRONMENT != "test":
+if not settings.AWS_ACCESS_KEY_ID and settings.ENVIRONMENT != "test":
     import warnings
-    warnings.warn("SENDGRID_API_KEY is not set. Email sending will not work.")
+    warnings.warn("AWS_ACCESS_KEY_ID is not set. Email sending will not work.")
 
 if settings.ENVIRONMENT == "production" and len(settings.SECRET_KEY) < 32:
     raise ValueError("SECRET_KEY must be at least 32 characters long in production")

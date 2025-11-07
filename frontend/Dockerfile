@@ -20,20 +20,24 @@ WORKDIR /app
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy all files except what's in .dockerignore
-# This ensures tsconfig.json and all source files are included
-COPY . .
+# Copy configuration files first
+COPY tsconfig.json next.config.mjs package.json ./
+COPY components.json postcss.config.js tailwind.config.ts ./
 
-# Verify critical files exist and show structure (debug)
+# Explicitly copy source directories to ensure they're included
+COPY src/ ./src/
+COPY public/ ./public/
+
+# Verify what files are actually copied (debug)
 RUN echo "=== File Verification ===" && \
-    echo "tsconfig.json:" && test -f tsconfig.json && cat tsconfig.json | grep -A 5 '"paths"' || echo "NOT FOUND" && \
-    echo "" && echo "Hook files:" && \
-    ls -la src/lib/hooks/mutations/useAuth.ts 2>&1 && \
-    ls -la src/lib/hooks/queries/useClients.ts 2>&1 && \
-    ls -la src/lib/hooks/mutations/useUpdateClient.ts 2>&1 && \
-    ls -la src/lib/hooks/ui/useToast.ts 2>&1 && \
-    echo "" && echo "Directory structure:" && \
-    find src/lib/hooks -name "*.ts" -type f | head -10
+    echo "Current directory:" && pwd && \
+    echo "" && echo "Does src directory exist?" && test -d src && echo "YES - Contents:" && ls -la src/ | head -10 || echo "NO" && \
+    echo "" && echo "Does src/lib exist?" && test -d src/lib && echo "YES" || echo "NO" && \
+    echo "" && echo "Hook files check:" && \
+    (test -f src/lib/hooks/mutations/useAuth.ts && echo "✓ useAuth.ts found" || echo "✗ useAuth.ts NOT found") && \
+    (test -f src/lib/hooks/queries/useClients.ts && echo "✓ useClients.ts found" || echo "✗ useClients.ts NOT found") && \
+    (test -f src/lib/hooks/ui/useToast.ts && echo "✓ useToast.ts found" || echo "✗ useToast.ts NOT found") && \
+    echo "" && echo "Directory structure:" && find src/lib/hooks -type f 2>/dev/null | head -10 || echo "src/lib/hooks not found"
 
 # Set environment variables for build
 ARG NEXT_PUBLIC_API_URL

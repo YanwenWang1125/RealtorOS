@@ -134,20 +134,20 @@ jobs:
           echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.SHORT_SHA }}
-          labels: |
-            org.opencontainers.image.created=${{ steps.tags.outputs.BUILD_DATE }}
-            org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
+      # - name: Build and push backend image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./backend
+      #     file: ./backend/Dockerfile
+      #     push: true
+      #     tags: |
+      #       ${{ env.BACKEND_IMAGE }}:latest
+      #       ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.SHORT_SHA }}
+      #     labels: |
+      #       org.opencontainers.image.created=${{ steps.tags.outputs.BUILD_DATE }}
+      #       org.opencontainers.image.revision=${{ github.sha }}
+      #     cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
+      #     cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
@@ -166,102 +166,102 @@ jobs:
           cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
-  deploy-backend:
-    name: Deploy Backend to Azure
-    runs-on: ubuntu-latest
-    needs: build-and-push
+  # deploy-backend:
+  #   name: Deploy Backend to Azure
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-push
 
-    steps:
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  #   steps:
+  #     - name: Log in to Azure
+  #       uses: azure/login@v1
+  #       with:
+  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy backend to Container Apps
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            az containerapp update \
-              --name ${{ env.BACKEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --image ${{ env.BACKEND_IMAGE }}:latest \
-              --min-replicas 0
+  #     - name: Deploy backend to Container Apps
+  #       uses: azure/CLI@v1
+  #       with:
+  #         inlineScript: |
+  #           az containerapp update \
+  #             --name ${{ env.BACKEND_APP_NAME }} \
+  #             --resource-group ${{ env.RESOURCE_GROUP }} \
+  #             --image ${{ env.BACKEND_IMAGE }}:latest \
+  #             --min-replicas 0
 
-      - name: Run database migrations
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            az containerapp exec \
-              --name ${{ env.BACKEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --command "alembic upgrade head" || true
+  #     - name: Run database migrations
+  #       uses: azure/CLI@v1
+  #       with:
+  #         inlineScript: |
+  #           az containerapp exec \
+  #             --name ${{ env.BACKEND_APP_NAME }} \
+  #             --resource-group ${{ env.RESOURCE_GROUP }} \
+  #             --command "alembic upgrade head" || true
 
-  deploy-frontend:
-    name: Deploy Frontend to Azure
-    runs-on: ubuntu-latest
-    needs: build-and-push
+  # deploy-frontend:
+  #   name: Deploy Frontend to Azure
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-push
 
-    steps:
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  #   steps:
+  #     - name: Log in to Azure
+  #       uses: azure/login@v1
+  #       with:
+  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy frontend to Container Apps
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            az containerapp update \
-              --name ${{ env.FRONTEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --image ${{ env.FRONTEND_IMAGE }}:latest \
-              --min-replicas 0
+  #     - name: Deploy frontend to Container Apps
+  #       uses: azure/CLI@v1
+  #       with:
+  #         inlineScript: |
+  #           az containerapp update \
+  #             --name ${{ env.FRONTEND_APP_NAME }} \
+  #             --resource-group ${{ env.RESOURCE_GROUP }} \
+  #             --image ${{ env.FRONTEND_IMAGE }}:latest \
+  #             --min-replicas 0
 
-  health-check:
-    name: Health Check
-    runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend]
+  # health-check:
+  #   name: Health Check
+  #   runs-on: ubuntu-latest
+  #   needs: [deploy-backend, deploy-frontend]
 
-    steps:
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  #   steps:
+  #     - name: Log in to Azure
+  #       uses: azure/login@v1
+  #       with:
+  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Get backend URL
-        id: backend-url
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            BACKEND_URL=$(az containerapp show \
-              --name ${{ env.BACKEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --query properties.configuration.ingress.fqdn -o tsv)
-            echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+  #     - name: Get backend URL
+  #       id: backend-url
+  #       uses: azure/CLI@v1
+  #       with:
+  #         inlineScript: |
+  #           BACKEND_URL=$(az containerapp show \
+  #             --name ${{ env.BACKEND_APP_NAME }} \
+  #             --resource-group ${{ env.RESOURCE_GROUP }} \
+  #             --query properties.configuration.ingress.fqdn -o tsv)
+  #           echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
 
-      - name: Get frontend URL
-        id: frontend-url
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            FRONTEND_URL=$(az containerapp show \
-              --name ${{ env.FRONTEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --query properties.configuration.ingress.fqdn -o tsv)
-            echo "url=https://$FRONTEND_URL" >> $GITHUB_OUTPUT
+  #     - name: Get frontend URL
+  #       id: frontend-url
+  #       uses: azure/CLI@v1
+  #       with:
+  #         inlineScript: |
+  #           FRONTEND_URL=$(az containerapp show \
+  #             --name ${{ env.FRONTEND_APP_NAME }} \
+  #             --resource-group ${{ env.RESOURCE_GROUP }} \
+  #             --query properties.configuration.ingress.fqdn -o tsv)
+  #           echo "url=https://$FRONTEND_URL" >> $GITHUB_OUTPUT
 
-      - name: Check backend health
-        run: |
-          curl -f ${{ steps.backend-url.outputs.url }}/health || exit 1
+  #     - name: Check backend health
+  #       run: |
+  #         curl -f ${{ steps.backend-url.outputs.url }}/health || exit 1
 
-      - name: Check frontend health
-        run: |
-          curl -f ${{ steps.frontend-url.outputs.url }} || exit 1
+  #     - name: Check frontend health
+  #       run: |
+  #         curl -f ${{ steps.frontend-url.outputs.url }} || exit 1
 
-      - name: Deployment summary
-        run: |
-          echo "### Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Backend URL:** ${{ steps.backend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Frontend URL:** ${{ steps.frontend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
-          echo "**API Docs:** ${{ steps.backend-url.outputs.url }}/docs" >> $GITHUB_STEP_SUMMARY
+  #     - name: Deployment summary
+  #       run: |
+  #         echo "### Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
+  #         echo "" >> $GITHUB_STEP_SUMMARY
+  #         echo "**Backend URL:** ${{ steps.backend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "**Frontend URL:** ${{ steps.frontend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "**API Docs:** ${{ steps.backend-url.outputs.url }}/docs" >> $GITHUB_STEP_SUMMARY

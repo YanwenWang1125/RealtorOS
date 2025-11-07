@@ -20,13 +20,9 @@ WORKDIR /app
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy configuration files first
-COPY tsconfig.json next.config.mjs package.json ./
-COPY components.json postcss.config.js tailwind.config.ts ./
-
-# Explicitly copy source directories to ensure they're included
-COPY src/ ./src/
-COPY public/ ./public/
+# Copy all files except what's in .dockerignore
+# This ensures all source files, config files, and public directory are included
+COPY . .
 
 # Verify what files are actually copied (debug)
 RUN echo "=== File Verification ===" && \

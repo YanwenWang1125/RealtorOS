@@ -20,8 +20,20 @@ WORKDIR /app
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy all source files (excluding node_modules which is already copied)
+# Copy all files except what's in .dockerignore
+# This ensures tsconfig.json and all source files are included
 COPY . .
+
+# Verify critical files exist and show structure (debug)
+RUN echo "=== File Verification ===" && \
+    echo "tsconfig.json:" && test -f tsconfig.json && cat tsconfig.json | grep -A 5 '"paths"' || echo "NOT FOUND" && \
+    echo "" && echo "Hook files:" && \
+    ls -la src/lib/hooks/mutations/useAuth.ts 2>&1 && \
+    ls -la src/lib/hooks/queries/useClients.ts 2>&1 && \
+    ls -la src/lib/hooks/mutations/useUpdateClient.ts 2>&1 && \
+    ls -la src/lib/hooks/ui/useToast.ts 2>&1 && \
+    echo "" && echo "Directory structure:" && \
+    find src/lib/hooks -name "*.ts" -type f | head -10
 
 # Set environment variables for build
 ARG NEXT_PUBLIC_API_URL

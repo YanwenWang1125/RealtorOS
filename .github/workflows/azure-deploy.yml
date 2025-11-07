@@ -26,7 +26,7 @@ jobs:
       API_TITLE: RealtorOS API
       API_VERSION: 1.0.0
       # Database (using in-memory SQLite for tests)
-      DATABASE_URL: sqlite+aiosqlite:///:memory:
+      DATABASE_URL: "sqlite+aiosqlite:///:memory:"
       # OpenAI (can use secrets.OPENAI_API_KEY if you want to test with real API)
       # Default test values will be set in a step if secrets are not provided
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

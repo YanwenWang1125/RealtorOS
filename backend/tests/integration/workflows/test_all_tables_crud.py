@@ -1214,7 +1214,7 @@ class TestEmailLogRead:
                 from_name="Test Agent",
                 from_email="test@example.com"
             )
-        emails = await services["email"].list_emails()
+        emails = await services["email"].list_emails(agent_id=sample_client.agent_id)
         assert len(emails) >= 5
 
     @pytest.mark.asyncio
@@ -1235,7 +1235,7 @@ class TestEmailLogRead:
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            task = await services["scheduler"].create_task(task_data)
+            task = await services["scheduler"].create_task(task_data, agent_id=client.agent_id)
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
@@ -1246,7 +1246,7 @@ class TestEmailLogRead:
                 from_name="Test Agent",
                 from_email="test@example.com"
             )
-        emails = await services["email"].list_emails(client_id=client.id)
+        emails = await services["email"].list_emails(agent_id=client.agent_id, client_id=client.id)
         assert all(e.client_id == client.id for e in emails)
 
     @pytest.mark.asyncio
@@ -1258,7 +1258,7 @@ class TestEmailLogRead:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1270,7 +1270,7 @@ class TestEmailLogRead:
             from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent", ses_message_id="msg123")
-        emails = await services["email"].list_emails(status="sent")
+        emails = await services["email"].list_emails(agent_id=sample_client.agent_id, status="sent")
         assert len(emails) >= 1
         assert any(e.id == email_log.id for e in emails)
 
@@ -1284,7 +1284,7 @@ class TestEmailLogRead:
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            task = await services["scheduler"].create_task(task_data)
+            task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
@@ -1295,8 +1295,8 @@ class TestEmailLogRead:
                 from_name="Test Agent",
                 from_email="test@example.com"
             )
-        page1 = await services["email"].list_emails(page=1, limit=5)
-        page2 = await services["email"].list_emails(page=2, limit=5)
+        page1 = await services["email"].list_emails(agent_id=sample_client.agent_id, page=1, limit=5)
+        page2 = await services["email"].list_emails(agent_id=sample_client.agent_id, page=2, limit=5)
         assert len(page1) == 5
         assert len(page2) == 5
 
@@ -1313,7 +1313,7 @@ class TestEmailLogUpdate:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1326,7 +1326,7 @@ class TestEmailLogUpdate:
         )
         result = await services["email"].update_email_status(email_log.id, "sent")
         assert result is True
-        updated = await services["email"].get_email(email_log.id)
+        updated = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
         assert updated.status == "sent"
 
     @pytest.mark.asyncio
@@ -1338,7 +1338,7 @@ class TestEmailLogUpdate:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1350,7 +1350,7 @@ class TestEmailLogUpdate:
             from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent", ses_message_id="ses-123456")
-        updated = await services["email"].get_email(email_log.id)
+        updated = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
         assert updated.ses_message_id == "ses-123456"
 
     @pytest.mark.asyncio
@@ -1362,7 +1362,7 @@ class TestEmailLogUpdate:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1374,7 +1374,7 @@ class TestEmailLogUpdate:
             from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "failed", error_message="Connection timeout")
-        updated = await services["email"].get_email(email_log.id)
+        updated = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
         assert updated.status == "failed"
         assert updated.error_message == "Connection timeout"
 
@@ -1387,7 +1387,7 @@ class TestEmailLogUpdate:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1401,7 +1401,7 @@ class TestEmailLogUpdate:
         statuses = ["queued", "sent", "delivered", "opened", "clicked", "bounced"]
         for status in statuses[1:]:
             await services["email"].update_email_status(email_log.id, status)
-            updated = await services["email"].get_email(email_log.id)
+            updated = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
             assert updated.status == status
 
     @pytest.mark.asyncio
@@ -1423,7 +1423,7 @@ class TestEmailLogComplex:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1435,7 +1435,7 @@ class TestEmailLogComplex:
             from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent", ses_message_id="lifecycle-123")
-        updated = await services["email"].get_email(email_log.id)
+        updated = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
         assert updated.status == "sent"
 
     @pytest.mark.asyncio
@@ -1448,7 +1448,7 @@ class TestEmailLogComplex:
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            task = await services["scheduler"].create_task(task_data)
+            task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
@@ -1459,7 +1459,7 @@ class TestEmailLogComplex:
                 from_name="Test Agent",
                 from_email="test@example.com"
             )
-        emails = await services["email"].list_emails(client_id=sample_client.id)
+        emails = await services["email"].list_emails(agent_id=sample_client.agent_id, client_id=sample_client.id)
         assert len(emails) >= 5
 
     @pytest.mark.asyncio
@@ -1473,7 +1473,7 @@ class TestEmailLogComplex:
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             )
-            task = await services["scheduler"].create_task(task_data)
+            task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
@@ -1486,9 +1486,9 @@ class TestEmailLogComplex:
             )
             if status != "queued":
                 await services["email"].update_email_status(email_log.id, status)
-        queued = await services["email"].list_emails(status="queued")
-        sent = await services["email"].list_emails(status="sent")
-        failed = await services["email"].list_emails(status="failed")
+        queued = await services["email"].list_emails(agent_id=sample_client.agent_id, status="queued")
+        sent = await services["email"].list_emails(agent_id=sample_client.agent_id, status="sent")
+        failed = await services["email"].list_emails(agent_id=sample_client.agent_id, status="failed")
         assert len(queued) >= 1
         assert len(sent) >= 1
         assert len(failed) >= 1
@@ -1502,7 +1502,7 @@ class TestCrossTableRelationships:
     """Test relationships and operations across all tables."""
 
     @pytest.mark.asyncio
-    async def test_r01_client_with_tasks(self, services):
+    async def test_r01_client_with_tasks(self, services, sample_agent):
         """Test 71: Client with associated tasks."""
         client = await services["crm"].create_client(ClientCreate(
             name="Task Client",
@@ -1511,7 +1511,7 @@ class TestCrossTableRelationships:
             property_address="1140 Task St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         assert len(tasks) > 0
         assert all(t.client_id == client.id for t in tasks)
@@ -1525,7 +1525,7 @@ class TestCrossTableRelationships:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1539,7 +1539,7 @@ class TestCrossTableRelationships:
         assert email_log.task_id == task.id
 
     @pytest.mark.asyncio
-    async def test_r03_client_tasks_emails_full_chain(self, services):
+    async def test_r03_client_tasks_emails_full_chain(self, services, sample_agent):
         """Test 73: Full chain: Client -> Tasks -> Emails."""
         client = await services["crm"].create_client(ClientCreate(
             name="Chain Client",
@@ -1548,7 +1548,7 @@ class TestCrossTableRelationships:
             property_address="1141 Chain St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         for task in tasks[:2]:
             email_log = await services["email"].log_email(
@@ -1564,7 +1564,7 @@ class TestCrossTableRelationships:
             assert email_log.client_id == client.id
 
     @pytest.mark.asyncio
-    async def test_r04_delete_client_keeps_tasks(self, services):
+    async def test_r04_delete_client_keeps_tasks(self, services, sample_agent):
         """Test 74: Delete client (soft delete) - tasks remain."""
         client = await services["crm"].create_client(ClientCreate(
             name="Delete Client",
@@ -1573,7 +1573,7 @@ class TestCrossTableRelationships:
             property_address="1142 Delete St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
@@ -1595,7 +1595,7 @@ class TestCrossTableRelationships:
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             ), agent_id=sample_client.agent_id)
-        tasks = await services["crm"].get_client_tasks(sample_client.id)
+        tasks = await services["crm"].get_client_tasks(sample_client.id, agent_id=sample_client.agent_id)
         assert len(tasks) >= 3
 
     @pytest.mark.asyncio
@@ -1623,7 +1623,7 @@ class TestCrossTableRelationships:
         assert updated_task.status == "completed"
 
     @pytest.mark.asyncio
-    async def test_r07_list_emails_for_client(self, services):
+    async def test_r07_list_emails_for_client(self, services, sample_agent):
         """Test 77: List all emails for a client."""
         client = await services["crm"].create_client(ClientCreate(
             name="Email List Client",
@@ -1632,14 +1632,14 @@ class TestCrossTableRelationships:
             property_address="1143 Email St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         for i in range(3):
             task = await services["scheduler"].create_task(TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
-            ))
+            ), agent_id=client.agent_id)
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
@@ -1650,7 +1650,7 @@ class TestCrossTableRelationships:
                 from_name="Test Agent",
                 from_email="test@example.com"
             )
-        emails = await services["email"].list_emails(client_id=client.id)
+        emails = await services["email"].list_emails(agent_id=client.agent_id, client_id=client.id)
         assert len(emails) >= 3
 
     @pytest.mark.asyncio
@@ -1663,7 +1663,7 @@ class TestCrossTableRelationships:
                 followup_type="Day 1",
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
-            ))
+            ), agent_id=sample_client.agent_id)
             tasks.append(task)
         
         for task in tasks:
@@ -1678,7 +1678,7 @@ class TestCrossTableRelationships:
                     from_name="Test Agent",
                     from_email="test@example.com"
                 )
-        all_emails = await services["email"].list_emails(client_id=sample_client.id)
+        all_emails = await services["email"].list_emails(agent_id=sample_client.agent_id, client_id=sample_client.id)
         assert len(all_emails) >= 6
 
     @pytest.mark.asyncio
@@ -1689,7 +1689,7 @@ class TestCrossTableRelationships:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1705,12 +1705,12 @@ class TestCrossTableRelationships:
         # Mark task as completed
         await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
         updated_task = await services["scheduler"].get_task(task.id, task.agent_id)
-        updated_email = await services["email"].get_email(email_log.id)
+        updated_email = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
         assert updated_task.status == "completed"
         assert updated_email.status == "sent"
 
     @pytest.mark.asyncio
-    async def test_r10_client_stage_change_affects_tasks(self, services):
+    async def test_r10_client_stage_change_affects_tasks(self, services, sample_agent):
         """Test 80: Client stage change workflow."""
         client = await services["crm"].create_client(ClientCreate(
             name="Stage Change Client",
@@ -1719,13 +1719,13 @@ class TestCrossTableRelationships:
             property_address="1144 Stage St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         # Update client stage
-        await services["crm"].update_client(client.id, ClientUpdate(stage="closed"))
+        await services["crm"].update_client(client.id, ClientUpdate(stage="closed"), agent_id=client.agent_id)
         # Tasks should still exist
         for task in tasks:
-            fetched = await services["scheduler"].get_task(task.id)
+            fetched = await services["scheduler"].get_task(task.id, agent_id=task.agent_id)
             assert fetched is not None
 
 
@@ -1737,7 +1737,7 @@ class TestAdvancedScenarios:
     """Test advanced scenarios and edge cases."""
 
     @pytest.mark.asyncio
-    async def test_a01_bulk_create_all_tables(self, services):
+    async def test_a01_bulk_create_all_tables(self, services, sample_agent):
         """Test 81: Bulk create across all tables."""
         clients = []
         for i in range(5):
@@ -1748,7 +1748,7 @@ class TestAdvancedScenarios:
                 property_address=f"{1150+i} Bulk St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=sample_agent.id)
             clients.append(client)
         
         tasks = []
@@ -1782,7 +1782,7 @@ class TestAdvancedScenarios:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         # Multiple updates
         await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
         await services["scheduler"].update_task(task.id, TaskUpdate(priority="low"), agent_id=sample_client.agent_id)
@@ -1798,7 +1798,7 @@ class TestAdvancedScenarios:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1813,7 +1813,7 @@ class TestAdvancedScenarios:
         assert email_log.client_id == sample_client.id
 
     @pytest.mark.asyncio
-    async def test_a04_pagination_consistency(self, services):
+    async def test_a04_pagination_consistency(self, services, sample_agent):
         """Test 84: Pagination consistency across tables."""
         # Create data
         for i in range(20):
@@ -1824,13 +1824,13 @@ class TestAdvancedScenarios:
                 property_address=f"{1170+i} Page St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=sample_agent.id)
             task = await services["scheduler"].create_task(TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
-            ))
+            ), agent_id=client.agent_id)
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
@@ -1843,9 +1843,9 @@ class TestAdvancedScenarios:
             )
         
         # Test pagination
-        clients_page = await services["crm"].list_clients(page=1, limit=10)
-        tasks_page = await services["scheduler"].list_tasks(page=1, limit=10)
-        emails_page = await services["email"].list_emails(page=1, limit=10)
+        clients_page = await services["crm"].list_clients(agent_id=sample_agent.id, page=1, limit=10)
+        tasks_page = await services["scheduler"].list_tasks(agent_id=sample_agent.id, page=1, limit=10)
+        emails_page = await services["email"].list_emails(agent_id=sample_agent.id, page=1, limit=10)
         
         assert len(clients_page) >= 10
         assert len(tasks_page) >= 10
@@ -1861,19 +1861,20 @@ class TestAdvancedScenarios:
                 followup_type="Day 1",
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
-            ))
+            ), agent_id=sample_client.agent_id)
             if status != "pending":
                 await services["scheduler"].update_task(task.id, TaskUpdate(status=status), agent_id=sample_client.agent_id)
         
         # Filter combinations
         pending = await services["scheduler"].list_tasks(
+            agent_id=sample_client.agent_id,
             client_id=sample_client.id,
             status="pending"
         )
         assert len(pending) >= 2
 
     @pytest.mark.asyncio
-    async def test_a06_timestamp_validation(self, services, sample_client):
+    async def test_a06_timestamp_validation(self, services, sample_agent):
         """Test 86: Timestamp fields validation."""
         client = await services["crm"].create_client(ClientCreate(
             name="Timestamp Client",
@@ -1882,7 +1883,7 @@ class TestAdvancedScenarios:
             property_address="1190 Time St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         assert client.created_at is not None
         
         task = await services["scheduler"].create_task(TaskCreate(
@@ -1890,7 +1891,7 @@ class TestAdvancedScenarios:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=client.agent_id)
         assert task.created_at is not None
         assert task.updated_at is not None
         
@@ -1907,7 +1908,7 @@ class TestAdvancedScenarios:
         assert email_log.created_at is not None
 
     @pytest.mark.asyncio
-    async def test_a07_data_persistence(self, services):
+    async def test_a07_data_persistence(self, services, sample_agent):
         """Test 87: Data persistence across operations."""
         client = await services["crm"].create_client(ClientCreate(
             name="Persist Client",
@@ -1916,26 +1917,26 @@ class TestAdvancedScenarios:
             property_address="1191 Persist St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         original_id = client.id
         
         # Multiple operations
-        await services["crm"].update_client(client.id, ClientUpdate(stage="negotiating"))
+        await services["crm"].update_client(client.id, ClientUpdate(stage="negotiating"), agent_id=client.agent_id)
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=client.agent_id)
         
         # Verify persistence
-        fetched = await services["crm"].get_client(original_id)
+        fetched = await services["crm"].get_client(original_id, agent_id=client.agent_id)
         assert fetched.stage == "negotiating"
         fetched_task = await services["scheduler"].get_task(task.id, task.agent_id)
         assert fetched_task.client_id == original_id
 
     @pytest.mark.asyncio
-    async def test_a08_cascade_operations(self, services):
+    async def test_a08_cascade_operations(self, services, sample_agent):
         """Test 88: Cascade operations across tables."""
         client = await services["crm"].create_client(ClientCreate(
             name="Cascade Client",
@@ -1944,7 +1945,7 @@ class TestAdvancedScenarios:
             property_address="1192 Cascade St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         for task in tasks[:3]:
             await services["email"].log_email(
@@ -1967,7 +1968,7 @@ class TestAdvancedScenarios:
             assert fetched is not None
 
     @pytest.mark.asyncio
-    async def test_a09_search_and_filter_complex(self, services):
+    async def test_a09_search_and_filter_complex(self, services, sample_agent):
         """Test 89: Complex search and filter scenarios."""
         # Create diverse data
         stages = ["lead", "negotiating", "closed"]
@@ -1980,26 +1981,26 @@ class TestAdvancedScenarios:
                     property_address=f"{1193+i*10+j} Search St, City, ST 12345",
                     property_type="residential",
                     stage=stage
-                ))
+                ), agent_id=sample_agent.id)
                 task = await services["scheduler"].create_task(TaskCreate(
                     client_id=client.id,
                     followup_type="Day 1",
                     scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                     priority="high"
-                ))
+                ), agent_id=client.agent_id)
                 await services["scheduler"].update_task(task.id, TaskUpdate(
                     status="completed" if j % 2 == 0 else "pending"
                 ), agent_id=client.agent_id)
         
         # Complex filters
-        lead_clients = await services["crm"].list_clients(stage="lead")
-        completed_tasks = await services["scheduler"].list_tasks(status="completed")
+        lead_clients = await services["crm"].list_clients(agent_id=sample_agent.id, stage="lead")
+        completed_tasks = await services["scheduler"].list_tasks(agent_id=sample_agent.id, status="completed")
         
         assert len(lead_clients) >= 3
         assert len(completed_tasks) >= 3
 
     @pytest.mark.asyncio
-    async def test_a10_volume_stress_test(self, services):
+    async def test_a10_volume_stress_test(self, services, sample_agent):
         """Test 90: Volume stress test."""
         # Create many records
         for i in range(50):
@@ -2010,14 +2011,14 @@ class TestAdvancedScenarios:
                 property_address=f"{1200+i} Volume St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=sample_agent.id)
             if i % 2 == 0:
                 task = await services["scheduler"].create_task(TaskCreate(
                     client_id=client.id,
                     followup_type="Day 1",
                     scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                     priority="high"
-                ))
+                ), agent_id=client.agent_id)
                 await services["email"].log_email(
                     task_id=task.id,
                     client_id=client.id,
@@ -2030,9 +2031,9 @@ class TestAdvancedScenarios:
                 )
         
         # Verify counts - use large limits to get all records
-        clients = await services["crm"].list_clients(page=1, limit=100)
-        tasks = await services["scheduler"].list_tasks(page=1, limit=100)
-        emails = await services["email"].list_emails(page=1, limit=100)
+        clients = await services["crm"].list_clients(agent_id=sample_agent.id, page=1, limit=100)
+        tasks = await services["scheduler"].list_tasks(agent_id=sample_agent.id, page=1, limit=100)
+        emails = await services["email"].list_emails(agent_id=sample_agent.id, page=1, limit=100)
         
         assert len(clients) >= 50
         assert len(tasks) >= 25
@@ -2045,18 +2046,18 @@ class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
     @pytest.mark.asyncio
-    async def test_e20_empty_results(self, services):
+    async def test_e20_empty_results(self, services, sample_agent):
         """Test 91: Empty result sets."""
-        no_clients = await services["crm"].list_clients(stage="closed")
-        no_tasks = await services["scheduler"].list_tasks(status="cancelled")
-        no_emails = await services["email"].list_emails(status="bounced")
+        no_clients = await services["crm"].list_clients(agent_id=sample_agent.id, stage="closed")
+        no_tasks = await services["scheduler"].list_tasks(agent_id=sample_agent.id, status="cancelled")
+        no_emails = await services["email"].list_emails(agent_id=sample_agent.id, status="bounced")
         # These should return empty lists, not errors
         assert isinstance(no_clients, list)
         assert isinstance(no_tasks, list)
         assert isinstance(no_emails, list)
 
     @pytest.mark.asyncio
-    async def test_e21_max_pagination(self, services):
+    async def test_e21_max_pagination(self, services, sample_agent):
         """Test 92: Maximum pagination values."""
         # Create data
         for i in range(5):
@@ -2067,10 +2068,10 @@ class TestEdgeCases:
                 property_address=f"{1250+i} Max St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=sample_agent.id)
         
         # Test with max limit
-        clients = await services["crm"].list_clients(page=1, limit=100)
+        clients = await services["crm"].list_clients(agent_id=sample_agent.id, page=1, limit=100)
         assert len(clients) >= 5
 
     @pytest.mark.asyncio
@@ -2081,7 +2082,7 @@ class TestEdgeCases:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         # Update with same values
         updated = await services["scheduler"].update_task(task.id, TaskUpdate(
             status="pending",
@@ -2098,19 +2099,19 @@ class TestEdgeCases:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) - timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         # Far future
         future_task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=365),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         assert past_task.id is not None
         assert future_task.id is not None
 
     @pytest.mark.asyncio
-    async def test_e24_string_field_lengths(self, services):
+    async def test_e24_string_field_lengths(self, services, sample_agent):
         """Test 95: String field maximum lengths."""
         long_name = "A" * 100
         long_address = "B" * 200
@@ -2121,7 +2122,7 @@ class TestEdgeCases:
             property_address=long_address,
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         assert len(client.name) == 100
         assert len(client.property_address) == 200
 
@@ -2132,7 +2133,7 @@ class TestFinalScenarios:
     """Final tests to complete 100 test cases."""
 
     @pytest.mark.asyncio
-    async def test_f01_comprehensive_workflow(self, services):
+    async def test_f01_comprehensive_workflow(self, services, sample_agent):
         """Test 96: Complete real-world workflow."""
         # Create client
         client = await services["crm"].create_client(ClientCreate(
@@ -2142,7 +2143,7 @@ class TestFinalScenarios:
             property_address="1260 Workflow St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         # Create tasks
         tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         # Send emails
@@ -2158,17 +2159,17 @@ class TestFinalScenarios:
                 from_email="test@example.com"
             )
         # Update client
-        await services["crm"].update_client(client.id, ClientUpdate(stage="negotiating"))
+        await services["crm"].update_client(client.id, ClientUpdate(stage="negotiating"), agent_id=client.agent_id)
         # Complete tasks
         for task in tasks[:2]:
             await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=client.agent_id)
         
         # Verify
-        updated_client = await services["crm"].get_client(client.id)
+        updated_client = await services["crm"].get_client(client.id, agent_id=client.agent_id)
         assert updated_client.stage == "negotiating"
 
     @pytest.mark.asyncio
-    async def test_f02_data_isolation(self, services):
+    async def test_f02_data_isolation(self, services, sample_agent):
         """Test 97: Data isolation between tests."""
         client1 = await services["crm"].create_client(ClientCreate(
             name="Isolated 1",
@@ -2177,7 +2178,7 @@ class TestFinalScenarios:
             property_address="1261 Isolated St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         client2 = await services["crm"].create_client(ClientCreate(
             name="Isolated 2",
             email="isolated2@example.com",
@@ -2185,10 +2186,10 @@ class TestFinalScenarios:
             property_address="1262 Isolated St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         assert client1.id != client2.id
-        tasks1 = await services["scheduler"].create_followup_tasks(client1.id)
-        tasks2 = await services["scheduler"].create_followup_tasks(client2.id)
+        tasks1 = await services["scheduler"].create_followup_tasks(client1.id, client1.agent_id)
+        tasks2 = await services["scheduler"].create_followup_tasks(client2.id, client2.agent_id)
         assert len(tasks1) == len(tasks2)
 
     @pytest.mark.asyncio
@@ -2199,7 +2200,7 @@ class TestFinalScenarios:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -2212,12 +2213,12 @@ class TestFinalScenarios:
         )
         # Both should be committed
         fetched_task = await services["scheduler"].get_task(task.id, task.agent_id)
-        fetched_email = await services["email"].get_email(email_log.id)
+        fetched_email = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
         assert fetched_task is not None
         assert fetched_email is not None
 
     @pytest.mark.asyncio
-    async def test_f04_performance_large_queries(self, services):
+    async def test_f04_performance_large_queries(self, services, sample_agent):
         """Test 99: Performance with large query results."""
         # Create data
         for i in range(30):
@@ -2228,14 +2229,14 @@ class TestFinalScenarios:
                 property_address=f"{1263+i} Perf St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=sample_agent.id)
         
         # Large queries
-        all_clients = await services["crm"].list_clients(limit=100)
+        all_clients = await services["crm"].list_clients(agent_id=sample_agent.id, limit=100)
         assert len(all_clients) >= 30
 
     @pytest.mark.asyncio
-    async def test_f100_complete_system_integration(self, services):
+    async def test_f100_complete_system_integration(self, services, sample_agent):
         """Test 100: Complete system integration test."""
         # Full integration: Create -> Update -> Read -> Delete flow
         # Client
@@ -2247,7 +2248,7 @@ class TestFinalScenarios:
             property_type="residential",
             stage="lead",
             custom_fields={"test": True}
-        ))
+        ), agent_id=sample_agent.id)
         # Tasks
         tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         # Emails
@@ -2267,22 +2268,22 @@ class TestFinalScenarios:
             await services["email"].update_email_status(email_log.id, "sent")
         
         # Update client
-        await services["crm"].update_client(client.id, ClientUpdate(stage="closed"))
+        await services["crm"].update_client(client.id, ClientUpdate(stage="closed"), agent_id=client.agent_id)
         
         # Complete tasks
         for task in tasks[:2]:
             await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=client.agent_id)
         
         # Verify everything
-        updated_client = await services["crm"].get_client(client.id)
+        updated_client = await services["crm"].get_client(client.id, agent_id=client.agent_id)
         assert updated_client.stage == "closed"
         assert len(tasks) > 0
         assert len(email_logs) == 3
         
         # Final verification
-        all_clients = await services["crm"].list_clients()
-        all_tasks = await services["scheduler"].list_tasks()
-        all_emails = await services["email"].list_emails()
+        all_clients = await services["crm"].list_clients(agent_id=client.agent_id)
+        all_tasks = await services["scheduler"].list_tasks(agent_id=client.agent_id)
+        all_emails = await services["email"].list_emails(agent_id=client.agent_id)
         
         assert len(all_clients) >= 1
         assert len(all_tasks) >= len(tasks)

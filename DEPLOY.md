@@ -278,13 +278,15 @@ docker push $ACR_NAME.azurecr.io/realtoros-frontend:latest
 
 #### 4. Deploy to Azure Container Apps
 ```bash
-# Create Container Apps environment
+# Create Container Apps environment (Consumption Plan - default)
 az containerapp env create \
   --name realtoros-env \
   --resource-group $RESOURCE_GROUP \
   --location $LOCATION
 
-# Deploy backend
+# Deploy backend (Consumption plan with scale-to-zero enabled)
+# Note: min-replicas 0 enables cost savings when no traffic
+# If APScheduler requires always-on, consider min-replicas 1
 az containerapp create \
   --name realtoros-backend \
   --resource-group $RESOURCE_GROUP \
@@ -292,13 +294,13 @@ az containerapp create \
   --image $ACR_NAME.azurecr.io/realtoros-api:latest \
   --target-port 8000 \
   --ingress external \
-  --min-replicas 1 \
-  --max-replicas 1 \
+  --min-replicas 0 \
+  --max-replicas 10 \
   --cpu 0.5 --memory 1.0Gi \
   --secrets database-url=keyvaultref:<keyvault-uri>,identityref:<identity-id> \
   --env-vars DATABASE_URL=secretref:database-url
 
-# Deploy frontend
+# Deploy frontend (Consumption plan with scale-to-zero enabled)
 az containerapp create \
   --name realtoros-frontend \
   --resource-group $RESOURCE_GROUP \
@@ -306,8 +308,8 @@ az containerapp create \
   --image $ACR_NAME.azurecr.io/realtoros-frontend:latest \
   --target-port 3000 \
   --ingress external \
-  --min-replicas 1 \
-  --max-replicas 5 \
+  --min-replicas 0 \
+  --max-replicas 10 \
   --cpu 0.25 --memory 0.5Gi \
   --env-vars NEXT_PUBLIC_API_URL=<backend-url>
 ```

@@ -626,6 +626,24 @@ For tests, the system uses a test PostgreSQL database configured via environment
 
 ## 📦 Deployment
 
+> **Note:** RealtorOS uses **APScheduler** for task scheduling (runs integrated with FastAPI process).
+
+### Quick Deployment
+
+For comprehensive Azure deployment with automation scripts:
+- **[DEPLOY.md](DEPLOY.md)** - Complete Azure deployment guide
+- **[deploy/](deploy/)** - All deployment scripts and configurations
+
+#### Automated Azure Deployment (Recommended)
+
+```bash
+cd deploy/scripts
+chmod +x deploy-azure.sh
+./deploy-azure.sh
+```
+
+This automated script creates all Azure resources, builds/pushes images, deploys containers, and runs migrations.
+
 ### Production Checklist
 
 - [ ] Set `ENVIRONMENT=production` and `DEBUG=false`
@@ -636,33 +654,89 @@ For tests, the system uses a test PostgreSQL database configured via environment
 - [ ] Configure CORS origins for production domain
 - [ ] Run database migrations (`alembic upgrade head`)
 - [ ] Create initial agent account
-- [ ] Set up logging/monitoring (e.g., Sentry, CloudWatch)
-- [ ] Configure SSL/TLS certificates
+- [ ] Set up logging/monitoring (Azure Application Insights recommended)
+- [ ] Configure SSL/TLS (automatic with Azure Container Apps)
 - [ ] Set up health check endpoints
-- [ ] Configure backup strategy for PostgreSQL
+- [ ] Configure automated backups for PostgreSQL
 
 ### Deployment Platforms
 
-#### Backend (FastAPI)
-- **Platforms**: AWS ECS, DigitalOcean App Platform, Railway, Render, Fly.io, Azure Container Apps
-- **Requirements**: PostgreSQL database
-- **Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8000` (with Gunicorn for production)
-- **Note**: APScheduler runs in-process, so only one replica should run scheduled tasks
+#### Recommended: Azure Container Apps
+- **Best for**: MVP to medium scale (< 10k clients)
+- **Pros**: Fully managed, cost-effective, built-in HTTPS, easy scaling
+- **Setup**: Use `deploy/scripts/deploy-azure.sh` or follow [DEPLOY.md](DEPLOY.md)
+- **Note**: Single replica for APScheduler (or implement distributed locking)
 
-#### Frontend (Next.js)
-- **Platforms**: Vercel (recommended), Netlify, AWS S3 + CloudFront
-- **Build**: `npm run build`
-- **Environment**: Set `NEXT_PUBLIC_API_URL` to production backend URL
+#### Alternative Platforms
+- **Backend**: AWS ECS, DigitalOcean App Platform, Railway, Render, Fly.io
+- **Frontend**: Vercel (recommended), Netlify, Azure Static Web Apps
+- **Database**: Azure PostgreSQL, AWS RDS, Supabase
+- **Email**: AWS SES (current) or Azure Communication Services
 
-#### Database
-- **PostgreSQL**: AWS RDS, Supabase, DigitalOcean Managed Database, Heroku Postgres, Azure Database for PostgreSQL
-- **Migrations**: Run `alembic upgrade head` on deployment
+### Docker Compose
 
-#### Email
-- **AWS SES**: Configure verified sender email, set up credentials
-- **Alternative**: Can migrate to Azure Communication Services Email or other providers
+```bash
+# Development
+docker-compose up -d
 
-See [DEPLOY.md](DEPLOY.md) for detailed Azure deployment instructions.
+# Production testing
+docker-compose -f deploy/docker/docker-compose.prod.yml up -d
+
+# Staging
+docker-compose -f deploy/docker/docker-compose.staging.yml up -d
+```
+
+### CI/CD with GitHub Actions
+
+```bash
+# Copy workflow file
+cp deploy/github-actions/azure-deploy.yml .github/workflows/
+
+# Configure GitHub secrets:
+# - AZURE_CREDENTIALS, ACR_NAME, ACR_USERNAME, ACR_PASSWORD
+# - NEXT_PUBLIC_API_URL
+```
+
+See [DEPLOY.md](DEPLOY.md) for detailed Azure deployment instructions and [deploy/README.md](deploy/README.md) for deployment files documentation.
+
+---
+
+## 🤖 AI Assistant Deployment Prompt
+
+Use this with AI coding assistants (Cursor, GitHub Copilot, Claude, etc.):
+
+```
+I need help deploying RealtorOS, an AI-powered CRM with FastAPI + Next.js + PostgreSQL.
+
+Tech Stack:
+- Backend: FastAPI with APScheduler (NOT Celery/Redis)
+- Frontend: Next.js 14 with App Router
+- Database: PostgreSQL 16
+- Email: AWS SES
+- AI: OpenAI GPT-4 for email generation
+
+Deployment Resources:
+- Automated script: deploy/scripts/deploy-azure.sh
+- Full guide: DEPLOY.md
+- Docker configs: deploy/docker/
+- CI/CD: deploy/github-actions/azure-deploy.yml
+
+Target: Azure Container Apps
+
+Task: [YOUR SPECIFIC REQUEST]
+```
+
+**Example Prompts:**
+
+```
+"Walk me through deploy/scripts/deploy-azure.sh for first-time Azure deployment"
+
+"Set up GitHub Actions CI/CD using deploy/github-actions/azure-deploy.yml"
+
+"Debug backend health check failures using Azure Container Apps logs"
+
+"Optimize deploy/docker/docker-compose.prod.yml for cost and performance"
+```
 
 ---
 

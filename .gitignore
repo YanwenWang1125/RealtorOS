@@ -227,3 +227,6 @@ dmypy.json
 
 # Azure
 azure/
+
+# Deployment
+deploy/

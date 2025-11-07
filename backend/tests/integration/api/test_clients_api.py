@@ -722,10 +722,13 @@ class TestGetClientTasks:
             "stage": "lead"
         }
         create_response = await async_client.post("/api/clients/", json=client_data)
-        client_id = create_response.json()["id"]
+        client_json = create_response.json()
+        client_id = client_json["id"]
+        agent_id = client_json["agent_id"]
         
         # Create tasks directly in database
         task1 = Task(
+            agent_id=agent_id,
             client_id=client_id,
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
@@ -733,6 +736,7 @@ class TestGetClientTasks:
             priority="high"
         )
         task2 = Task(
+            agent_id=agent_id,
             client_id=client_id,
             followup_type="Week 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),

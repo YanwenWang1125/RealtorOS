@@ -112,7 +112,7 @@ class TestClientCreate:
     """Test CREATE operations for Client table."""
 
     @pytest.mark.asyncio
-    async def test_c01_create_client_minimal(self, services):
+    async def test_c01_create_client_minimal(self, services, sample_agent):
         """Test 1: Create client with only required fields."""
         client = ClientCreate(
             name="Minimal Client",
@@ -122,12 +122,12 @@ class TestClientCreate:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
         assert created.id is not None
         assert created.name == "Minimal Client"
 
     @pytest.mark.asyncio
-    async def test_c02_create_client_with_notes(self, services):
+    async def test_c02_create_client_with_notes(self, services, sample_agent):
         """Test 2: Create client with notes."""
         client = ClientCreate(
             name="Noted Client",
@@ -138,11 +138,11 @@ class TestClientCreate:
             stage="lead",
             notes="Important client notes here"
         )
-        created = await services["crm"].create_client(client)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
         assert created.notes == "Important client notes here"
 
     @pytest.mark.asyncio
-    async def test_c03_create_client_all_stages(self, services):
+    async def test_c03_create_client_all_stages(self, services, sample_agent):
         """Test 3: Create clients in all stages."""
         stages = ["lead", "negotiating", "under_contract", "closed", "lost"]
         for i, stage in enumerate(stages):
@@ -154,11 +154,11 @@ class TestClientCreate:
                 property_type="residential",
                 stage=stage
             )
-            created = await services["crm"].create_client(client)
+            created = await services["crm"].create_client(client, agent_id=sample_agent.id)
             assert created.stage == stage
 
     @pytest.mark.asyncio
-    async def test_c04_create_client_all_property_types(self, services):
+    async def test_c04_create_client_all_property_types(self, services, sample_agent):
         """Test 4: Create clients with all property types."""
         types = ["residential", "commercial", "land", "other"]
         for i, ptype in enumerate(types):
@@ -170,11 +170,11 @@ class TestClientCreate:
                 property_type=ptype,
                 stage="lead"
             )
-            created = await services["crm"].create_client(client)
+            created = await services["crm"].create_client(client, agent_id=sample_agent.id)
             assert created.property_type == ptype
 
     @pytest.mark.asyncio
-    async def test_c05_create_client_with_custom_fields(self, services):
+    async def test_c05_create_client_with_custom_fields(self, services, sample_agent):
         """Test 5: Create client with custom_fields."""
         client = ClientCreate(
             name="Custom Client",
@@ -185,11 +185,11 @@ class TestClientCreate:
             stage="lead",
             custom_fields={"budget": "$500k", "pref": "downtown"}
         )
-        created = await services["crm"].create_client(client)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
         assert created.custom_fields == {"budget": "$500k", "pref": "downtown"}
 
     @pytest.mark.asyncio
-    async def test_c06_create_multiple_clients_bulk(self, services):
+    async def test_c06_create_multiple_clients_bulk(self, services, sample_agent):
         """Test 6: Create multiple clients in bulk."""
         for i in range(10):
             client = ClientCreate(
@@ -200,7 +200,7 @@ class TestClientCreate:
                 property_type="residential",
                 stage="lead"
             )
-            created = await services["crm"].create_client(client)
+            created = await services["crm"].create_client(client, agent_id=sample_agent.id)
             assert created.id is not None
 
 
@@ -208,7 +208,7 @@ class TestClientRead:
     """Test READ operations for Client table."""
 
     @pytest.mark.asyncio
-    async def test_c07_get_client_by_id(self, services):
+    async def test_c07_get_client_by_id(self, services, sample_agent):
         """Test 7: Get client by ID."""
         client = ClientCreate(
             name="Get Test",
@@ -218,19 +218,19 @@ class TestClientRead:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
-        fetched = await services["crm"].get_client(created.id)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
+        fetched = await services["crm"].get_client(created.id, agent_id=sample_agent.id)
         assert fetched.id == created.id
         assert fetched.name == "Get Test"
 
     @pytest.mark.asyncio
-    async def test_c08_get_nonexistent_client(self, services):
+    async def test_c08_get_nonexistent_client(self, services, sample_agent):
         """Test 8: Get non-existent client."""
-        result = await services["crm"].get_client(99999)
+        result = await services["crm"].get_client(99999, agent_id=sample_agent.id)
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_c09_list_all_clients(self, services):
+    async def test_c09_list_all_clients(self, services, sample_agent):
         """Test 9: List all clients."""
         for i in range(5):
             client = ClientCreate(
@@ -241,12 +241,12 @@ class TestClientRead:
                 property_type="residential",
                 stage="lead"
             )
-            await services["crm"].create_client(client)
-        clients = await services["crm"].list_clients()
+            await services["crm"].create_client(client, agent_id=sample_agent.id)
+        clients = await services["crm"].list_clients(agent_id=sample_agent.id)
         assert len(clients) >= 5
 
     @pytest.mark.asyncio
-    async def test_c10_list_clients_pagination(self, services):
+    async def test_c10_list_clients_pagination(self, services, sample_agent):
         """Test 10: List clients with pagination."""
         for i in range(15):
             client = ClientCreate(
@@ -257,14 +257,14 @@ class TestClientRead:
                 property_type="residential",
                 stage="lead"
             )
-            await services["crm"].create_client(client)
-        page1 = await services["crm"].list_clients(page=1, limit=5)
-        page2 = await services["crm"].list_clients(page=2, limit=5)
+            await services["crm"].create_client(client, agent_id=sample_agent.id)
+        page1 = await services["crm"].list_clients(agent_id=sample_agent.id, page=1, limit=5)
+        page2 = await services["crm"].list_clients(agent_id=sample_agent.id, page=2, limit=5)
         assert len(page1) == 5
         assert len(page2) == 5
 
     @pytest.mark.asyncio
-    async def test_c11_list_clients_filter_by_stage(self, services):
+    async def test_c11_list_clients_filter_by_stage(self, services, sample_agent):
         """Test 11: List clients filtered by stage."""
         for stage in ["lead", "negotiating", "closed"]:
             for i in range(3):
@@ -276,8 +276,8 @@ class TestClientRead:
                     property_type="residential",
                     stage=stage
                 )
-                await services["crm"].create_client(client)
-        filtered = await services["crm"].list_clients(stage="lead")
+                await services["crm"].create_client(client, agent_id=sample_agent.id)
+        filtered = await services["crm"].list_clients(agent_id=sample_agent.id, stage="lead")
         assert all(c.stage == "lead" for c in filtered)
 
 
@@ -285,7 +285,7 @@ class TestClientUpdate:
     """Test UPDATE operations for Client table."""
 
     @pytest.mark.asyncio
-    async def test_c12_update_client_name(self, services):
+    async def test_c12_update_client_name(self, services, sample_agent):
         """Test 12: Update client name."""
         client = ClientCreate(
             name="Original",
@@ -295,12 +295,12 @@ class TestClientUpdate:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
-        updated = await services["crm"].update_client(created.id, ClientUpdate(name="Updated"))
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
+        updated = await services["crm"].update_client(created.id, ClientUpdate(name="Updated"), agent_id=sample_agent.id)
         assert updated.name == "Updated"
 
     @pytest.mark.asyncio
-    async def test_c13_update_client_email(self, services):
+    async def test_c13_update_client_email(self, services, sample_agent):
         """Test 13: Update client email."""
         client = ClientCreate(
             name="Email Test",
@@ -310,12 +310,12 @@ class TestClientUpdate:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
-        updated = await services["crm"].update_client(created.id, ClientUpdate(email="new@example.com"))
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
+        updated = await services["crm"].update_client(created.id, ClientUpdate(email="new@example.com"), agent_id=sample_agent.id)
         assert updated.email == "new@example.com"
 
     @pytest.mark.asyncio
-    async def test_c14_update_client_stage(self, services):
+    async def test_c14_update_client_stage(self, services, sample_agent):
         """Test 14: Update client stage."""
         client = ClientCreate(
             name="Stage Test",
@@ -325,12 +325,12 @@ class TestClientUpdate:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
-        updated = await services["crm"].update_client(created.id, ClientUpdate(stage="negotiating"))
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
+        updated = await services["crm"].update_client(created.id, ClientUpdate(stage="negotiating"), agent_id=sample_agent.id)
         assert updated.stage == "negotiating"
 
     @pytest.mark.asyncio
-    async def test_c15_update_client_multiple_fields(self, services):
+    async def test_c15_update_client_multiple_fields(self, services, sample_agent):
         """Test 15: Update multiple client fields."""
         client = ClientCreate(
             name="Multi",
@@ -340,18 +340,18 @@ class TestClientUpdate:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
         updated = await services["crm"].update_client(created.id, ClientUpdate(
             phone="+1-555-9999",
             stage="under_contract",
             notes="Updated notes"
-        ))
+        ), agent_id=sample_agent.id)
         assert updated.phone == "+1-555-9999"
         assert updated.stage == "under_contract"
         assert updated.notes == "Updated notes"
 
     @pytest.mark.asyncio
-    async def test_c16_update_client_all_fields(self, services):
+    async def test_c16_update_client_all_fields(self, services, sample_agent):
         """Test 16: Update all client fields."""
         client = ClientCreate(
             name="All Fields",
@@ -361,7 +361,7 @@ class TestClientUpdate:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
         updated = await services["crm"].update_client(created.id, ClientUpdate(
             name="All Updated",
             email="all.updated@example.com",
@@ -371,15 +371,15 @@ class TestClientUpdate:
             stage="closed",
             notes="All updated",
             custom_fields={"updated": True}
-        ))
+        ), agent_id=sample_agent.id)
         assert updated.name == "All Updated"
         assert updated.email == "all.updated@example.com"
         assert updated.property_type == "commercial"
 
     @pytest.mark.asyncio
-    async def test_c17_update_nonexistent_client(self, services):
+    async def test_c17_update_nonexistent_client(self, services, sample_agent):
         """Test 17: Update non-existent client."""
-        result = await services["crm"].update_client(99999, ClientUpdate(name="Won't work"))
+        result = await services["crm"].update_client(99999, ClientUpdate(name="Won't work"), agent_id=sample_agent.id)
         assert result is None
 
 
@@ -387,7 +387,7 @@ class TestClientDelete:
     """Test DELETE operations for Client table."""
 
     @pytest.mark.asyncio
-    async def test_c18_delete_client(self, services):
+    async def test_c18_delete_client(self, services, sample_agent):
         """Test 18: Delete client."""
         client = ClientCreate(
             name="Delete Me",
@@ -397,14 +397,14 @@ class TestClientDelete:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
-        result = await services["crm"].delete_client(created.id)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
+        result = await services["crm"].delete_client(created.id, agent_id=sample_agent.id)
         assert result is True
-        listed = await services["crm"].list_clients()
+        listed = await services["crm"].list_clients(agent_id=sample_agent.id)
         assert created.id not in [c.id for c in listed]
 
     @pytest.mark.asyncio
-    async def test_c19_delete_multiple_clients(self, services):
+    async def test_c19_delete_multiple_clients(self, services, sample_agent):
         """Test 19: Delete multiple clients."""
         ids = []
         for i in range(5):
@@ -416,18 +416,18 @@ class TestClientDelete:
                 property_type="residential",
                 stage="lead"
             )
-            created = await services["crm"].create_client(client)
+            created = await services["crm"].create_client(client, agent_id=sample_agent.id)
             ids.append(created.id)
         for cid in ids[:3]:
-            await services["crm"].delete_client(cid)
-        listed = await services["crm"].list_clients()
+            await services["crm"].delete_client(cid, agent_id=sample_agent.id)
+        listed = await services["crm"].list_clients(agent_id=sample_agent.id)
         assert ids[0] not in [c.id for c in listed]
         assert ids[1] not in [c.id for c in listed]
 
     @pytest.mark.asyncio
-    async def test_c20_delete_nonexistent_client(self, services):
+    async def test_c20_delete_nonexistent_client(self, services, sample_agent):
         """Test 20: Delete non-existent client."""
-        result = await services["crm"].delete_client(99999)
+        result = await services["crm"].delete_client(99999, agent_id=sample_agent.id)
         assert result is False
 
 
@@ -435,7 +435,7 @@ class TestClientComplex:
     """Test complex Client operations."""
 
     @pytest.mark.asyncio
-    async def test_c21_client_lifecycle(self, services):
+    async def test_c21_client_lifecycle(self, services, sample_agent):
         """Test 21: Full client lifecycle."""
         client = ClientCreate(
             name="Lifecycle",
@@ -446,14 +446,14 @@ class TestClientComplex:
             stage="lead"
         )
         created = await services["crm"].create_client(client)
-        await services["crm"].update_client(created.id, ClientUpdate(stage="negotiating"))
-        await services["crm"].update_client(created.id, ClientUpdate(stage="closed"))
-        await services["crm"].delete_client(created.id)
-        listed = await services["crm"].list_clients()
+        await services["crm"].update_client(created.id, ClientUpdate(stage="negotiating"), agent_id=sample_agent.id)
+        await services["crm"].update_client(created.id, ClientUpdate(stage="closed"), agent_id=sample_agent.id)
+        await services["crm"].delete_client(created.id, agent_id=sample_agent.id)
+        listed = await services["crm"].list_clients(agent_id=sample_agent.id)
         assert created.id not in [c.id for c in listed]
 
     @pytest.mark.asyncio
-    async def test_c22_client_with_custom_fields_update(self, services):
+    async def test_c22_client_with_custom_fields_update(self, services, sample_agent):
         """Test 22: Update client custom_fields."""
         client = ClientCreate(
             name="Custom Update",
@@ -464,14 +464,14 @@ class TestClientComplex:
             stage="lead",
             custom_fields={"old": "value"}
         )
-        created = await services["crm"].create_client(client)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
         updated = await services["crm"].update_client(created.id, ClientUpdate(
             custom_fields={"new": "value", "updated": True}
-        ))
+        ), agent_id=sample_agent.id)
         assert updated.custom_fields == {"new": "value", "updated": True}
 
     @pytest.mark.asyncio
-    async def test_c23_list_clients_excludes_deleted(self, services):
+    async def test_c23_list_clients_excludes_deleted(self, services, sample_agent):
         """Test 23: List excludes deleted clients."""
         ids = []
         for i in range(5):
@@ -486,12 +486,12 @@ class TestClientComplex:
             created = await services["crm"].create_client(client)
             ids.append(created.id)
         await services["crm"].delete_client(ids[2])
-        listed = await services["crm"].list_clients()
+        listed = await services["crm"].list_clients(agent_id=sample_agent.id)
         assert ids[2] not in [c.id for c in listed]
         assert ids[0] in [c.id for c in listed]
 
     @pytest.mark.asyncio
-    async def test_c24_client_filter_by_stage_multiple(self, services):
+    async def test_c24_client_filter_by_stage_multiple(self, services, sample_agent):
         """Test 24: Filter clients by stage with multiple stages."""
         stages_data = {"lead": 5, "negotiating": 3, "closed": 2}
         for stage, count in stages_data.items():
@@ -504,13 +504,13 @@ class TestClientComplex:
                     property_type="residential",
                     stage=stage
                 )
-                await services["crm"].create_client(client)
-        lead_clients = await services["crm"].list_clients(stage="lead")
+                await services["crm"].create_client(client, agent_id=sample_agent.id)
+        lead_clients = await services["crm"].list_clients(agent_id=sample_agent.id, stage="lead")
         assert len(lead_clients) >= 5
         assert all(c.stage == "lead" for c in lead_clients)
 
     @pytest.mark.asyncio
-    async def test_c25_client_pagination_large_dataset(self, services):
+    async def test_c25_client_pagination_large_dataset(self, services, sample_agent):
         """Test 25: Pagination with large dataset."""
         for i in range(25):
             client = ClientCreate(
@@ -521,10 +521,10 @@ class TestClientComplex:
                 property_type="residential",
                 stage="lead"
             )
-            await services["crm"].create_client(client)
+            await services["crm"].create_client(client, agent_id=sample_agent.id)
         pages = []
         for page_num in range(1, 6):
-            page = await services["crm"].list_clients(page=page_num, limit=5)
+            page = await services["crm"].list_clients(agent_id=sample_agent.id, page=page_num, limit=5)
             pages.extend(page)
         assert len(pages) >= 20
         all_ids = [c.id for c in pages]

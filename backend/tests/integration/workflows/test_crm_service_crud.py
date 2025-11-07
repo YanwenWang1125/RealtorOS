@@ -190,7 +190,7 @@ class TestCRMCreate:
         assert len(created_ids) == 10
         # Verify all are retrievable
         for client_id in created_ids:
-            fetched = await crm_service.get_client(client_id)
+            fetched = await crm_service.get_client(client_id, agent_id=test_agent.id)
             assert fetched is not None
             assert fetched.id == client_id
 
@@ -213,7 +213,7 @@ class TestCRMRead:
         created = await crm_service.create_client(client_data, agent_id=test_agent.id)
         
         # Retrieve it
-        fetched = await crm_service.get_client(created.id)
+        fetched = await crm_service.get_client(created.id, agent_id=test_agent.id)
         
         assert fetched is not None
         assert fetched.id == created.id
@@ -223,7 +223,7 @@ class TestCRMRead:
     @pytest.mark.asyncio
     async def test_get_nonexistent_client(self, crm_service, test_agent):
         """Test 7: Attempt to get a client that doesn't exist."""
-        result = await crm_service.get_client(99999)
+        result = await crm_service.get_client(99999, agent_id=test_agent.id)
         assert result is None
 
     @pytest.mark.asyncio
@@ -239,10 +239,10 @@ class TestCRMRead:
                 property_type="residential",
                 stage="lead"
             )
-            await crm_service.create_client(client_data)
+            await crm_service.create_client(client_data, agent_id=test_agent.id)
         
         # List all
-        clients = await crm_service.list_clients()
+        clients = await crm_service.list_clients(agent_id=test_agent.id)
         assert len(clients) >= 5
 
     @pytest.mark.asyncio
@@ -258,12 +258,12 @@ class TestCRMRead:
                 property_type="residential",
                 stage="lead"
             )
-            await crm_service.create_client(client_data)
+            await crm_service.create_client(client_data, agent_id=test_agent.id)
         
         # Test pagination
-        page1 = await crm_service.list_clients(page=1, limit=5)
-        page2 = await crm_service.list_clients(page=2, limit=5)
-        page3 = await crm_service.list_clients(page=3, limit=5)
+        page1 = await crm_service.list_clients(agent_id=test_agent.id, page=1, limit=5)
+        page2 = await crm_service.list_clients(agent_id=test_agent.id, page=2, limit=5)
+        page3 = await crm_service.list_clients(agent_id=test_agent.id, page=3, limit=5)
         
         assert len(page1) == 5
         assert len(page2) == 5
@@ -302,7 +302,7 @@ class TestCRMRead:
         
         # Verify filtering
         for stage, expected_ids in created_by_stage.items():
-            filtered = await crm_service.list_clients(stage=stage)
+            filtered = await crm_service.list_clients(agent_id=test_agent.id, stage=stage)
             filtered_ids = [c.id for c in filtered]
             for expected_id in expected_ids:
                 assert expected_id in filtered_ids
@@ -331,6 +331,7 @@ class TestCRMRead:
         
         for followup_type, days, priority, status in tasks_data:
             task = Task(
+                agent_id=test_agent.id,
                 client_id=created.id,
                 followup_type=followup_type,
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=days),
@@ -342,7 +343,7 @@ class TestCRMRead:
         await crm_service.session.commit()
         
         # Retrieve tasks
-        tasks = await crm_service.get_client_tasks(created.id)
+        tasks = await crm_service.get_client_tasks(created.id, agent_id=test_agent.id)
         
         assert len(tasks) == 3
         assert all("id" in t for t in tasks)
@@ -369,7 +370,7 @@ class TestCRMUpdate:
         
         # Update name
         update_data = ClientUpdate(name="Updated Name")
-        updated = await crm_service.update_client(created.id, update_data)
+        updated = await crm_service.update_client(created.id, update_data, agent_id=test_agent.id)
         
         assert updated.name == "Updated Name"
         assert updated.email == "original@example.com"  # Unchanged
@@ -388,7 +389,7 @@ class TestCRMUpdate:
         created = await crm_service.create_client(client_data, agent_id=test_agent.id)
         
         update_data = ClientUpdate(email="new@example.com")
-        updated = await crm_service.update_client(created.id, update_data)
+        updated = await crm_service.update_client(created.id, update_data, agent_id=test_agent.id)
         
         assert updated.email == "new@example.com"
         assert updated.name == "Email Client"  # Unchanged
@@ -410,7 +411,7 @@ class TestCRMUpdate:
         stages = ["lead", "negotiating", "under_contract", "closed"]
         for stage in stages[1:]:  # Skip first (already lead)
             update_data = ClientUpdate(stage=stage)
-            updated = await crm_service.update_client(created.id, update_data)
+            updated = await crm_service.update_client(created.id, update_data, agent_id=test_agent.id)
             assert updated.stage == stage
 
     @pytest.mark.asyncio
@@ -435,7 +436,7 @@ class TestCRMUpdate:
             notes="Updated notes",
             custom_fields={"key": "value"}
         )
-        updated = await crm_service.update_client(created.id, update_data)
+        updated = await crm_service.update_client(created.id, update_data, agent_id=test_agent.id)
         
         assert updated.phone == "+1-555-9999"
         assert updated.property_address == "9999 Updated St, New City, ST 99999"
@@ -466,7 +467,7 @@ class TestCRMUpdate:
             notes="All fields updated",
             custom_fields={"all": "updated", "test": True}
         )
-        updated = await crm_service.update_client(created.id, update_data)
+        updated = await crm_service.update_client(created.id, update_data, agent_id=test_agent.id)
         
         assert updated.name == "All Updated"
         assert updated.email == "all.updated@example.com"
@@ -481,7 +482,7 @@ class TestCRMUpdate:
     async def test_update_nonexistent_client(self, crm_service, test_agent):
         """Test 17: Attempt to update non-existent client."""
         update_data = ClientUpdate(name="Won't Work")
-        result = await crm_service.update_client(99999, update_data)
+        result = await crm_service.update_client(99999, update_data, agent_id=test_agent.id)
         assert result is None
 
     @pytest.mark.asyncio
@@ -499,7 +500,7 @@ class TestCRMUpdate:
         
         # Update with empty ClientUpdate
         update_data = ClientUpdate()
-        updated = await crm_service.update_client(created.id, update_data)
+        updated = await crm_service.update_client(created.id, update_data, agent_id=test_agent.id)
         
         assert updated is not None
         assert updated.name == "Empty Update"  # Unchanged
@@ -523,11 +524,11 @@ class TestCRMDelete:
         client_id = created.id
         
         # Delete client
-        result = await crm_service.delete_client(client_id)
+        result = await crm_service.delete_client(client_id, agent_id=test_agent.id)
         assert result is True
         
         # Verify it's not in the list
-        listed = await crm_service.list_clients()
+        listed = await crm_service.list_clients(agent_id=test_agent.id)
         assert client_id not in [c.id for c in listed]
 
     @pytest.mark.asyncio
@@ -549,11 +550,11 @@ class TestCRMDelete:
         
         # Delete first 3
         for client_id in created_ids[:3]:
-            result = await crm_service.delete_client(client_id)
+            result = await crm_service.delete_client(client_id, agent_id=test_agent.id)
             assert result is True
         
         # Verify deleted ones are not in list
-        listed = await crm_service.list_clients()
+        listed = await crm_service.list_clients(agent_id=test_agent.id)
         listed_ids = [c.id for c in listed]
         assert created_ids[0] not in listed_ids
         assert created_ids[1] not in listed_ids
@@ -565,7 +566,7 @@ class TestCRMDelete:
     @pytest.mark.asyncio
     async def test_delete_nonexistent_client(self, crm_service, test_agent):
         """Test 21: Attempt to delete non-existent client."""
-        result = await crm_service.delete_client(99999)
+        result = await crm_service.delete_client(99999, agent_id=test_agent.id)
         assert result is False
 
 
@@ -588,22 +589,22 @@ class TestCRMComplexScenarios:
         original_id = created.id
         
         # Read
-        fetched = await crm_service.get_client(original_id)
+        fetched = await crm_service.get_client(original_id, agent_id=test_agent.id)
         assert fetched is not None
         assert fetched.stage == "lead"
         
         # Update - progress through stages
-        await crm_service.update_client(original_id, ClientUpdate(stage="negotiating"))
-        await crm_service.update_client(original_id, ClientUpdate(stage="under_contract"))
-        updated = await crm_service.update_client(original_id, ClientUpdate(stage="closed"))
+        await crm_service.update_client(original_id, ClientUpdate(stage="negotiating"), agent_id=test_agent.id)
+        await crm_service.update_client(original_id, ClientUpdate(stage="under_contract"), agent_id=test_agent.id)
+        updated = await crm_service.update_client(original_id, ClientUpdate(stage="closed"), agent_id=test_agent.id)
         assert updated.stage == "closed"
         
         # Delete
-        deleted = await crm_service.delete_client(original_id)
+        deleted = await crm_service.delete_client(original_id, agent_id=test_agent.id)
         assert deleted is True
         
         # Verify deleted
-        listed = await crm_service.list_clients()
+        listed = await crm_service.list_clients(agent_id=test_agent.id)
         assert original_id not in [c.id for c in listed]
 
     @pytest.mark.asyncio
@@ -622,6 +623,7 @@ class TestCRMComplexScenarios:
         
         # Add tasks
         task1 = Task(
+            agent_id=test_agent.id,
             client_id=created.id,
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
@@ -629,6 +631,7 @@ class TestCRMComplexScenarios:
             priority="high"
         )
         task2 = Task(
+            agent_id=test_agent.id,
             client_id=created.id,
             followup_type="Week 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),
@@ -639,10 +642,10 @@ class TestCRMComplexScenarios:
         await crm_service.session.commit()
         
         # Update client
-        await crm_service.update_client(created.id, ClientUpdate(stage="negotiating"))
+        await crm_service.update_client(created.id, ClientUpdate(stage="negotiating"), agent_id=test_agent.id)
         
         # Verify tasks still exist
-        tasks = await crm_service.get_client_tasks(created.id)
+        tasks = await crm_service.get_client_tasks(created.id, agent_id=test_agent.id)
         assert len(tasks) == 2
 
     @pytest.mark.asyncio
@@ -664,11 +667,11 @@ class TestCRMComplexScenarios:
         
         # Delete some clients (every other one)
         for client_id in created_ids[::2]:  # Delete indices 0, 2, 4, 6, 8
-            await crm_service.delete_client(client_id)
+            await crm_service.delete_client(client_id, agent_id=test_agent.id)
         
         # Paginate - should only get non-deleted clients
-        page1 = await crm_service.list_clients(page=1, limit=5)
-        page2 = await crm_service.list_clients(page=2, limit=5)
+        page1 = await crm_service.list_clients(agent_id=test_agent.id, page=1, limit=5)
+        page2 = await crm_service.list_clients(agent_id=test_agent.id, page=2, limit=5)
         
         all_listed_ids = [c.id for c in page1 + page2]
         # Verify deleted clients are not in the list

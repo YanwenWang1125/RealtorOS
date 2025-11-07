@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from app.services.ai_agent import AIAgent
 from app.models.client import Client
 from app.models.task import Task
+from app.models.agent import Agent
 from app.config import settings
 
 
@@ -63,6 +64,22 @@ def create_test_task(**kwargs):
     return Task(**defaults)
 
 
+def create_test_agent(**kwargs):
+    """Helper to create test agent with defaults."""
+    defaults = {
+        "id": 1,
+        "name": "Test Agent",
+        "email": "agent@example.com",
+        "title": "Real Estate Agent",
+        "company": "Test Realty",
+        "phone": "+1-555-0000",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    }
+    defaults.update(kwargs)
+    return Agent(**defaults)
+
+
 def create_mock_openai_response(subject, body):
     """Helper to create mock OpenAI response."""
     mock_response = MagicMock()
@@ -94,7 +111,8 @@ async def test_generate_email():
         mock_openai_class.return_value = mock_client
         
         # Create agent and test data
-        agent = AIAgent()
+        ai_agent = AIAgent()
+        agent = create_test_agent()
         client = create_test_client(
             name="Jane Smith",
             email="jane@example.com",
@@ -109,7 +127,7 @@ async def test_generate_email():
         )
         
         # Execute
-        result = await agent.generate_email(client, task)
+        result = await ai_agent.generate_email(client, task, agent)
         
         # Assert
         assert "subject" in result
@@ -146,12 +164,13 @@ async def test_generate_email_with_instructions():
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
         mock_openai_class.return_value = mock_client
         
-        agent = AIAgent()
+        ai_agent = AIAgent()
+        agent = create_test_agent()
         client = create_test_client(name="Jane Smith", email="jane@example.com")
         task = create_test_task()
         
         custom_instructions = "Be extra friendly and mention the neighborhood schools"
-        result = await agent.generate_email(client, task, agent_instructions=custom_instructions)
+        result = await ai_agent.generate_email(client, task, agent, agent_instructions=custom_instructions)
         
         # Verify result
         assert "subject" in result
@@ -178,12 +197,13 @@ async def test_generate_email_api_failure():
         )
         mock_openai_class.return_value = mock_client
         
-        agent = AIAgent()
+        ai_agent = AIAgent()
+        agent = create_test_agent()
         client = create_test_client(name="Jane", email="jane@test.com", stage="lead")
         task = create_test_task(followup_type="Day 1", priority="high")
         
         # Should not crash, should return fallback
-        result = await agent.generate_email(client, task)
+        result = await ai_agent.generate_email(client, task, agent)
         
         assert "subject" in result
         assert "body" in result
@@ -205,11 +225,12 @@ async def test_generate_email_rate_limit_error():
         )
         mock_openai_class.return_value = mock_client
         
-        agent = AIAgent()
+        ai_agent = AIAgent()
+        agent = create_test_agent()
         client = create_test_client(name="John Doe", email="john@test.com")
         task = create_test_task()
         
-        result = await agent.generate_email(client, task)
+        result = await ai_agent.generate_email(client, task, agent)
         
         # Should return fallback email
         assert "subject" in result
@@ -232,11 +253,12 @@ async def test_generate_email_preview():
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
         mock_openai_class.return_value = mock_client
         
-        agent = AIAgent()
+        ai_agent = AIAgent()
+        agent = create_test_agent()
         client = create_test_client(name="Jane", email="jane@test.com", stage="lead")
         task = create_test_task(followup_type="Day 3", priority="medium")
         
-        result = await agent.generate_email_preview(client, task)
+        result = await ai_agent.generate_email_preview(client, task, agent)
         
         assert "subject" in result
         assert "body" in result
@@ -260,11 +282,12 @@ async def test_generate_email_preview_api_failure():
         )
         mock_openai_class.return_value = mock_client
         
-        agent = AIAgent()
+        ai_agent = AIAgent()
+        agent = create_test_agent()
         client = create_test_client(name="Bob", email="bob@test.com")
         task = create_test_task()
         
-        result = await agent.generate_email_preview(client, task)
+        result = await ai_agent.generate_email_preview(client, task, agent)
         
         # Should return fallback
         assert "subject" in result
@@ -277,7 +300,8 @@ async def test_generate_email_preview_api_failure():
 def test_build_prompt():
     """Test prompt building with all client and task data."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     
     client = create_test_client(
         name="Jane Smith",
@@ -293,7 +317,7 @@ def test_build_prompt():
         priority="high"
     )
     
-    prompt = agent._build_prompt(client, task, agent_instructions="Be extra friendly")
+    prompt = ai_agent._build_prompt(client, task, agent, agent_instructions="Be extra friendly")
     
     # Assert prompt structure
     assert isinstance(prompt, str)
@@ -317,7 +341,8 @@ def test_build_prompt():
 def test_build_prompt_with_minimal_data():
     """Test prompt building with minimal client data."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     
     client = create_test_client(
         name="John Doe",
@@ -329,7 +354,7 @@ def test_build_prompt_with_minimal_data():
     
     task = create_test_task(followup_type="Week 1", priority="low")
     
-    prompt = agent._build_prompt(client, task)
+    prompt = ai_agent._build_prompt(client, task, agent)
     
     assert isinstance(prompt, str)
     assert len(prompt) > 50
@@ -344,13 +369,14 @@ def test_build_prompt_with_minimal_data():
 def test_build_prompt_includes_instructions():
     """Test that custom instructions are included in prompt."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     
     client = create_test_client(name="Alice", email="alice@test.com")
     task = create_test_task()
     
     custom_instructions = "Focus on the investment potential and ROI"
-    prompt = agent._build_prompt(client, task, agent_instructions=custom_instructions)
+    prompt = ai_agent._build_prompt(client, task, agent, agent_instructions=custom_instructions)
     
     assert "investment potential" in prompt.lower() or "ROI" in prompt.lower() or "investment" in prompt.lower()
     assert custom_instructions in prompt or "investment potential" in prompt.lower()
@@ -359,7 +385,8 @@ def test_build_prompt_includes_instructions():
 def test_build_prompt_with_custom_fields():
     """Test prompt building includes custom fields when available."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     
     client = create_test_client(
         name="Bob",
@@ -368,7 +395,7 @@ def test_build_prompt_with_custom_fields():
     )
     task = create_test_task()
     
-    prompt = agent._build_prompt(client, task)
+    prompt = ai_agent._build_prompt(client, task, agent)
     
     assert "budget" in prompt.lower() or "500k" in prompt
     assert "preferred_location" in prompt.lower() or "downtown" in prompt.lower()
@@ -377,12 +404,13 @@ def test_build_prompt_with_custom_fields():
 def test_build_prompt_with_task_notes():
     """Test prompt building includes task notes."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     
     client = create_test_client(name="Charlie", email="charlie@test.com")
     task = create_test_task(notes="Client requested virtual tour")
     
-    prompt = agent._build_prompt(client, task)
+    prompt = ai_agent._build_prompt(client, task, agent)
     
     assert "virtual tour" in prompt.lower() or "Client requested virtual tour" in prompt
 
@@ -619,7 +647,8 @@ Your Real Estate Agent"""
     mock_openai_class.return_value = mock_client
     
     # Create test data
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     client = create_test_client(
         name="Jane Smith",
         email="jane@example.com",
@@ -634,7 +663,7 @@ Your Real Estate Agent"""
     )
     
     # Execute full flow
-    result = await agent.generate_email(client, task, agent_instructions="Keep it warm and friendly")
+    result = await ai_agent.generate_email(client, task, agent, agent_instructions="Keep it warm and friendly")
     
     # Verify result structure
     assert result["subject"] == "Great to Connect About 123 Oak Street"
@@ -669,39 +698,42 @@ Your Real Estate Agent"""
 async def test_generate_email_with_none_client():
     """Test handling of invalid input (None client)."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     task = create_test_task()
     
     # Implementation doesn't handle None client - it will raise AttributeError
     # This test documents the current behavior
     with pytest.raises(AttributeError):
-        await agent.generate_email(None, task)
+        await ai_agent.generate_email(None, task, agent)
 
 
 @pytest.mark.asyncio
 async def test_generate_email_with_none_task():
     """Test handling of invalid input (None task)."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     client = create_test_client()
     
     # Implementation doesn't handle None task - it will raise AttributeError
     # This test documents the current behavior
     with pytest.raises(AttributeError):
-        await agent.generate_email(client, None)
+        await ai_agent.generate_email(client, None, agent)
 
 
 def test_build_prompt_all_followup_types():
     """Test prompt building for different follow-up types."""
     
-    agent = AIAgent()
+    ai_agent = AIAgent()
+    agent = create_test_agent()
     client = create_test_client()
     
     followup_types = ["Day 1", "Day 3", "Week 1", "Week 2", "Month 1", "Custom Type"]
     
     for followup_type in followup_types:
         task = create_test_task(followup_type=followup_type)
-        prompt = agent._build_prompt(client, task)
+        prompt = ai_agent._build_prompt(client, task, agent)
         
         assert followup_type in prompt
         assert isinstance(prompt, str)

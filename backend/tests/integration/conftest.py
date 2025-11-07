@@ -124,12 +124,51 @@ async def async_client(db_session):
     from app.db.postgresql import get_session
     async def override_get_session():
         yield db_session
-    
+
     app.dependency_overrides[get_session] = override_get_session
-    
+
     async with AsyncClient(app=app, base_url="http://test", follow_redirects=True) as client:
         yield client
-    
+
     # Clean up the override after the test
     app.dependency_overrides.clear()
+
+@pytest_asyncio.fixture
+async def authenticated_client(db_session, async_client):
+    """Create an authenticated AsyncClient with a test agent."""
+    from app.utils.auth import hash_password
+    from sqlalchemy import delete
+
+    # Clean up and create test agent
+    await db_session.execute(delete(Agent))
+    await db_session.commit()
+
+    test_agent = Agent(
+        email="test-agent@example.com",
+        password_hash=hash_password("test_password"),
+        name="Test Agent",
+        auth_provider="email"
+    )
+    db_session.add(test_agent)
+    await db_session.commit()
+    await db_session.refresh(test_agent)
+
+    # Login to get token
+    login_response = await async_client.post(
+        "/api/agents/login",
+        json={
+            "email": "test-agent@example.com",
+            "password": "test_password"
+        }
+    )
+    token_data = login_response.json()
+    token = token_data["access_token"]
+
+    # Add auth header to client
+    async_client.headers["Authorization"] = f"Bearer {token}"
+
+    yield async_client
+
+    # Clean up auth header
+    async_client.headers.pop("Authorization", None)
 

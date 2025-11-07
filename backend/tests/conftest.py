@@ -26,19 +26,11 @@ if str(backend_dir) not in sys.path:
 
 import pytest
 import pytest_asyncio
-import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import text
 from app.db.postgresql import Base
 # Import all models so they register with Base.metadata
 from app.models import client, task, email_log, agent  # noqa: F401
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 @pytest_asyncio.fixture
 async def test_session():

@@ -1,0 +1,696 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-7.4.3, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Leo\AI projects\RealtorOS\backend
+plugins: anyio-4.11.0, asyncio-0.23.1, cov-7.0.0
+asyncio: mode=Mode.STRICT
+collecting ... collected 288 items
+
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_process_due_tasks_job_with_real_database PASSED [  0%]
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_scheduler_start_stop_lifecycle PASSED [  0%]
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_scheduler_job_registration PASSED [  1%]
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_process_due_tasks_job_handles_database_errors PASSED [  1%]
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_process_due_tasks_job_handles_service_errors PASSED [  1%]
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_scheduler_status_endpoint_format PASSED [  2%]
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_multiple_job_executions PASSED [  2%]
+tests/integration/api/test_agents_api.py::test_register_endpoint PASSED  [  2%]
+tests/integration/api/test_agents_api.py::test_register_duplicate_email PASSED [  3%]
+tests/integration/api/test_agents_api.py::test_login_endpoint PASSED     [  3%]
+tests/integration/api/test_agents_api.py::test_login_wrong_password PASSED [  3%]
+tests/integration/api/test_agents_api.py::test_get_profile_endpoint PASSED [  4%]
+tests/integration/api/test_agents_api.py::test_get_profile_unauthorized FAILED [  4%]
+tests/integration/api/test_agents_api.py::test_get_profile_invalid_token PASSED [  4%]
+tests/integration/api/test_agents_api.py::test_update_profile_endpoint PASSED [  5%]
+tests/integration/api/test_agents_api.py::test_google_login_endpoint PASSED [  5%]
+tests/integration/api/test_agents_api.py::test_google_login_invalid_token PASSED [  5%]
+tests/integration/api/test_agents_api.py::test_protected_endpoint_requires_auth FAILED [  6%]
+tests/integration/api/test_agents_api.py::test_protected_endpoint_with_token PASSED [  6%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_success FAILED [  6%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_with_notes FAILED [  7%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_with_custom_fields FAILED [  7%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_missing_required_fields FAILED [  7%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_invalid_email FAILED [  8%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_invalid_stage FAILED [  8%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_invalid_property_type FAILED [  9%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_all_stages FAILED [  9%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_triggers_task_creation FAILED [  9%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_creates_followup_tasks FAILED [ 10%]
+tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_task_creation_all_stages FAILED [ 10%]
+tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_empty FAILED [ 10%]
+tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_basic FAILED [ 11%]
+tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_pagination FAILED [ 11%]
+tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_filter_by_stage FAILED [ 11%]
+tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_pagination_defaults FAILED [ 12%]
+tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_invalid_page FAILED [ 12%]
+tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_invalid_limit FAILED [ 12%]
+tests/integration/api/test_clients_api.py::TestGetClient::test_get_client_success FAILED [ 13%]
+tests/integration/api/test_clients_api.py::TestGetClient::test_get_client_not_found FAILED [ 13%]
+tests/integration/api/test_clients_api.py::TestGetClient::test_get_client_invalid_id FAILED [ 13%]
+tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_partial FAILED [ 14%]
+tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_stage FAILED [ 14%]
+tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_multiple_fields FAILED [ 14%]
+tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_custom_fields FAILED [ 15%]
+tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_not_found FAILED [ 15%]
+tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_invalid_stage FAILED [ 15%]
+tests/integration/api/test_clients_api.py::TestDeleteClient::test_delete_client_success FAILED [ 16%]
+tests/integration/api/test_clients_api.py::TestDeleteClient::test_delete_client_not_found FAILED [ 16%]
+tests/integration/api/test_clients_api.py::TestDeleteClient::test_delete_client_then_get_returns_404 FAILED [ 17%]
+tests/integration/api/test_clients_api.py::TestGetClientTasks::test_get_client_tasks_empty FAILED [ 17%]
+tests/integration/api/test_clients_api.py::TestGetClientTasks::test_get_client_tasks_with_tasks FAILED [ 17%]
+tests/integration/api/test_clients_api.py::TestGetClientTasks::test_get_client_tasks_not_found FAILED [ 18%]
+tests/integration/api/test_clients_api.py::TestClientAPIIntegration::test_client_full_lifecycle FAILED [ 18%]
+tests/integration/api/test_clients_api.py::TestClientAPIIntegration::test_list_clients_excludes_deleted FAILED [ 18%]
+tests/integration/api/test_scheduler_api.py::TestSchedulerAPI::test_scheduler_health_endpoint PASSED [ 19%]
+tests/integration/api/test_scheduler_api.py::TestSchedulerAPI::test_scheduler_health_endpoint_when_stopped PASSED [ 19%]
+tests/integration/api/test_scheduler_api.py::TestSchedulerAPI::test_scheduler_health_endpoint_job_details PASSED [ 19%]
+tests/integration/api/test_scheduler_api.py::TestSchedulerAPI::test_scheduler_health_endpoint_response_format PASSED [ 20%]
+tests/integration/api/test_send.py::test_send_email PASSED               [ 20%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c01_create_client_minimal PASSED [ 20%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c02_create_client_with_notes ERROR [ 21%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c02_create_client_with_notes ERROR [ 21%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c03_create_client_all_stages ERROR [ 21%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c03_create_client_all_stages ERROR [ 21%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c04_create_client_all_property_types ERROR [ 21%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c04_create_client_all_property_types ERROR [ 21%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c05_create_client_with_custom_fields ERROR [ 22%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c05_create_client_with_custom_fields ERROR [ 22%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c06_create_multiple_clients_bulk ERROR [ 22%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c06_create_multiple_clients_bulk ERROR [ 22%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c07_get_client_by_id ERROR [ 22%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c07_get_client_by_id ERROR [ 22%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c08_get_nonexistent_client ERROR [ 23%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c08_get_nonexistent_client ERROR [ 23%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c09_list_all_clients ERROR [ 23%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c09_list_all_clients ERROR [ 23%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c10_list_clients_pagination ERROR [ 23%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c10_list_clients_pagination ERROR [ 23%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c11_list_clients_filter_by_stage ERROR [ 24%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c11_list_clients_filter_by_stage ERROR [ 24%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c12_update_client_name ERROR [ 24%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c12_update_client_name ERROR [ 24%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c13_update_client_email ERROR [ 25%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c13_update_client_email ERROR [ 25%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c14_update_client_stage ERROR [ 25%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c14_update_client_stage ERROR [ 25%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c15_update_client_multiple_fields ERROR [ 25%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c15_update_client_multiple_fields ERROR [ 25%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c16_update_client_all_fields ERROR [ 26%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c16_update_client_all_fields ERROR [ 26%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c17_update_nonexistent_client ERROR [ 26%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c17_update_nonexistent_client ERROR [ 26%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c18_delete_client ERROR [ 26%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c18_delete_client ERROR [ 26%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c19_delete_multiple_clients ERROR [ 27%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c19_delete_multiple_clients ERROR [ 27%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c20_delete_nonexistent_client ERROR [ 27%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c20_delete_nonexistent_client ERROR [ 27%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c21_client_lifecycle ERROR [ 27%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c21_client_lifecycle ERROR [ 27%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c22_client_with_custom_fields_update ERROR [ 28%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c22_client_with_custom_fields_update ERROR [ 28%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c23_list_clients_excludes_deleted ERROR [ 28%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c23_list_clients_excludes_deleted ERROR [ 28%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c24_client_filter_by_stage_multiple ERROR [ 28%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c24_client_filter_by_stage_multiple ERROR [ 28%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c25_client_pagination_large_dataset ERROR [ 29%]
+tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c25_client_pagination_large_dataset ERROR [ 29%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t01_create_task_basic ERROR [ 29%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t01_create_task_basic ERROR [ 29%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t02_create_task_with_notes ERROR [ 29%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t02_create_task_with_notes ERROR [ 29%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t03_create_task_all_followup_types ERROR [ 30%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t03_create_task_all_followup_types ERROR [ 30%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t04_create_task_all_priorities ERROR [ 30%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t04_create_task_all_priorities ERROR [ 30%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t05_create_followup_tasks ERROR [ 30%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t05_create_followup_tasks ERROR [ 30%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t06_create_multiple_tasks_same_client ERROR [ 31%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t06_create_multiple_tasks_same_client ERROR [ 31%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t07_create_tasks_different_clients PASSED [ 31%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t08_get_task_by_id ERROR [ 31%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t08_get_task_by_id ERROR [ 31%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t09_get_nonexistent_task PASSED [ 32%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t10_list_all_tasks ERROR [ 32%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t10_list_all_tasks ERROR [ 32%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t11_list_tasks_filter_by_status ERROR [ 32%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t11_list_tasks_filter_by_status ERROR [ 32%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t12_list_tasks_filter_by_client PASSED [ 33%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t13_list_tasks_pagination ERROR [ 33%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t13_list_tasks_pagination ERROR [ 33%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t14_get_due_tasks ERROR [ 34%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t14_get_due_tasks ERROR [ 34%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t15_update_task_status ERROR [ 34%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t15_update_task_status ERROR [ 34%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t16_update_task_all_statuses ERROR [ 34%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t16_update_task_all_statuses ERROR [ 34%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t17_update_task_priority ERROR [ 35%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t17_update_task_priority ERROR [ 35%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t18_update_task_notes ERROR [ 35%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t18_update_task_notes ERROR [ 35%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t19_update_task_scheduled_for ERROR [ 35%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t19_update_task_scheduled_for ERROR [ 35%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t20_reschedule_task ERROR [ 36%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t20_reschedule_task ERROR [ 36%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t21_update_task_multiple_fields ERROR [ 36%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t21_update_task_multiple_fields ERROR [ 36%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t22_update_nonexistent_task PASSED [ 36%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t23_task_lifecycle ERROR [ 37%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t23_task_lifecycle ERROR [ 37%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t24_create_followup_tasks_for_multiple_clients PASSED [ 37%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t25_tasks_with_different_schedules ERROR [ 37%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t25_tasks_with_different_schedules ERROR [ 37%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t26_task_status_progression ERROR [ 38%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t26_task_status_progression ERROR [ 38%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t27_list_tasks_multiple_filters ERROR [ 38%]
+tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t27_list_tasks_multiple_filters ERROR [ 38%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e01_log_email_basic ERROR [ 38%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e01_log_email_basic ERROR [ 38%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e02_log_email_with_details ERROR [ 39%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e02_log_email_with_details ERROR [ 39%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e03_log_multiple_emails_same_task ERROR [ 39%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e03_log_multiple_emails_same_task ERROR [ 39%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e04_log_emails_different_clients PASSED [ 39%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e05_get_email_by_id ERROR [ 40%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e05_get_email_by_id ERROR [ 40%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e06_get_nonexistent_email FAILED [ 40%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e07_list_all_emails ERROR [ 40%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e07_list_all_emails ERROR [ 40%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e08_list_emails_filter_by_client FAILED [ 41%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e09_list_emails_filter_by_status ERROR [ 41%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e09_list_emails_filter_by_status ERROR [ 41%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e10_list_emails_pagination ERROR [ 42%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e10_list_emails_pagination ERROR [ 42%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e11_update_email_status ERROR [ 42%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e11_update_email_status ERROR [ 42%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e12_update_email_status_with_message_id ERROR [ 42%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e12_update_email_status_with_message_id ERROR [ 42%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e13_update_email_status_with_error ERROR [ 43%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e13_update_email_status_with_error ERROR [ 43%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e14_update_email_all_statuses ERROR [ 43%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e14_update_email_all_statuses ERROR [ 43%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e15_update_nonexistent_email PASSED [ 43%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e16_email_lifecycle ERROR [ 44%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e16_email_lifecycle ERROR [ 44%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e17_multiple_emails_same_client ERROR [ 44%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e17_multiple_emails_same_client ERROR [ 44%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e18_emails_with_different_statuses ERROR [ 44%]
+tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e18_emails_with_different_statuses ERROR [ 44%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r01_client_with_tasks FAILED [ 45%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r02_task_with_email_log ERROR [ 45%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r02_task_with_email_log ERROR [ 45%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r03_client_tasks_emails_full_chain FAILED [ 45%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r04_delete_client_keeps_tasks FAILED [ 46%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r05_get_client_tasks_via_crm ERROR [ 46%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r05_get_client_tasks_via_crm ERROR [ 46%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r06_update_task_complete_with_email ERROR [ 46%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r06_update_task_complete_with_email ERROR [ 46%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r07_list_emails_for_client FAILED [ 47%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r08_multiple_tasks_multiple_emails ERROR [ 47%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r08_multiple_tasks_multiple_emails ERROR [ 47%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r09_task_email_status_coordination ERROR [ 47%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r09_task_email_status_coordination ERROR [ 47%]
+tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r10_client_stage_change_affects_tasks FAILED [ 48%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a01_bulk_create_all_tables FAILED [ 48%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a02_concurrent_updates ERROR [ 48%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a02_concurrent_updates ERROR [ 48%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a03_data_integrity_foreign_keys ERROR [ 49%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a03_data_integrity_foreign_keys ERROR [ 49%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a04_pagination_consistency FAILED [ 49%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a05_filter_combinations ERROR [ 50%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a05_filter_combinations ERROR [ 50%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a06_timestamp_validation ERROR [ 50%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a06_timestamp_validation ERROR [ 50%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a07_data_persistence FAILED [ 50%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a08_cascade_operations FAILED [ 51%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a09_search_and_filter_complex FAILED [ 51%]
+tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a10_volume_stress_test FAILED [ 51%]
+tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e20_empty_results FAILED [ 52%]
+tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e21_max_pagination FAILED [ 52%]
+tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e22_update_no_changes ERROR [ 52%]
+tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e22_update_no_changes ERROR [ 52%]
+tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e23_date_edge_cases ERROR [ 53%]
+tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e23_date_edge_cases ERROR [ 53%]
+tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e24_string_field_lengths FAILED [ 53%]
+tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f01_comprehensive_workflow FAILED [ 53%]
+tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f02_data_isolation FAILED [ 54%]
+tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f03_transaction_safety ERROR [ 54%]
+tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f03_transaction_safety ERROR [ 54%]
+tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f04_performance_large_queries FAILED [ 54%]
+tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f100_complete_system_integration FAILED [ 55%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_basic ERROR [ 55%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_basic ERROR [ 55%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_with_custom_fields ERROR [ 55%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_with_custom_fields ERROR [ 55%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_stages ERROR [ 56%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_stages ERROR [ 56%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_property_types ERROR [ 56%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_property_types ERROR [ 56%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_multiple_clients_bulk ERROR [ 56%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_multiple_clients_bulk ERROR [ 56%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_by_id ERROR [ 57%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_by_id ERROR [ 57%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_nonexistent_client ERROR [ 57%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_nonexistent_client ERROR [ 57%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_all_clients ERROR [ 57%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_all_clients ERROR [ 57%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_with_pagination ERROR [ 58%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_with_pagination ERROR [ 58%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_filter_by_stage ERROR [ 58%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_filter_by_stage ERROR [ 58%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_tasks ERROR [ 59%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_tasks ERROR [ 59%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_name ERROR [ 59%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_name ERROR [ 59%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_email ERROR [ 59%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_email ERROR [ 59%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_stage_progression ERROR [ 60%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_stage_progression ERROR [ 60%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_multiple_fields ERROR [ 60%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_multiple_fields ERROR [ 60%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_all_fields ERROR [ 60%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_all_fields ERROR [ 60%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_nonexistent_client ERROR [ 61%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_nonexistent_client ERROR [ 61%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_with_empty_data ERROR [ 61%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_with_empty_data ERROR [ 61%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_client_soft_delete ERROR [ 61%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_client_soft_delete ERROR [ 61%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_multiple_clients ERROR [ 62%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_multiple_clients ERROR [ 62%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_nonexistent_client ERROR [ 62%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_nonexistent_client ERROR [ 62%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_full_client_lifecycle ERROR [ 62%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_full_client_lifecycle ERROR [ 62%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_client_with_multiple_task_updates ERROR [ 63%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_client_with_multiple_task_updates ERROR [ 63%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_pagination_with_deleted_clients ERROR [ 63%]
+tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_pagination_with_deleted_clients ERROR [ 63%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_register_email_success PASSED [ 63%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_register_email_duplicate PASSED [ 64%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_login_email_success PASSED [ 64%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_login_email_wrong_password PASSED [ 64%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_login_email_nonexistent PASSED [ 65%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_login_google_new_user PASSED [ 65%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_login_google_existing_user PASSED [ 65%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_login_google_invalid_token PASSED [ 66%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_get_profile PASSED [ 66%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_get_profile_nonexistent PASSED [ 67%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_update_profile PASSED [ 67%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_update_profile_partial PASSED [ 67%]
+tests/unit/services/test_agent_service.py::TestAgentService::test_update_profile_nonexistent PASSED [ 68%]
+tests/unit/services/test_ai_agent.py::test_generate_email PASSED         [ 68%]
+tests/unit/services/test_ai_agent.py::test_generate_email_with_instructions PASSED [ 68%]
+tests/unit/services/test_ai_agent.py::test_generate_email_api_failure PASSED [ 69%]
+tests/unit/services/test_ai_agent.py::test_generate_email_rate_limit_error PASSED [ 69%]
+tests/unit/services/test_ai_agent.py::test_generate_email_preview FAILED [ 69%]
+tests/unit/services/test_ai_agent.py::test_generate_email_preview_api_failure PASSED [ 70%]
+tests/unit/services/test_ai_agent.py::test_build_prompt PASSED           [ 70%]
+tests/unit/services/test_ai_agent.py::test_build_prompt_with_minimal_data PASSED [ 70%]
+tests/unit/services/test_ai_agent.py::test_build_prompt_includes_instructions PASSED [ 71%]
+tests/unit/services/test_ai_agent.py::test_build_prompt_with_custom_fields PASSED [ 71%]
+tests/unit/services/test_ai_agent.py::test_build_prompt_with_task_notes PASSED [ 71%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_json PASSED [ 72%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_json_with_markdown PASSED [ 72%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_plain_text PASSED [ 72%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_plain_text_no_subject_prefix PASSED [ 73%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_error PASSED [ 73%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_missing_content PASSED [ 73%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_invalid_json PASSED [ 74%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_preview_truncation PASSED [ 74%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_preview_short PASSED [ 75%]
+tests/unit/services/test_ai_agent.py::test_parse_openai_response_missing_fields PASSED [ 75%]
+tests/unit/services/test_ai_agent.py::test_openai_integration PASSED     [ 75%]
+tests/unit/services/test_ai_agent.py::test_generate_email_with_none_client PASSED [ 76%]
+tests/unit/services/test_ai_agent.py::test_generate_email_with_none_task PASSED [ 76%]
+tests/unit/services/test_ai_agent.py::test_build_prompt_all_followup_types PASSED [ 76%]
+tests/unit/services/test_ai_manual.py::test_basic_email_generation PASSED [ 77%]
+tests/unit/services/test_ai_manual.py::test_day_3_followup PASSED        [ 77%]
+tests/unit/services/test_ai_manual.py::test_week_1_followup PASSED       [ 77%]
+tests/unit/services/test_ai_manual.py::test_with_custom_instructions PASSED [ 78%]
+tests/unit/services/test_ai_manual.py::test_email_preview PASSED         [ 78%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_create_and_get_client PASSED [ 78%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_list_update_delete_client PASSED [ 79%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_get_client_tasks PASSED [ 79%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_create_client_with_custom_fields PASSED [ 79%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_get_nonexistent_client PASSED [ 80%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_update_client_partial_fields PASSED [ 80%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_update_nonexistent_client PASSED [ 80%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_list_clients_pagination PASSED [ 81%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_list_clients_filter_by_stage PASSED [ 81%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_delete_client_soft_delete PASSED [ 81%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_delete_nonexistent_client PASSED [ 82%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_get_client_tasks_multiple_statuses PASSED [ 82%]
+tests/unit/services/test_crm_service.py::TestCRMService::test_update_client_all_fields PASSED [ 82%]
+tests/unit/services/test_email_service.py::TestEmailService::test_log_email PASSED [ 83%]
+tests/unit/services/test_email_service.py::TestEmailService::test_get_email PASSED [ 83%]
+tests/unit/services/test_email_service.py::TestEmailService::test_list_emails PASSED [ 84%]
+tests/unit/services/test_email_service.py::TestEmailService::test_update_email_status PASSED [ 84%]
+tests/unit/services/test_email_service.py::TestEmailService::test_ses_integration PASSED [ 84%]
+tests/unit/services/test_email_service.py::TestEmailService::test_send_email PASSED [ 85%]
+tests/unit/services/test_email_service.py::TestEmailService::test_process_webhook_event PASSED [ 85%]
+tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_scheduler_is_configured PASSED [ 85%]
+tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_start_scheduler_registers_jobs FAILED [ 86%]
+tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_start_scheduler_starts_scheduler FAILED [ 86%]
+tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_stop_scheduler_gracefully_shuts_down FAILED [ 86%]
+tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_stop_scheduler_when_not_running PASSED [ 87%]
+tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_get_scheduler_status FAILED [ 87%]
+tests/unit/services/test_scheduler.py::TestProcessDueTasksJob::test_process_due_tasks_job_success PASSED [ 87%]
+tests/unit/services/test_scheduler.py::TestProcessDueTasksJob::test_process_due_tasks_job_no_due_tasks PASSED [ 88%]
+tests/unit/services/test_scheduler.py::TestProcessDueTasksJob::test_process_due_tasks_job_handles_exception PASSED [ 88%]
+tests/unit/services/test_scheduler.py::TestProcessDueTasksJob::test_process_due_tasks_job_initializes_db_if_needed PASSED [ 88%]
+tests/unit/services/test_scheduler.py::TestProcessDueTasksJob::test_process_due_tasks_job_logs_success PASSED [ 89%]
+tests/unit/services/test_scheduler.py::TestSchedulerJobConfiguration::test_job_has_correct_trigger PASSED [ 89%]
+tests/unit/services/test_scheduler.py::TestSchedulerJobConfiguration::test_job_defaults_are_set PASSED [ 89%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_create_list_get_update_task PASSED [ 90%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_get_due_and_reschedule PASSED [ 90%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_no_due_tasks PASSED [ 90%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_single_success PASSED [ 91%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_multiple_tasks PASSED [ 91%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_missing_client PASSED [ 92%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_client_no_email PASSED [ 92%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_ai_generation_fails PASSED [ 92%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_email_send_fails FAILED [ 93%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_partial_success PASSED [ 93%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_verifies_email_log PASSED [ 93%]
+tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_only_processes_due_tasks PASSED [ 94%]
+tests/unit/utils/test_auth.py::TestPasswordHashing::test_hash_password PASSED [ 94%]
+tests/unit/utils/test_auth.py::TestPasswordHashing::test_verify_password_correct PASSED [ 94%]
+tests/unit/utils/test_auth.py::TestPasswordHashing::test_verify_password_incorrect PASSED [ 95%]
+tests/unit/utils/test_auth.py::TestPasswordHashing::test_hash_password_unicode PASSED [ 95%]
+tests/unit/utils/test_auth.py::TestJWTTokens::test_create_access_token PASSED [ 95%]
+tests/unit/utils/test_auth.py::TestJWTTokens::test_create_access_token_with_expires_delta PASSED [ 96%]
+tests/unit/utils/test_auth.py::TestJWTTokens::test_decode_access_token_valid PASSED [ 96%]
+tests/unit/utils/test_auth.py::TestJWTTokens::test_decode_access_token_invalid PASSED [ 96%]
+tests/unit/utils/test_auth.py::TestJWTTokens::test_decode_access_token_expired PASSED [ 97%]
+tests/unit/utils/test_auth.py::TestJWTTokens::test_token_contains_agent_id PASSED [ 97%]
+tests/unit/utils/test_google_oauth.py::TestGoogleOAuth::test_verify_google_token_no_client_id PASSED [ 97%]
+tests/unit/utils/test_google_oauth.py::TestGoogleOAuth::test_verify_google_token_valid PASSED [ 98%]
+tests/unit/utils/test_google_oauth.py::TestGoogleOAuth::test_verify_google_token_invalid_issuer PASSED [ 98%]
+tests/unit/utils/test_google_oauth.py::TestGoogleOAuth::test_verify_google_token_missing_name PASSED [ 98%]
+tests/unit/utils/test_google_oauth.py::TestGoogleOAuth::test_verify_google_token_value_error PASSED [ 99%]
+tests/unit/utils/test_google_oauth.py::TestGoogleOAuth::test_verify_google_token_https_issuer PASSED [ 99%]
+tests/utils/test_sendgrid.py::test_sendgrid_email PASSED                 [100%]
+
+============================== warnings summary ===============================
+app\config.py:30
+  C:\Users\Leo\AI projects\RealtorOS\backend\app\config.py:30: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+tests/integration/test_scheduler_integration.py::TestSchedulerIntegration::test_process_due_tasks_job_with_real_database
+  C:\Users\Leo\AppData\Roaming\Python\Python313\site-packages\pytest_asyncio\plugin.py:738: DeprecationWarning: The event_loop fixture provided by pytest-asyncio has been redefined in
+  C:\Users\Leo\AI projects\RealtorOS\backend\tests\conftest.py:36
+  Replacing the event_loop fixture with a custom implementation is deprecated
+  and will lead to errors in the future.
+  If you want to request an asyncio event loop with a scope other than function
+  scope, use the "scope" argument to the asyncio mark when marking the tests.
+  If you want to return different types of event loops, use the event_loop_policy
+  fixture.
+  
+    warnings.warn(
+
+tests/unit/services/test_agent_service.py::TestAgentService::test_register_email_success
+  C:\Users\Leo\AppData\Roaming\Python\Python313\site-packages\pytest_asyncio\plugin.py:738: DeprecationWarning: The event_loop fixture provided by pytest-asyncio has been redefined in
+  C:\Users\Leo\AI projects\RealtorOS\backend\tests\unit\conftest.py:34
+  Replacing the event_loop fixture with a custom implementation is deprecated
+  and will lead to errors in the future.
+  If you want to request an asyncio event loop with a scope other than function
+  scope, use the "scope" argument to the asyncio mark when marking the tests.
+  If you want to return different types of event loops, use the event_loop_policy
+  fixture.
+  
+    warnings.warn(
+
+tests/utils/test_sendgrid.py::test_sendgrid_email
+  C:\Users\Leo\AppData\Roaming\Python\Python313\site-packages\pytest_asyncio\plugin.py:796: DeprecationWarning: pytest-asyncio detected an unclosed event loop when tearing down the event_loop
+  fixture: <ProactorEventLoop running=False closed=False debug=False>
+  pytest-asyncio will close the event loop for you, but future versions of the
+  library will no longer do so. In order to ensure compatibility with future
+  versions, please make sure that:
+      1. Any custom "event_loop" fixture properly closes the loop after yielding it
+      2. The scopes of your custom "event_loop" fixtures do not overlap
+      3. Your code does not modify the event loop in async fixtures or tests
+  
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.13.7-final-0 _______________
+
+Coverage XML written to file coverage.xml
+=========================== short test summary info ===========================
+FAILED tests/integration/api/test_agents_api.py::test_get_profile_unauthorized
+FAILED tests/integration/api/test_agents_api.py::test_protected_endpoint_requires_auth
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_success
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_with_notes
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_with_custom_fields
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_missing_required_fields
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_invalid_email
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_invalid_stage
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_invalid_property_type
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_all_stages
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_triggers_task_creation
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_creates_followup_tasks
+FAILED tests/integration/api/test_clients_api.py::TestCreateClient::test_create_client_task_creation_all_stages
+FAILED tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_empty
+FAILED tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_basic
+FAILED tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_pagination
+FAILED tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_filter_by_stage
+FAILED tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_pagination_defaults
+FAILED tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_invalid_page
+FAILED tests/integration/api/test_clients_api.py::TestListClients::test_list_clients_invalid_limit
+FAILED tests/integration/api/test_clients_api.py::TestGetClient::test_get_client_success
+FAILED tests/integration/api/test_clients_api.py::TestGetClient::test_get_client_not_found
+FAILED tests/integration/api/test_clients_api.py::TestGetClient::test_get_client_invalid_id
+FAILED tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_partial
+FAILED tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_stage
+FAILED tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_multiple_fields
+FAILED tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_custom_fields
+FAILED tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_not_found
+FAILED tests/integration/api/test_clients_api.py::TestUpdateClient::test_update_client_invalid_stage
+FAILED tests/integration/api/test_clients_api.py::TestDeleteClient::test_delete_client_success
+FAILED tests/integration/api/test_clients_api.py::TestDeleteClient::test_delete_client_not_found
+FAILED tests/integration/api/test_clients_api.py::TestDeleteClient::test_delete_client_then_get_returns_404
+FAILED tests/integration/api/test_clients_api.py::TestGetClientTasks::test_get_client_tasks_empty
+FAILED tests/integration/api/test_clients_api.py::TestGetClientTasks::test_get_client_tasks_with_tasks
+FAILED tests/integration/api/test_clients_api.py::TestGetClientTasks::test_get_client_tasks_not_found
+FAILED tests/integration/api/test_clients_api.py::TestClientAPIIntegration::test_client_full_lifecycle
+FAILED tests/integration/api/test_clients_api.py::TestClientAPIIntegration::test_list_clients_excludes_deleted
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e06_get_nonexistent_email
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e08_list_emails_filter_by_client
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r01_client_with_tasks
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r03_client_tasks_emails_full_chain
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r04_delete_client_keeps_tasks
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r07_list_emails_for_client
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r10_client_stage_change_affects_tasks
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a01_bulk_create_all_tables
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a04_pagination_consistency
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a07_data_persistence
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a08_cascade_operations
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a09_search_and_filter_complex
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a10_volume_stress_test
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e20_empty_results
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e21_max_pagination
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e24_string_field_lengths
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f01_comprehensive_workflow
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f02_data_isolation
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f04_performance_large_queries
+FAILED tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f100_complete_system_integration
+FAILED tests/unit/services/test_ai_agent.py::test_generate_email_preview - as...
+FAILED tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_start_scheduler_registers_jobs
+FAILED tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_start_scheduler_starts_scheduler
+FAILED tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_stop_scheduler_gracefully_shuts_down
+FAILED tests/unit/services/test_scheduler.py::TestSchedulerInitialization::test_get_scheduler_status
+FAILED tests/unit/services/test_scheduler_service.py::TestSchedulerService::test_process_and_send_due_emails_email_send_fails
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c02_create_client_with_notes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c02_create_client_with_notes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c03_create_client_all_stages
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c03_create_client_all_stages
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c04_create_client_all_property_types
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c04_create_client_all_property_types
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c05_create_client_with_custom_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c05_create_client_with_custom_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c06_create_multiple_clients_bulk
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientCreate::test_c06_create_multiple_clients_bulk
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c07_get_client_by_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c07_get_client_by_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c08_get_nonexistent_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c08_get_nonexistent_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c09_list_all_clients
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c09_list_all_clients
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c10_list_clients_pagination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c10_list_clients_pagination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c11_list_clients_filter_by_stage
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientRead::test_c11_list_clients_filter_by_stage
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c12_update_client_name
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c12_update_client_name
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c13_update_client_email
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c13_update_client_email
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c14_update_client_stage
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c14_update_client_stage
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c15_update_client_multiple_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c15_update_client_multiple_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c16_update_client_all_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c16_update_client_all_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c17_update_nonexistent_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientUpdate::test_c17_update_nonexistent_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c18_delete_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c18_delete_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c19_delete_multiple_clients
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c19_delete_multiple_clients
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c20_delete_nonexistent_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientDelete::test_c20_delete_nonexistent_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c21_client_lifecycle
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c21_client_lifecycle
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c22_client_with_custom_fields_update
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c22_client_with_custom_fields_update
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c23_list_clients_excludes_deleted
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c23_list_clients_excludes_deleted
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c24_client_filter_by_stage_multiple
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c24_client_filter_by_stage_multiple
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c25_client_pagination_large_dataset
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestClientComplex::test_c25_client_pagination_large_dataset
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t01_create_task_basic
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t01_create_task_basic
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t02_create_task_with_notes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t02_create_task_with_notes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t03_create_task_all_followup_types
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t03_create_task_all_followup_types
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t04_create_task_all_priorities
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t04_create_task_all_priorities
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t05_create_followup_tasks
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t05_create_followup_tasks
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t06_create_multiple_tasks_same_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskCreate::test_t06_create_multiple_tasks_same_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t08_get_task_by_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t08_get_task_by_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t10_list_all_tasks
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t10_list_all_tasks
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t11_list_tasks_filter_by_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t11_list_tasks_filter_by_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t13_list_tasks_pagination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t13_list_tasks_pagination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t14_get_due_tasks
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskRead::test_t14_get_due_tasks
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t15_update_task_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t15_update_task_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t16_update_task_all_statuses
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t16_update_task_all_statuses
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t17_update_task_priority
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t17_update_task_priority
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t18_update_task_notes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t18_update_task_notes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t19_update_task_scheduled_for
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t19_update_task_scheduled_for
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t20_reschedule_task
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t20_reschedule_task
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t21_update_task_multiple_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskUpdate::test_t21_update_task_multiple_fields
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t23_task_lifecycle
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t23_task_lifecycle
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t25_tasks_with_different_schedules
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t25_tasks_with_different_schedules
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t26_task_status_progression
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t26_task_status_progression
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t27_list_tasks_multiple_filters
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestTaskComplex::test_t27_list_tasks_multiple_filters
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e01_log_email_basic
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e01_log_email_basic
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e02_log_email_with_details
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e02_log_email_with_details
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e03_log_multiple_emails_same_task
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogCreate::test_e03_log_multiple_emails_same_task
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e05_get_email_by_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e05_get_email_by_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e07_list_all_emails
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e07_list_all_emails
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e09_list_emails_filter_by_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e09_list_emails_filter_by_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e10_list_emails_pagination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogRead::test_e10_list_emails_pagination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e11_update_email_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e11_update_email_status
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e12_update_email_status_with_message_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e12_update_email_status_with_message_id
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e13_update_email_status_with_error
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e13_update_email_status_with_error
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e14_update_email_all_statuses
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogUpdate::test_e14_update_email_all_statuses
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e16_email_lifecycle
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e16_email_lifecycle
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e17_multiple_emails_same_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e17_multiple_emails_same_client
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e18_emails_with_different_statuses
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEmailLogComplex::test_e18_emails_with_different_statuses
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r02_task_with_email_log
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r02_task_with_email_log
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r05_get_client_tasks_via_crm
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r05_get_client_tasks_via_crm
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r06_update_task_complete_with_email
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r06_update_task_complete_with_email
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r08_multiple_tasks_multiple_emails
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r08_multiple_tasks_multiple_emails
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r09_task_email_status_coordination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestCrossTableRelationships::test_r09_task_email_status_coordination
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a02_concurrent_updates
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a02_concurrent_updates
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a03_data_integrity_foreign_keys
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a03_data_integrity_foreign_keys
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a05_filter_combinations
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a05_filter_combinations
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a06_timestamp_validation
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestAdvancedScenarios::test_a06_timestamp_validation
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e22_update_no_changes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e22_update_no_changes
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e23_date_edge_cases
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestEdgeCases::test_e23_date_edge_cases
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f03_transaction_safety
+ERROR tests/integration/workflows/test_all_tables_crud.py::TestFinalScenarios::test_f03_transaction_safety
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_basic
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_basic
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_with_custom_fields
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_with_custom_fields
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_stages
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_stages
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_property_types
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_client_all_property_types
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_multiple_clients_bulk
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMCreate::test_create_multiple_clients_bulk
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_by_id
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_by_id
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_nonexistent_client
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_nonexistent_client
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_all_clients
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_all_clients
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_with_pagination
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_with_pagination
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_filter_by_stage
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_list_clients_filter_by_stage
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_tasks
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMRead::test_get_client_tasks
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_name
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_name
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_email
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_email
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_stage_progression
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_stage_progression
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_multiple_fields
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_multiple_fields
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_all_fields
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_client_all_fields
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_nonexistent_client
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_nonexistent_client
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_with_empty_data
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMUpdate::test_update_with_empty_data
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_client_soft_delete
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_client_soft_delete
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_multiple_clients
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_multiple_clients
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_nonexistent_client
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMDelete::test_delete_nonexistent_client
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_full_client_lifecycle
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_full_client_lifecycle
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_client_with_multiple_task_updates
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_client_with_multiple_task_updates
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_pagination_with_deleted_clients
+ERROR tests/integration/workflows/test_crm_service_crud.py::TestCRMComplexScenarios::test_pagination_with_deleted_clients
+=========== 63 failed, 129 passed, 4 warnings, 192 errors in 24.03s ===========

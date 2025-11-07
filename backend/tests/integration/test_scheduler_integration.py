@@ -76,6 +76,7 @@ class TestSchedulerIntegration:
             # Mock EmailService - need to create actual email log entry first
             from app.models.email_log import EmailLog
             email_log = EmailLog(
+                agent_id=agent.id,
                 client_id=client.id,
                 task_id=task.id,
                 to_email=client.email,
@@ -120,11 +121,10 @@ class TestSchedulerIntegration:
                 
                 # Verify job executed successfully
                 assert result == 1
-                
+
                 # Verify task was processed
-                await db_session.refresh(task)
                 # Note: The task update happens in the job's session, not our test session
-                # So we need to check via the service
+                # So we need to check via the service (task is a Pydantic schema, not ORM model)
                 updated_task = await svc.get_task(task.id, agent.id)
                 # The task might still be pending if the job used a different session
                 # This is expected behavior - the job creates its own session
@@ -300,6 +300,7 @@ class TestSchedulerIntegration:
             email_logs = []
             for i, task in enumerate(tasks):
                 email_log = EmailLog(
+                    agent_id=agent.id,
                     client_id=client.id,
                     task_id=task.id,
                     to_email=client.email,

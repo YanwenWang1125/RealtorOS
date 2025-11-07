@@ -23,6 +23,7 @@ class TestGoogleOAuth:
         finally:
             settings.GOOGLE_CLIENT_ID = original
 
+    @patch.object(settings, 'GOOGLE_CLIENT_ID', 'test_client_id_123')
     @patch('app.utils.google_oauth.id_token.verify_oauth2_token')
     def test_verify_google_token_valid(self, mock_verify):
         """Test verification of a valid Google token."""
@@ -47,8 +48,9 @@ class TestGoogleOAuth:
         mock_verify.assert_called_once()
         call_args = mock_verify.call_args
         assert call_args[0][0] == "valid_token"
-        assert call_args[0][2] == settings.GOOGLE_CLIENT_ID
+        assert call_args[0][2] == 'test_client_id_123'
 
+    @patch.object(settings, 'GOOGLE_CLIENT_ID', 'test_client_id_123')
     @patch('app.utils.google_oauth.id_token.verify_oauth2_token')
     def test_verify_google_token_invalid_issuer(self, mock_verify):
         """Test verification fails for invalid issuer."""
@@ -61,6 +63,7 @@ class TestGoogleOAuth:
         result = verify_google_token("invalid_token")
         assert result is None
 
+    @patch.object(settings, 'GOOGLE_CLIENT_ID', 'test_client_id_123')
     @patch('app.utils.google_oauth.id_token.verify_oauth2_token')
     def test_verify_google_token_missing_name(self, mock_verify):
         """Test that missing name uses email prefix."""
@@ -75,6 +78,7 @@ class TestGoogleOAuth:
         assert result is not None
         assert result['name'] == 'testuser'  # Should use email prefix
 
+    @patch.object(settings, 'GOOGLE_CLIENT_ID', 'test_client_id_123')
     @patch('app.utils.google_oauth.id_token.verify_oauth2_token')
     def test_verify_google_token_value_error(self, mock_verify):
         """Test that ValueError from Google API returns None."""
@@ -83,6 +87,7 @@ class TestGoogleOAuth:
         result = verify_google_token("invalid_token")
         assert result is None
 
+    @patch.object(settings, 'GOOGLE_CLIENT_ID', 'test_client_id_123')
     @patch('app.utils.google_oauth.id_token.verify_oauth2_token')
     def test_verify_google_token_https_issuer(self, mock_verify):
         """Test that https://accounts.google.com issuer is accepted."""

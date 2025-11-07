@@ -37,6 +37,7 @@ from app.schemas.client_schema import ClientCreate, ClientUpdate
 from app.models.client import Client
 from app.models.task import Task
 from app.models.agent import Agent
+from app.models.email_log import EmailLog
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -47,12 +48,17 @@ async def db_session():
         raise RuntimeError("Database not initialized. SessionLocal is None.")
     
     async with postgresql.SessionLocal() as session:
-        # Clean up before each test
+        # Clean up before each test (order matters due to foreign keys)
+        # EmailLog references Task and Client, so delete it first
+        await session.execute(delete(EmailLog))
+        # Task references Client and EmailLog, so delete it next
         await session.execute(delete(Task))
+        # Client can be deleted last
         await session.execute(delete(Client))
         await session.commit()
         yield session
-        # Clean up after each test
+        # Clean up after each test (same order)
+        await session.execute(delete(EmailLog))
         await session.execute(delete(Task))
         await session.execute(delete(Client))
         await session.commit()

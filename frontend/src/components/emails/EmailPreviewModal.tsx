@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePreviewEmail } from '@/lib/hooks/mutations/usePreviewEmail';
 import { useSendEmail } from '@/lib/hooks/mutations/useSendEmail';
+import { useUpdateTask } from '@/lib/hooks/mutations/useUpdateTask';
+import { useTask } from '@/lib/hooks/queries/useTasks';
 import { useToast } from '@/lib/hooks/ui/useToast';
+import { useQueryClient } from '@tanstack/react-query';
+import { tasksApi } from '@/lib/api/endpoints/tasks';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmailComposer } from '@/components/emails/EmailComposer';
 import { CustomInstructionsInput } from '@/components/emails/CustomInstructionsInput';
-import { AlertCircle, Loader2, RefreshCw, Send } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw, Send, Save } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/navigation';
 
@@ -31,6 +35,9 @@ interface EmailPreviewModalProps {
   taskId: number;
 }
 
+// Fallback to localStorage if database is not available
+const getPreviewStorageKey = (taskId: number) => `email_preview_${taskId}`;
+
 export function EmailPreviewModal({
   open,
   onOpenChange,
@@ -41,24 +48,97 @@ export function EmailPreviewModal({
 }: EmailPreviewModalProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const previewEmail = usePreviewEmail();
   const sendEmail = useSendEmail();
+  const updateTask = useUpdateTask();
+  const { data: task } = useTask(taskId, { enabled: open });
 
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Use ref to track if we've already attempted to generate to prevent duplicate calls
+  const hasAttemptedGenerate = useRef(false);
+  const isGeneratingRef = useRef(false);
+  const isSavingRef = useRef(false); // Track when we're saving to prevent regeneration
 
-  // Generate preview on open
-  useEffect(() => {
-    if (open && !hasGenerated) {
-      handleGenerate();
+  // Save preview to database
+  const savePreviewToDatabase = useCallback(async (preview: { subject: string; body: string; custom_instructions?: string }, skipInvalidation = false) => {
+    try {
+      setIsSaving(true);
+      isSavingRef.current = true; // Mark that we're saving
+      const previewData = {
+        ...preview,
+        timestamp: Date.now()
+      };
+      
+      // Call API directly to avoid automatic invalidation from useUpdateTask hook
+      const result = await tasksApi.update(taskId, {
+        email_preview: previewData
+      });
+      
+      // Manually update the cache to avoid triggering useEffect
+      if (skipInvalidation) {
+        // Update cache directly without invalidating
+        queryClient.setQueryData(['task', taskId], (oldData: any) => {
+          if (oldData) {
+            return { ...oldData, email_preview: previewData };
+          }
+          return oldData;
+        });
+      } else {
+        // Update cache directly first, then invalidate to ensure fresh data
+        queryClient.setQueryData(['task', taskId], (oldData: any) => {
+          if (oldData) {
+            return { ...oldData, email_preview: previewData };
+          }
+          return oldData;
+        });
+        // Invalidate to ensure consistency, but cache is already updated
+        queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      }
+      
+      console.log('Preview saved to database successfully', result);
+      return result;
+    } catch (error: any) {
+      console.error('Failed to save preview to database:', error);
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message ||
+                          error.message ||
+                          "Failed to save preview";
+      
+      // Show error toast but don't block the user
+      toast({
+        title: "Warning: Preview not saved",
+        description: "Preview saved locally. " + errorMessage,
+        variant: "default",
+      });
+      
+      // Fallback to localStorage
+      const storageKey = getPreviewStorageKey(taskId);
+      localStorage.setItem(storageKey, JSON.stringify({ ...preview, timestamp: Date.now() }));
+      throw error; // Re-throw to allow caller to handle if needed
+    } finally {
+      setIsSaving(false);
+      // Reset saving flag after a short delay to allow query to update
+      setTimeout(() => {
+        isSavingRef.current = false;
+      }, 1000);
     }
-  }, [open]);
+  }, [taskId, queryClient, toast]);
 
   const handleGenerate = async () => {
+    // Prevent duplicate calls
+    if (isGeneratingRef.current) {
+      return;
+    }
+    
     try {
+      isGeneratingRef.current = true;
       setHasGenerated(true);
       const preview = await previewEmail.mutateAsync({
         client_id: clientId,
@@ -69,6 +149,17 @@ export function EmailPreviewModal({
       setSubject(preview.subject);
       setBody(preview.body);
       setIsEditMode(false);
+      // Save to database after generation, but skip invalidation to avoid triggering useEffect
+      try {
+        await savePreviewToDatabase({
+          subject: preview.subject,
+          body: preview.body,
+          custom_instructions: customInstructions || undefined
+        }, true); // skipInvalidation = true
+      } catch (saveError) {
+        // Error already handled in savePreviewToDatabase, just log
+        console.warn('Preview generation succeeded but save failed:', saveError);
+      }
     } catch (error: any) {
       console.error('Email preview error:', error);
       const errorMessage = error.response?.data?.detail || 
@@ -83,11 +174,165 @@ export function EmailPreviewModal({
       // Set fallback template on error
       setSubject(`Follow-up: ${clientName}`);
       setBody(`<p>Hi ${clientName},</p><p>I wanted to follow up with you regarding your property search. Please let me know if you have any questions or would like to schedule a viewing.</p><p>Best regards</p>`);
+    } finally {
+      isGeneratingRef.current = false;
     }
   };
 
-  const handleRegenerate = () => {
+  // Load stored preview on open (from database or localStorage)
+  useEffect(() => {
+    if (!open) {
+      // Reset flags when modal closes
+      hasAttemptedGenerate.current = false;
+      isGeneratingRef.current = false;
+      isSavingRef.current = false;
+      return;
+    }
+    
+    // Don't load if we're currently saving (to prevent regeneration during save)
+    if (isSavingRef.current) {
+      console.log('Skipping preview load - currently saving');
+      return;
+    }
+    
+    // Don't regenerate if we already have content loaded (unless modal was just opened)
+    if (hasGenerated && subject && body && hasAttemptedGenerate.current) {
+      console.log('Skipping preview load - already have content loaded');
+      return;
+    }
+    
+    // Reset flag when modal opens to allow loading (only if we don't have content)
+    if (!hasGenerated) {
+      hasAttemptedGenerate.current = false;
+    }
+    
+    // Wait for task to load before attempting to load preview
+    const loadPreview = () => {
+      // Prevent duplicate generation attempts
+      if (hasAttemptedGenerate.current && hasGenerated) {
+        return;
+      }
+      
+      // Don't load if we're saving
+      if (isSavingRef.current) {
+        console.log('Skipping preview load in loadPreview - currently saving');
+        return;
+      }
+      
+      // Mark that we've attempted to load/generate
+      hasAttemptedGenerate.current = true;
+      
+      let loadedPreview = false;
+      
+      // First, try to load from database if task is loaded
+      if (task?.email_preview) {
+        const preview = task.email_preview;
+        // If preview exists and has subject/body, use it (regardless of age if manually saved)
+        if (preview.subject && preview.body) {
+          // Only update if content is different (to avoid unnecessary updates)
+          if (preview.subject !== subject || preview.body !== body) {
+            setSubject(preview.subject);
+            setBody(preview.body);
+            setCustomInstructions(preview.custom_instructions || '');
+            setHasGenerated(true);
+            setIsEditMode(false);
+            loadedPreview = true;
+            console.log('Loaded preview from database:', preview);
+          } else {
+            // Content matches, just mark as loaded
+            loadedPreview = true;
+            console.log('Preview already matches database content');
+          }
+        }
+      }
+      
+      // Fallback to localStorage if no database preview
+      if (!loadedPreview) {
+        const storageKey = getPreviewStorageKey(taskId);
+        const stored = localStorage.getItem(storageKey);
+        
+        if (stored) {
+          try {
+            const preview = JSON.parse(stored);
+            const age = Date.now() - (preview.timestamp || 0);
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+            
+            if (age < maxAge && preview.subject && preview.body) {
+              setSubject(preview.subject);
+              setBody(preview.body);
+              setCustomInstructions(preview.customInstructions || preview.custom_instructions || '');
+              setHasGenerated(true);
+              setIsEditMode(false);
+              loadedPreview = true;
+              console.log('Loaded preview from localStorage:', preview);
+            } else {
+              localStorage.removeItem(storageKey);
+            }
+          } catch (e) {
+            console.error('Failed to parse stored preview:', e);
+            localStorage.removeItem(storageKey);
+          }
+        }
+      }
+      
+      // If no stored preview and we don't have content, generate new one (only if not already generating)
+      if (!loadedPreview && !hasGenerated && !isGeneratingRef.current) {
+        console.log('No saved preview found, generating new email');
+        handleGenerate();
+      }
+    };
+    
+    // Wait for task to be loaded before checking for preview
+    if (task) {
+      // Task is loaded, check for preview
+      loadPreview();
+    } else {
+      // Task not loaded yet, wait a bit longer and try again
+      // The effect will re-run when task becomes available
+      const timeoutId = setTimeout(() => {
+        // If task still not loaded after timeout, try loading anyway (might use localStorage)
+        console.log('Task not loaded yet, attempting to load preview anyway');
+        loadPreview();
+      }, 500); // Increased timeout to 500ms to give task time to load
+      return () => clearTimeout(timeoutId);
+    }
+    // Depend on task object to re-run when task data changes (e.g., after save)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, taskId, task]);
+
+  // Save preview to database whenever it changes (debounced)
+  // Only save if user manually edited (not during initial generation)
+  useEffect(() => {
+    if (hasGenerated && subject && body && !isGeneratingRef.current) {
+      // Debounce saves to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        savePreviewToDatabase({
+          subject,
+          body,
+          custom_instructions: customInstructions || undefined
+        }, true); // Skip invalidation to avoid triggering the first useEffect
+      }, 1000); // Wait 1 second after last change
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [subject, body, customInstructions, hasGenerated, taskId, savePreviewToDatabase]);
+
+  const handleRegenerate = async () => {
+    // Clear stored preview when regenerating
+    const storageKey = getPreviewStorageKey(taskId);
+    localStorage.removeItem(storageKey);
+    // Clear from database
+    try {
+      await updateTask.mutateAsync({
+        id: taskId,
+        data: { email_preview: null }
+      });
+      // Don't invalidate here to avoid triggering useEffect
+    } catch (error) {
+      console.error('Failed to clear preview from database:', error);
+    }
     setHasGenerated(false);
+    hasAttemptedGenerate.current = false; // Reset flag to allow regeneration
     handleGenerate();
   };
 
@@ -101,6 +346,20 @@ export function EmailPreviewModal({
         body,
         agent_instructions: customInstructions || undefined
       });
+
+      // Clear stored preview after sending (from both database and localStorage)
+      const storageKey = getPreviewStorageKey(taskId);
+      localStorage.removeItem(storageKey);
+      // Clear from database
+      try {
+        await updateTask.mutateAsync({
+          id: taskId,
+          data: { email_preview: null }
+        });
+        queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      } catch (error) {
+        console.error('Failed to clear preview from database:', error);
+      }
 
       toast({
         title: "Email sent!",
@@ -118,12 +377,42 @@ export function EmailPreviewModal({
     }
   };
 
+  const handleSave = async () => {
+    if (!subject || !body) {
+      toast({
+        title: "Cannot save",
+        description: "Subject and body are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Save to database (this will update cache and invalidate query)
+      await savePreviewToDatabase({
+        subject,
+        body,
+        custom_instructions: customInstructions || undefined
+      }, false); // Don't skip invalidation for manual save
+      
+      toast({
+        title: "Preview saved!",
+        description: "Your changes have been saved to the database.",
+      });
+    } catch (error: any) {
+      // Error already handled in savePreviewToDatabase
+      console.error('Failed to save preview:', error);
+    }
+  };
+
   const handleClose = () => {
     setSubject('');
     setBody('');
     setCustomInstructions('');
     setHasGenerated(false);
     setIsEditMode(false);
+    hasAttemptedGenerate.current = false; // Reset flag when closing
+    isGeneratingRef.current = false;
     onOpenChange(false);
   };
 
@@ -131,9 +420,15 @@ export function EmailPreviewModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Email Preview</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Email Preview
+            {isSaving && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </DialogTitle>
           <DialogDescription>
             AI-generated email for {clientName}
+            {isSaving && <span className="ml-2 text-xs">(Saving...)</span>}
           </DialogDescription>
         </DialogHeader>
 
@@ -192,7 +487,9 @@ export function EmailPreviewModal({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsEditMode(!isEditMode)}
+                    onClick={() => {
+                      setIsEditMode(!isEditMode);
+                    }}
                   >
                     {isEditMode ? 'Preview' : 'Edit'}
                   </Button>
@@ -231,6 +528,25 @@ export function EmailPreviewModal({
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
+            {hasGenerated && (
+              <Button
+                variant="outline"
+                onClick={handleSave}
+                disabled={isSaving || !subject || !body}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </>
+                )}
+              </Button>
+            )}
             <Button
               onClick={handleSend}
               disabled={!hasGenerated || sendEmail.isPending || !subject || !body}

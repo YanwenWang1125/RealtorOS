@@ -7,17 +7,31 @@ import { useAuthStore } from '@/store/useAuthStore';
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [isLoading, setIsLoading] = useState(true);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
   useEffect(() => {
+    // Wait for Zustand persist to finish rehydrating before checking auth
+    if (!hasHydrated) {
+      return;
+    }
+
+    // Only redirect if not authenticated after hydration is complete
     if (!isAuthenticated) {
       router.push('/login');
-    } else {
-      setIsLoading(false);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, hasHydrated, router]);
 
-  if (isLoading) {
+  // Show loading while waiting for hydration
+  if (!hasHydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // If not authenticated after hydration, show loading while redirecting
+  if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-lg">Loading...</div>

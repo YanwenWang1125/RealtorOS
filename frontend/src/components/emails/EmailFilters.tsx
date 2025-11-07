@@ -1,15 +1,25 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { MultiSelect } from '@/components/ui/multi-select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ClientAutocomplete } from '@/components/tasks/ClientAutocomplete';
-import { EMAIL_STATUSES, EMAIL_STATUS_LABELS } from '@/lib/constants/email.constants';
+import { EMAIL_STATUS_LABELS } from '@/lib/constants/email.constants';
+import { EmailStatus } from '@/lib/types/email.types';
 import { X } from 'lucide-react';
 
+// Engagement statuses shown in the timeline: Sent, Delivered, Opened, Clicked, and Failed
+const ENGAGEMENT_STATUSES: EmailStatus[] = ['sent', 'delivered', 'opened', 'clicked', 'failed'];
+
 interface EmailFiltersProps {
-  statusFilter: string[];
+  statusFilter: string | null;
   clientFilter: number | null;
-  onStatusChange: (status: string[]) => void;
+  onStatusChange: (status: string | null) => void;
   onClientChange: (clientId: number | null) => void;
   onClearAll: () => void;
 }
@@ -21,22 +31,29 @@ export function EmailFilters({
   onClientChange,
   onClearAll
 }: EmailFiltersProps) {
-  const hasActiveFilters = statusFilter.length > 0 || clientFilter !== null;
+  const hasActiveFilters = statusFilter !== null || clientFilter !== null;
 
   return (
     <div className="flex flex-wrap gap-4 items-end">
       {/* Status Filter */}
       <div className="flex-1 min-w-[250px]">
         <label className="text-sm font-medium mb-2 block">Status</label>
-        <MultiSelect
-          options={EMAIL_STATUSES.map(status => ({
-            value: status,
-            label: EMAIL_STATUS_LABELS[status]
-          }))}
-          selected={statusFilter}
-          onChange={onStatusChange}
-          placeholder="All statuses"
-        />
+        <Select 
+          value={statusFilter || 'all'} 
+          onValueChange={(value) => onStatusChange(value === 'all' ? null : value)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {ENGAGEMENT_STATUSES.map(status => (
+              <SelectItem key={status} value={status}>
+                {EMAIL_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Client Filter */}

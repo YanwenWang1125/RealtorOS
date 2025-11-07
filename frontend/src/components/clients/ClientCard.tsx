@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/badge';
 import { Client } from '@/lib/types/client.types';
 import { CLIENT_STAGE_COLORS, CLIENT_STAGE_LABELS } from '@/lib/constants/client.constants';
+import { normalizeClientStage } from '@/lib/utils/formatters';
 
 interface ClientCardProps {
   client: Client;
@@ -24,9 +25,18 @@ export function ClientCard({ client }: ClientCardProps) {
             <h3 className="font-semibold text-lg">{client.name}</h3>
             <p className="text-sm text-muted-foreground">{client.email}</p>
           </div>
-          <Badge className={CLIENT_STAGE_COLORS[client.stage]}>
-            {CLIENT_STAGE_LABELS[client.stage]}
-          </Badge>
+          {(() => {
+            const normalizedStage = normalizeClientStage(client.stage);
+            const stageColor = CLIENT_STAGE_COLORS[normalizedStage] ?? 'bg-gray-100 text-gray-700';
+            const stageLabel = CLIENT_STAGE_LABELS[normalizedStage] ?? client.stage;
+            return (
+              <span 
+                className={`inline-flex items-center rounded-full px-2 py-1 text-sm font-medium ${stageColor}`}
+              >
+                {stageLabel}
+              </span>
+            );
+          })()}
         </div>
         <div className="mt-3">
           <p className="text-sm text-muted-foreground">

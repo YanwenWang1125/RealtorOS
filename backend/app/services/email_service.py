@@ -31,6 +31,10 @@ class EmailService:
         self.from_name = settings.SES_FROM_NAME
 
     async def send_email(self, email_data: EmailSendRequest, agent: Agent) -> EmailResponse:
+        # Use verified SES email but display agent name with "via company name"
+        company_name = agent.company if agent.company else "RealtorOS"
+        display_name = f"{agent.name} via {company_name}"
+        
         email_log = await self.log_email(
             task_id=email_data.task_id,
             client_id=email_data.client_id,
@@ -38,14 +42,14 @@ class EmailService:
             to_email=email_data.to_email,
             subject=email_data.subject,
             body=email_data.body,
-            from_name=agent.name,
-            from_email=agent.email,
+            from_name=display_name,
+            from_email=self.from_email,
         )
 
         try:
-            # Send email via Amazon SES
+            # Send email via Amazon SES using verified sender email
             response = self.ses.send_email(
-                Source=f"{agent.name} <{agent.email}>",
+                Source=f"{display_name} <{self.from_email}>",
                 Destination={'ToAddresses': [email_data.to_email]},
                 Message={
                     'Subject': {'Data': email_data.subject},

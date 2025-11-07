@@ -1,9 +1,9 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { MultiSelect } from '@/components/ui/multi-select';
 import { ClientAutocomplete } from '@/components/tasks/ClientAutocomplete';
-import { TASK_STATUSES, PRIORITY_LEVELS, TASK_STATUS_LABELS, PRIORITY_LABELS } from '@/lib/constants/task.constants';
+import { StatusSelect } from '@/components/tasks/StatusSelect';
+import { PrioritySelect } from '@/components/tasks/PrioritySelect';
 import { X } from 'lucide-react';
 
 interface TaskFiltersProps {
@@ -32,12 +32,8 @@ export function TaskFilters({
       {/* Status Filter */}
       <div className="flex-1 min-w-[200px]">
         <label className="text-sm font-medium mb-2 block">Status</label>
-        <MultiSelect
-          options={TASK_STATUSES.map(status => ({
-            value: status,
-            label: TASK_STATUS_LABELS[status]
-          }))}
-          selected={statusFilter}
+        <StatusSelect
+          value={statusFilter}
           onChange={onStatusChange}
           placeholder="All statuses"
         />
@@ -46,12 +42,8 @@ export function TaskFilters({
       {/* Priority Filter */}
       <div className="flex-1 min-w-[200px]">
         <label className="text-sm font-medium mb-2 block">Priority</label>
-        <MultiSelect
-          options={PRIORITY_LEVELS.map(priority => ({
-            value: priority,
-            label: PRIORITY_LABELS[priority]
-          }))}
-          selected={priorityFilter}
+        <PrioritySelect
+          value={priorityFilter}
           onChange={onPriorityChange}
           placeholder="All priorities"
         />

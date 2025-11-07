@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
 )
+from sqlalchemy.dialects.postgresql import JSON
 from app.db.postgresql import Base
 
 
@@ -32,6 +33,7 @@ class Task(Base):
     status = Column(String(50), nullable=False, default="pending", index=True)
     priority = Column(String(20), nullable=True)
     notes = Column(Text, nullable=True)
+    email_preview = Column(JSON, nullable=True)  # Store email preview (subject, body, custom_instructions)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
     completed_at = Column(DateTime(timezone=True), nullable=True)

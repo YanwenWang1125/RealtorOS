@@ -6,7 +6,7 @@ and responses in the RealtorOS system.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 class TaskBase(BaseModel):
@@ -27,6 +27,7 @@ class TaskUpdate(BaseModel):
     scheduled_for: Optional[datetime] = None
     notes: Optional[str] = Field(None, max_length=500)
     priority: Optional[str] = Field(None, pattern=r'^(high|medium|low)$')
+    email_preview: Optional[Dict[str, Any]] = Field(None, description="Email preview data (subject, body, custom_instructions)")
 
 class TaskResponse(TaskBase):
     """Schema for task API responses."""
@@ -37,5 +38,6 @@ class TaskResponse(TaskBase):
     updated_at: datetime
     completed_at: Optional[datetime] = None
     email_sent_id: Optional[int] = None
+    email_preview: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)

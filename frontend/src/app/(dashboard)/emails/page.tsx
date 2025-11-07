@@ -11,13 +11,13 @@ import { RefreshCw } from 'lucide-react';
 export default function EmailsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [clientFilter, setClientFilter] = useState<number | null>(null);
 
   const { data: emails, isLoading, isError, refetch, isFetching } = useEmails({
     page,
     limit,
-    status: statusFilter.length > 0 ? statusFilter.join(',') : undefined,
+    status: statusFilter || undefined,
     client_id: clientFilter || undefined
   });
 
@@ -28,7 +28,7 @@ export default function EmailsPage() {
     return Object.fromEntries(clients.map(c => [c.id, c]));
   }, [clients]);
 
-  const activeFilterCount = statusFilter.length + (clientFilter ? 1 : 0);
+  const activeFilterCount = (statusFilter ? 1 : 0) + (clientFilter ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -60,7 +60,7 @@ export default function EmailsPage() {
         onStatusChange={setStatusFilter}
         onClientChange={setClientFilter}
         onClearAll={() => {
-          setStatusFilter([]);
+          setStatusFilter(null);
           setClientFilter(null);
         }}
       />

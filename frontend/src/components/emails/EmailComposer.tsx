@@ -30,6 +30,13 @@ export function EmailComposer({ value, onChange, readOnly = false }: EmailCompos
     }
   }, [value, editor]);
 
+  // Update editor editable state when readOnly changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!readOnly);
+    }
+  }, [editor, readOnly]);
+
   if (!editor) {
     return null;
   }

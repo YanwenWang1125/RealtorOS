@@ -9,7 +9,12 @@ interface TaskPriorityBadgeProps {
 
 export function TaskPriorityBadge({ priority }: TaskPriorityBadgeProps) {
   return (
-    <Badge className={cn(PRIORITY_COLORS[priority])}>
+    <Badge 
+      className={cn(
+        PRIORITY_COLORS[priority],
+        'border-transparent font-medium'
+      )}
+    >
       {PRIORITY_LABELS[priority]}
     </Badge>
   );

@@ -9,7 +9,12 @@ interface EmailStatusBadgeProps {
 
 export function EmailStatusBadge({ status }: EmailStatusBadgeProps) {
   return (
-    <Badge className={cn(EMAIL_STATUS_COLORS[status])}>
+    <Badge 
+      className={cn(
+        EMAIL_STATUS_COLORS[status],
+        'border-transparent font-medium'
+      )}
+    >
       {EMAIL_STATUS_LABELS[status]}
     </Badge>
   );

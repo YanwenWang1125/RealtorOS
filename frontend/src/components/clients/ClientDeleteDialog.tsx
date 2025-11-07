@@ -64,16 +64,16 @@ export function ClientDeleteDialog({ client, taskCount, emailCount }: ClientDele
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This will permanently delete <strong>{client.name}</strong> and cannot be undone.
-            {(taskCount || emailCount) && (
-              <div className="mt-4 p-3 bg-muted rounded-md">
-                <p className="text-sm">This client has:</p>
-                <ul className="text-sm list-disc list-inside mt-1">
-                  {taskCount && taskCount > 0 && <li>{taskCount} task(s)</li>}
-                  {emailCount && emailCount > 0 && <li>{emailCount} email(s)</li>}
-                </ul>
-              </div>
-            )}
           </AlertDialogDescription>
+          {(taskCount || emailCount) && (
+            <div className="mt-4 p-3 bg-muted rounded-md">
+              <div className="text-sm">This client has:</div>
+              <ul className="text-sm list-disc list-inside mt-1">
+                {taskCount && taskCount > 0 && <li>{taskCount} task(s)</li>}
+                {emailCount && emailCount > 0 && <li>{emailCount} email(s)</li>}
+              </ul>
+            </div>
+          )}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>

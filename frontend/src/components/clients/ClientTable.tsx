@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Client } from '@/lib/types/client.types';
 import { CLIENT_STAGE_COLORS, CLIENT_STAGE_LABELS, PROPERTY_TYPE_LABELS } from '@/lib/constants/client.constants';
 import { formatRelativeTime } from '@/lib/utils/format';
+import { normalizeClientStage } from '@/lib/utils/formatters';
 import { Eye } from 'lucide-react';
 
 interface ClientTableProps {
@@ -126,9 +127,22 @@ export function ClientTable({ clients, loading, sortColumn, sortDirection, onSor
             <TableCell>{client.property_address}</TableCell>
             <TableCell>{PROPERTY_TYPE_LABELS[client.property_type]}</TableCell>
             <TableCell>
-              <Badge className={CLIENT_STAGE_COLORS[client.stage]}>
-                {CLIENT_STAGE_LABELS[client.stage]}
-              </Badge>
+              {(() => {
+                // Normalize the stage value
+                const normalizedStage = normalizeClientStage(client.stage);
+                
+                // Get color and label with fallbacks
+                const stageColor = CLIENT_STAGE_COLORS[normalizedStage] ?? 'bg-gray-100 text-gray-700';
+                const stageLabel = CLIENT_STAGE_LABELS[normalizedStage] ?? client.stage;
+                
+                return (
+                  <span 
+                    className={`inline-flex items-center rounded-full px-2 py-1 text-sm font-medium ${stageColor}`}
+                  >
+                    {stageLabel}
+                  </span>
+                );
+              })()}
             </TableCell>
             <TableCell>
               {client.last_contacted

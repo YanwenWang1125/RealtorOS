@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useClient, useClientTasks } from '@/lib/hooks/queries/useClients';
 import { useEmails } from '@/lib/hooks/queries/useEmails';
@@ -10,17 +11,22 @@ import { ClientInfoCard } from '@/components/clients/ClientInfoCard';
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientEmailHistory } from '@/components/clients/ClientEmailHistory';
 import { ClientDeleteDialog } from '@/components/clients/ClientDeleteDialog';
+import { EmailPreviewModal } from '@/components/emails/EmailPreviewModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Mail, Plus, Pencil } from 'lucide-react';
+import { useToast } from '@/lib/hooks/ui/useToast';
 
 export default function ClientDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const clientId = parseInt(params.id as string);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const { data: client, isLoading: clientLoading } = useClient(clientId);
   const { data: tasks, isLoading: tasksLoading } = useClientTasks(clientId);
   const { data: emails, isLoading: emailsLoading } = useEmails({ client_id: clientId });
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   if (clientLoading) {
     return (
@@ -42,6 +48,33 @@ export default function ClientDetailPage() {
     );
   }
 
+  const handleSendEmail = () => {
+    if (!client.email) {
+      toast({
+        title: "No email address",
+        description: "This client doesn't have an email address. Please add one first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Find the first available task (prefer pending tasks, then any task)
+    const pendingTask = tasks?.find(t => t.status === 'pending');
+    const firstTask = pendingTask || tasks?.[0];
+
+    if (!firstTask) {
+      toast({
+        title: "No tasks available",
+        description: "This client doesn't have any tasks yet. Please create a task first to send an email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedTaskId(firstTask.id);
+    setEmailModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -55,7 +88,7 @@ export default function ClientDetailPage() {
             <Pencil className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleSendEmail}>
             <Mail className="h-4 w-4 mr-2" />
             Send Email
           </Button>
@@ -98,6 +131,23 @@ export default function ClientDetailPage() {
           <ClientEmailHistory emails={emails || []} />
         )}
       </div>
+
+      {/* Email Preview Modal */}
+      {client && client.email && selectedTaskId && (
+        <EmailPreviewModal
+          open={emailModalOpen}
+          onOpenChange={(open) => {
+            setEmailModalOpen(open);
+            if (!open) {
+              setSelectedTaskId(null);
+            }
+          }}
+          clientId={clientId}
+          clientEmail={client.email}
+          clientName={client.name}
+          taskId={selectedTaskId}
+        />
+      )}
     </div>
   );
 }

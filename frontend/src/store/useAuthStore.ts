@@ -6,9 +6,11 @@ interface AuthState {
   token: string | null;
   agent: Agent | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
 
   setAuth: (data: TokenResponse) => void;
   logout: () => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -17,6 +19,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       agent: null,
       isAuthenticated: false,
+      hasHydrated: false,
 
       setAuth: (data: TokenResponse) => {
         set({
@@ -33,9 +36,18 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
         });
       },
+
+      setHasHydrated: (state: boolean) => {
+        set({
+          hasHydrated: state,
+        });
+      },
     }),
     {
       name: 'realtor-auth-storage',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

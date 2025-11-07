@@ -9,6 +9,7 @@
 
 import { useState } from 'react'
 import type { Client } from '@/lib/types'
+import { CLIENT_STAGES, CLIENT_STAGE_LABELS } from '@/lib/constants/client.constants'
 
 interface ClientFormProps {
   client?: Client
@@ -52,15 +53,14 @@ export default function ClientForm({
   const propertyTypes = [
     { value: 'residential', label: 'Residential' },
     { value: 'commercial', label: 'Commercial' },
-    { value: 'rental', label: 'Rental' },
+    { value: 'land', label: 'Land' },
     { value: 'other', label: 'Other' }
   ]
 
-  const stages = [
-    { value: 'lead', label: 'Lead' },
-    { value: 'archived', label: 'Archived' },
-    { value: 'lost', label: 'Lost' }
-  ]
+  const stages = CLIENT_STAGES.map(stage => ({
+    value: stage,
+    label: CLIENT_STAGE_LABELS[stage]
+  }))
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}

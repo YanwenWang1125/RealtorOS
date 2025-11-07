@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Task } from '@/lib/types/task.types';
 import { useClient } from '@/lib/hooks/queries/useClients';
 import { useEmail } from '@/lib/hooks/queries/useEmails';
@@ -11,12 +12,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
 import { TaskActionsMenu } from '@/components/tasks/TaskActionsMenu';
+import { EmailPreviewModal } from '@/components/emails/EmailPreviewModal';
 import { formatDateTime } from '@/lib/utils/format';
-import { Calendar, User, Mail, FileText } from 'lucide-react';
+import { Calendar, User, Mail, FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
 
 interface TaskDetailModalProps {
@@ -26,6 +29,7 @@ interface TaskDetailModalProps {
 }
 
 export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalProps) {
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const { data: client, isLoading: clientLoading } = useClient(task.client_id);
   const { data: email, isLoading: emailLoading } = useEmail(
     task.email_sent_id || 0
@@ -115,6 +119,30 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
             </CardContent>
           </Card>
 
+          {/* Email Preview (if pending) */}
+          {task.status === 'pending' && !task.email_sent_id && client && client.email && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Email Preview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Preview and edit the email that will be sent for this task. You can make changes before sending.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEmailPreviewOpen(true)}
+                    className="w-full"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview & Edit Email
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Email Info (if sent) */}
           {task.email_sent_id && (
             <Card>
@@ -161,6 +189,18 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
             </Card>
           )}
         </div>
+
+        {/* Email Preview Modal */}
+        {client && client.email && (
+          <EmailPreviewModal
+            open={emailPreviewOpen}
+            onOpenChange={setEmailPreviewOpen}
+            clientId={task.client_id}
+            clientEmail={client.email}
+            clientName={client.name}
+            taskId={task.id}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

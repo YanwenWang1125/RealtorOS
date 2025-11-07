@@ -7,7 +7,12 @@ import { TASK_STATUS_LABELS, TASK_STATUS_COLORS } from '@/lib/constants/task.con
 import { formatDateString } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/index';
 
-export function ClientTimeline({ tasks }: { tasks: Task[] }) {
+interface ClientTimelineProps {
+  tasks: Task[];
+  onTaskClick?: (task: Task) => void;
+}
+
+export function ClientTimeline({ tasks, onTaskClick }: ClientTimelineProps) {
   if (tasks.length === 0) {
     return (
       <EmptyState
@@ -39,7 +44,13 @@ export function ClientTimeline({ tasks }: { tasks: Task[] }) {
               <div className="w-px h-full bg-border mt-1 min-h-[40px]" />
             )}
           </div>
-          <Card className="flex-1 hover:bg-secondary/10 hover:text-secondary transition-all cursor-pointer">
+          <Card 
+            className={cn(
+              "flex-1 transition-all",
+              onTaskClick ? "hover:bg-secondary/10 hover:text-secondary cursor-pointer" : ""
+            )}
+            onClick={() => onTaskClick?.(task)}
+          >
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>

@@ -8,6 +8,7 @@ in the RealtorOS CRM system.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from app.schemas.client_schema import ClientCreate, ClientUpdate, ClientResponse
+from app.schemas.task_schema import TaskResponse
 from app.services.crm_service import CRMService
 from app.services.scheduler_service import SchedulerService
 from app.api.dependencies import get_crm_service, get_scheduler_service, get_current_agent
@@ -90,11 +91,12 @@ async def delete_client(
         raise HTTPException(status_code=404, detail="Client not found")
     return {"success": True}
 
-@router.get("/{client_id}/tasks")
+@router.get("/{client_id}/tasks", response_model=List[TaskResponse])
 async def get_client_tasks(
     client_id: int,
     agent: Agent = Depends(get_current_agent),
     crm_service: CRMService = Depends(get_crm_service)
 ):
     """Get all tasks for a specific client."""
-    return await crm_service.get_client_tasks(client_id, agent.id)
+    tasks = await crm_service.get_client_tasks(client_id, agent.id)
+    return [TaskResponse.model_validate(task, from_attributes=True) for task in tasks]

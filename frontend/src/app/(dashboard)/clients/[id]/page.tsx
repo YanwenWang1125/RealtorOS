@@ -12,9 +12,13 @@ import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientEmailHistory } from '@/components/clients/ClientEmailHistory';
 import { ClientDeleteDialog } from '@/components/clients/ClientDeleteDialog';
 import { EmailPreviewModal } from '@/components/emails/EmailPreviewModal';
+import { EmailDetailModal } from '@/components/emails/EmailDetailModal';
+import { TaskDetailModal } from '@/components/tasks/TaskDetailModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Mail, Plus, Pencil } from 'lucide-react';
 import { useToast } from '@/lib/hooks/ui/useToast';
+import { Task } from '@/lib/types/task.types';
+import { Email } from '@/lib/types/email.types';
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -22,6 +26,10 @@ export default function ClientDetailPage() {
   const { toast } = useToast();
   const clientId = parseInt(params.id as string);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [taskDetailModalOpen, setTaskDetailModalOpen] = useState(false);
+  const [emailDetailModalOpen, setEmailDetailModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 
   const { data: client, isLoading: clientLoading } = useClient(clientId);
   const { data: tasks, isLoading: tasksLoading } = useClientTasks(clientId);
@@ -118,7 +126,13 @@ export default function ClientDetailPage() {
         {tasksLoading ? (
           <Skeleton className="h-64 w-full" />
         ) : (
-          <ClientTimeline tasks={tasks || []} />
+          <ClientTimeline 
+            tasks={tasks || []} 
+            onTaskClick={(task) => {
+              setSelectedTask(task);
+              setTaskDetailModalOpen(true);
+            }}
+          />
         )}
       </div>
 
@@ -128,7 +142,13 @@ export default function ClientDetailPage() {
         {emailsLoading ? (
           <Skeleton className="h-64 w-full" />
         ) : (
-          <ClientEmailHistory emails={emails || []} />
+          <ClientEmailHistory 
+            emails={emails || []} 
+            onEmailClick={(email) => {
+              setSelectedEmail(email);
+              setEmailDetailModalOpen(true);
+            }}
+          />
         )}
       </div>
 
@@ -146,6 +166,34 @@ export default function ClientDetailPage() {
           clientEmail={client.email}
           clientName={client.name}
           taskId={selectedTaskId}
+        />
+      )}
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          open={taskDetailModalOpen}
+          onOpenChange={(open) => {
+            setTaskDetailModalOpen(open);
+            if (!open) {
+              setSelectedTask(null);
+            }
+          }}
+        />
+      )}
+
+      {/* Email Detail Modal */}
+      {selectedEmail && (
+        <EmailDetailModal
+          email={selectedEmail}
+          open={emailDetailModalOpen}
+          onOpenChange={(open) => {
+            setEmailDetailModalOpen(open);
+            if (!open) {
+              setSelectedEmail(null);
+            }
+          }}
         />
       )}
     </div>

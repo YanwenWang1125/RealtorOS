@@ -5,8 +5,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Email } from '@/lib/types/email.types';
 import { EMAIL_STATUS_LABELS, EMAIL_STATUS_COLORS } from '@/lib/constants/email.constants';
 import { formatRelativeTime } from '@/lib/utils/format';
+import { cn } from '@/lib/utils/index';
 
-export function ClientEmailHistory({ emails }: { emails: Email[] }) {
+interface ClientEmailHistoryProps {
+  emails: Email[];
+  onEmailClick?: (email: Email) => void;
+}
+
+export function ClientEmailHistory({ emails, onEmailClick }: ClientEmailHistoryProps) {
   if (emails.length === 0) {
     return (
       <EmptyState
@@ -20,7 +26,14 @@ export function ClientEmailHistory({ emails }: { emails: Email[] }) {
   return (
     <div className="space-y-2">
       {emails.map(email => (
-        <Card key={email.id} className="hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-all">
+        <Card 
+          key={email.id} 
+          className={cn(
+            "transition-all",
+            onEmailClick ? "hover:bg-secondary/10 hover:text-secondary cursor-pointer" : ""
+          )}
+          onClick={() => onEmailClick?.(email)}
+        >
           <CardContent className="pt-6">
             <div className="flex justify-between items-start">
               <div className="flex-1">

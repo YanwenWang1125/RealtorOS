@@ -121,7 +121,11 @@ export function ClientTable({ clients, loading, sortColumn, sortDirection, onSor
       </TableHeader>
       <TableBody>
         {clients.map((client) => (
-          <TableRow key={client.id} className="hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors">
+          <TableRow 
+            key={client.id} 
+            className="hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors"
+            onClick={() => router.push(`/clients/${client.id}`)}
+          >
             <TableCell className="font-medium">{client.name}</TableCell>
             <TableCell>{client.email}</TableCell>
             <TableCell>{client.property_address}</TableCell>

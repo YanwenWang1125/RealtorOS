@@ -32,7 +32,8 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const { data: client, isLoading: clientLoading } = useClient(task.client_id);
   const { data: email, isLoading: emailLoading } = useEmail(
-    task.email_sent_id || 0
+    task.email_sent_id || 0,
+    { enabled: !!task.email_sent_id }
   );
 
   return (

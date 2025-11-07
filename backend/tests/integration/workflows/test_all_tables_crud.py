@@ -1028,9 +1028,12 @@ class TestEmailLogCreate:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="test@example.com",
             subject="Test Subject",
-            body="Test body"
+            body="Test body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         assert email_log.id is not None
         assert email_log.status == "queued"
@@ -1049,9 +1052,12 @@ class TestEmailLogCreate:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="detailed@example.com",
             subject="Detailed Subject",
-            body="<html><body>Detailed HTML body</body></html>"
+            body="<html><body>Detailed HTML body</body></html>",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         assert email_log.to_email == "detailed@example.com"
         assert "HTML" in email_log.body
@@ -1071,9 +1077,12 @@ class TestEmailLogCreate:
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
+                agent_id=sample_client.agent_id,
                 to_email=f"multiple{i}@example.com",
                 subject=f"Email {i}",
-                body=f"Body {i}"
+                body=f"Body {i}",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
             assert email_log.task_id == task.id
 
@@ -1113,9 +1122,12 @@ class TestEmailLogCreate:
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=client.email,
                 subject="Test",
-                body="Test"
+                body="Test",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
             assert email_log.client_id == client.id
 
@@ -1136,9 +1148,12 @@ class TestEmailLogRead:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="get@example.com",
             subject="Get Test",
-            body="Get body"
+            body="Get body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         fetched = await services["email"].get_email(email_log.id)
         assert fetched.id == email_log.id
@@ -1164,9 +1179,12 @@ class TestEmailLogRead:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
+                agent_id=sample_client.agent_id,
                 to_email=f"list{i}@example.com",
                 subject=f"List {i}",
-                body=f"Body {i}"
+                body=f"Body {i}",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         emails = await services["email"].list_emails()
         assert len(emails) >= 5
@@ -1193,9 +1211,12 @@ class TestEmailLogRead:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=f"filter{i}@example.com",
                 subject=f"Filter {i}",
-                body=f"Body {i}"
+                body=f"Body {i}",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         emails = await services["email"].list_emails(client_id=client.id)
         assert all(e.client_id == client.id for e in emails)
@@ -1213,9 +1234,12 @@ class TestEmailLogRead:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="status@example.com",
             subject="Status Test",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent", ses_message_id="msg123")
         emails = await services["email"].list_emails(status="sent")
@@ -1236,9 +1260,12 @@ class TestEmailLogRead:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
+                agent_id=sample_client.agent_id,
                 to_email=f"page{i}@example.com",
                 subject=f"Page {i}",
-                body=f"Body {i}"
+                body=f"Body {i}",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         page1 = await services["email"].list_emails(page=1, limit=5)
         page2 = await services["email"].list_emails(page=2, limit=5)
@@ -1262,9 +1289,12 @@ class TestEmailLogUpdate:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="update@example.com",
             subject="Update Test",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         result = await services["email"].update_email_status(email_log.id, "sent")
         assert result is True
@@ -1284,9 +1314,12 @@ class TestEmailLogUpdate:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="msgid@example.com",
             subject="Message ID Test",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent", ses_message_id="ses-123456")
         updated = await services["email"].get_email(email_log.id)
@@ -1305,9 +1338,12 @@ class TestEmailLogUpdate:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="error@example.com",
             subject="Error Test",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "failed", error_message="Connection timeout")
         updated = await services["email"].get_email(email_log.id)
@@ -1327,9 +1363,12 @@ class TestEmailLogUpdate:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="allstatus@example.com",
             subject="All Status Test",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         statuses = ["queued", "sent", "delivered", "opened", "clicked", "bounced"]
         for status in statuses[1:]:
@@ -1360,9 +1399,12 @@ class TestEmailLogComplex:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="lifecycle@example.com",
             subject="Lifecycle Test",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent", ses_message_id="lifecycle-123")
         updated = await services["email"].get_email(email_log.id)
@@ -1382,9 +1424,12 @@ class TestEmailLogComplex:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
+                agent_id=sample_client.agent_id,
                 to_email=sample_client.email,
                 subject=f"Email {i}",
-                body=f"Body {i}"
+                body=f"Body {i}",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         emails = await services["email"].list_emails(client_id=sample_client.id)
         assert len(emails) >= 5
@@ -1404,9 +1449,12 @@ class TestEmailLogComplex:
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
+                agent_id=sample_client.agent_id,
                 to_email=f"{status}@example.com",
                 subject=f"{status} Test",
-                body="Body"
+                body="Body",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
             if status != "queued":
                 await services["email"].update_email_status(email_log.id, status)
@@ -1453,9 +1501,12 @@ class TestCrossTableRelationships:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="taskemail@example.com",
             subject="Task Email",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         assert email_log.task_id == task.id
 
@@ -1475,9 +1526,12 @@ class TestCrossTableRelationships:
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=client.email,
                 subject=f"Email for {task.followup_type}",
-                body="Body"
+                body="Body",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
             assert email_log.client_id == client.id
 
@@ -1528,9 +1582,12 @@ class TestCrossTableRelationships:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email=sample_client.email,
             subject="Complete Task",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent")
         await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"))
@@ -1558,9 +1615,12 @@ class TestCrossTableRelationships:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=client.email,
                 subject=f"Email {i}",
-                body=f"Body {i}"
+                body=f"Body {i}",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         emails = await services["email"].list_emails(client_id=client.id)
         assert len(emails) >= 3
@@ -1583,9 +1643,12 @@ class TestCrossTableRelationships:
                 await services["email"].log_email(
                     task_id=task.id,
                     client_id=sample_client.id,
+                    agent_id=sample_client.agent_id,
                     to_email=f"multi{j}@example.com",
                     subject=f"Task {task.id} Email {j}",
-                    body="Body"
+                    body="Body",
+                    from_name="Test Agent",
+                    from_email="test@example.com"
                 )
         all_emails = await services["email"].list_emails(client_id=sample_client.id)
         assert len(all_emails) >= 6
@@ -1602,9 +1665,12 @@ class TestCrossTableRelationships:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email=sample_client.email,
             subject="Coordinated",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         # Email sent successfully
         await services["email"].update_email_status(email_log.id, "sent")
@@ -1667,9 +1733,12 @@ class TestAdvancedScenarios:
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=task.client_id,
+                agent_id=task.agent_id,
                 to_email=f"bulk{task.id}@example.com",
                 subject=f"Bulk Email {task.id}",
-                body="Bulk body"
+                body="Bulk body",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
             emails.append(email_log)
         
@@ -1705,9 +1774,12 @@ class TestAdvancedScenarios:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="integrity@example.com",
             subject="Integrity",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         assert email_log.task_id == task.id
         assert email_log.client_id == sample_client.id
@@ -1734,9 +1806,12 @@ class TestAdvancedScenarios:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=client.email,
                 subject=f"Page {i}",
-                body="Body"
+                body="Body",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         
         # Test pagination
@@ -1794,9 +1869,12 @@ class TestAdvancedScenarios:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=client.id,
+            agent_id=client.agent_id,
             to_email="timestamp@example.com",
             subject="Timestamp",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         assert email_log.created_at is not None
 
@@ -1844,9 +1922,12 @@ class TestAdvancedScenarios:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=client.email,
                 subject=f"Cascade {task.id}",
-                body="Body"
+                body="Body",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         
         # Soft delete client
@@ -1912,9 +1993,12 @@ class TestAdvancedScenarios:
                 await services["email"].log_email(
                     task_id=task.id,
                     client_id=client.id,
+                    agent_id=client.agent_id,
                     to_email=client.email,
                     subject=f"Volume {i}",
-                    body="Body"
+                    body="Body",
+                    from_name="Test Agent",
+                    from_email="test@example.com"
                 )
         
         # Verify counts - use large limits to get all records
@@ -2038,9 +2122,12 @@ class TestFinalScenarios:
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=client.email,
                 subject=f"Workflow {task.followup_type}",
-                body="Workflow body"
+                body="Workflow body",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
         # Update client
         await services["crm"].update_client(client.id, ClientUpdate(stage="negotiating"))
@@ -2088,9 +2175,12 @@ class TestFinalScenarios:
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
+            agent_id=sample_client.agent_id,
             to_email="transaction@example.com",
             subject="Transaction",
-            body="Body"
+            body="Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
         )
         # Both should be committed
         fetched_task = await services["scheduler"].get_task(task.id)
@@ -2138,9 +2228,12 @@ class TestFinalScenarios:
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
+                agent_id=client.agent_id,
                 to_email=client.email,
                 subject=f"Integration {task.followup_type}",
-                body="Integration body"
+                body="Integration body",
+                from_name="Test Agent",
+                from_email="test@example.com"
             )
             email_logs.append(email_log)
             await services["email"].update_email_status(email_log.id, "sent")

@@ -97,21 +97,12 @@ class CRMService:
         await self.session.commit()
         return result.rowcount > 0
 
-    async def get_client_tasks(self, client_id: int, agent_id: int) -> List[Dict[str, Any]]:
+    async def get_client_tasks(self, client_id: int, agent_id: int) -> List[Task]:
+        """Get all tasks for a client, returning full Task objects."""
         stmt = select(Task).where(
             Task.client_id == client_id,
             Task.agent_id == agent_id
         )
         result = await self.session.execute(stmt)
         tasks = result.scalars().all()
-        return [
-            {
-                "id": t.id,
-                "followup_type": t.followup_type,
-                "scheduled_for": t.scheduled_for,
-                "status": t.status,
-                "priority": t.priority,
-                "notes": t.notes,
-            }
-            for t in tasks
-        ]
+        return list(tasks)

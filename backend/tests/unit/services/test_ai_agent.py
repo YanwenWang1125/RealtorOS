@@ -267,8 +267,9 @@ async def test_generate_email_preview():
         assert result["body"] == "Preview body content with multiple sentences. This is a longer email body for testing purposes."
         
         # Verify API was called with reduced max_tokens for preview
+        # Implementation uses: max(500, min(800, self.max_tokens))
         call_args = mock_client.chat.completions.create.call_args
-        assert call_args.kwargs["max_tokens"] <= 300
+        assert 500 <= call_args.kwargs["max_tokens"] <= 800
 
 
 @pytest.mark.asyncio

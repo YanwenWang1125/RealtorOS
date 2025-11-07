@@ -407,8 +407,23 @@ class TestSchedulerService:
         assert count == 0
         
         # Task should still be pending (not updated due to error)
-        updated_task = await svc.get_task(task.id, agent_id=agent.id)
-        assert updated_task.status == "pending"
+        # The session may have been rolled back, so query directly from database
+        from sqlalchemy import select
+        from app.models.task import Task
+        
+        # Rollback to clear any bad state
+        try:
+            await test_session.rollback()
+        except Exception:
+            pass
+        
+        # Query task directly from database
+        stmt = select(Task).where(Task.id == task.id)
+        result = await test_session.execute(stmt)
+        db_task = result.scalar_one_or_none()
+        
+        assert db_task is not None
+        assert db_task.status == "pending"
 
     @pytest.mark.asyncio
     @patch('app.services.email_service.boto3')

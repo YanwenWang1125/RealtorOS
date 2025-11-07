@@ -41,6 +41,7 @@ from app.schemas.email_schema import EmailSendRequest
 from app.models.client import Client
 from app.models.task import Task
 from app.models.email_log import EmailLog
+from app.models.agent import Agent
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -57,10 +58,11 @@ async def db_session():
             await conn.run_sync(postgresql.Base.metadata.create_all)
 
     async with postgresql.SessionLocal() as session:
-        # Clean up before each test
+        # Clean up before each test (order matters due to foreign keys)
         await session.execute(delete(EmailLog))
         await session.execute(delete(Task))
         await session.execute(delete(Client))
+        await session.execute(delete(Agent))
         await session.commit()
         yield session
         # Clean up after each test
@@ -70,9 +72,11 @@ async def db_session():
         except Exception:
             pass  # Ignore rollback errors
         try:
+            # Clean up in reverse order of dependencies
             await session.execute(delete(EmailLog))
             await session.execute(delete(Task))
             await session.execute(delete(Client))
+            await session.execute(delete(Agent))
             await session.commit()
         except Exception:
             # If cleanup fails, try to rollback and continue
@@ -463,7 +467,7 @@ class TestClientComplex:
             property_type="residential",
             stage="lead"
         )
-        created = await services["crm"].create_client(client)
+        created = await services["crm"].create_client(client, agent_id=sample_agent.id)
         await services["crm"].update_client(created.id, ClientUpdate(stage="negotiating"), agent_id=sample_agent.id)
         await services["crm"].update_client(created.id, ClientUpdate(stage="closed"), agent_id=sample_agent.id)
         await services["crm"].delete_client(created.id, agent_id=sample_agent.id)
@@ -501,9 +505,9 @@ class TestClientComplex:
                 property_type="residential",
                 stage="lead"
             )
-            created = await services["crm"].create_client(client)
+            created = await services["crm"].create_client(client, agent_id=sample_agent.id)
             ids.append(created.id)
-        await services["crm"].delete_client(ids[2])
+        await services["crm"].delete_client(ids[2], agent_id=sample_agent.id)
         listed = await services["crm"].list_clients(agent_id=sample_agent.id)
         assert ids[2] not in [c.id for c in listed]
         assert ids[0] in [c.id for c in listed]
@@ -886,7 +890,7 @@ class TestTaskUpdate:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
         new_date = datetime.now(timezone.utc) + timedelta(days=30)
         # Get agent_id from the created task
         agent_id = created.agent_id
@@ -902,12 +906,12 @@ class TestTaskUpdate:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
         updated = await services["scheduler"].update_task(created.id, TaskUpdate(
             status="completed",
             priority="low",
             notes="All updated"
-        ))
+        ), agent_id=sample_client.agent_id)
         assert updated.status == "completed"
         assert updated.priority == "low"
         assert updated.notes == "All updated"
@@ -1089,7 +1093,7 @@ class TestEmailLogCreate:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         
         for i in range(3):
             email_log = await services["email"].log_email(
@@ -1162,7 +1166,7 @@ class TestEmailLogRead:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1173,14 +1177,20 @@ class TestEmailLogRead:
             from_name="Test Agent",
             from_email="test@example.com"
         )
-        fetched = await services["email"].get_email(email_log.id)
+        fetched = await services["email"].get_email(email_log.id, agent_id=sample_client.agent_id)
         assert fetched.id == email_log.id
         assert fetched.to_email == "get@example.com"
 
     @pytest.mark.asyncio
     async def test_e06_get_nonexistent_email(self, services):
         """Test 58: Get non-existent email."""
-        result = await services["email"].get_email(99999)
+        # Need an agent_id for get_email, create a temporary agent
+        from app.models.agent import Agent
+        agent = Agent(email="temp@example.com", name="Temp Agent", password_hash="dummy", is_active=True)
+        services["crm"].session.add(agent)
+        await services["crm"].session.commit()
+        await services["crm"].session.refresh(agent)
+        result = await services["email"].get_email(99999, agent_id=agent.id)
         assert result is None
 
     @pytest.mark.asyncio
@@ -1193,7 +1203,7 @@ class TestEmailLogRead:
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            task = await services["scheduler"].create_task(task_data)
+            task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
             await services["email"].log_email(
                 task_id=task.id,
                 client_id=sample_client.id,
@@ -1208,7 +1218,7 @@ class TestEmailLogRead:
         assert len(emails) >= 5
 
     @pytest.mark.asyncio
-    async def test_e08_list_emails_filter_by_client(self, services):
+    async def test_e08_list_emails_filter_by_client(self, services, sample_agent):
         """Test 60: List emails filtered by client."""
         client = await services["crm"].create_client(ClientCreate(
             name="Filter Client",
@@ -1217,7 +1227,7 @@ class TestEmailLogRead:
             property_address="1134 Filter St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=sample_agent.id)
         for i in range(3):
             task_data = TaskCreate(
                 client_id=client.id,
@@ -1570,7 +1580,7 @@ class TestCrossTableRelationships:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ), agent_id=client.agent_id)
-        await services["crm"].delete_client(client.id)
+        await services["crm"].delete_client(client.id, agent_id=client.agent_id)
         # Task should still exist
         fetched_task = await services["scheduler"].get_task(task.id, task.agent_id)
         assert fetched_task is not None
@@ -1949,7 +1959,7 @@ class TestAdvancedScenarios:
             )
         
         # Soft delete client
-        await services["crm"].delete_client(client.id)
+        await services["crm"].delete_client(client.id, agent_id=client.agent_id)
         
         # Verify tasks and emails still exist
         for task in tasks:

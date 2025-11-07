@@ -382,9 +382,10 @@ class TestCRMRead:
         tasks = await crm_service.get_client_tasks(created.id, agent_id=test_agent.id)
         
         assert len(tasks) == 3
-        assert all("id" in t for t in tasks)
-        assert all("followup_type" in t for t in tasks)
-        assert all("status" in t for t in tasks)
+        # Tasks are Task model objects, not dictionaries
+        assert all(hasattr(t, 'id') for t in tasks)
+        assert all(hasattr(t, 'followup_type') for t in tasks)
+        assert all(hasattr(t, 'status') for t in tasks)
 
 
 class TestCRMUpdate:

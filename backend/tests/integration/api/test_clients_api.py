@@ -720,10 +720,11 @@ class TestGetClientTasks:
         
         # Tasks are automatically created when client is created (5 tasks)
         # Add 2 more tasks manually to verify the endpoint returns all tasks
+        # Use valid followup_type values that match the schema pattern
         task1 = Task(
             agent_id=agent_id,
             client_id=client_id,
-            followup_type="Custom Task 1",
+            followup_type="Custom",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             status="pending",
             priority="high"
@@ -731,7 +732,7 @@ class TestGetClientTasks:
         task2 = Task(
             agent_id=agent_id,
             client_id=client_id,
-            followup_type="Custom Task 2",
+            followup_type="Custom",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),
             status="pending",
             priority="medium"

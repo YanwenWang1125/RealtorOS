@@ -81,14 +81,6 @@ class EmailService:
 
         return EmailResponse.model_validate(email_log.__dict__, from_attributes=True)
 
-    async def get_email(self, email_id: int) -> Optional[EmailResponse]:
-        stmt = select(EmailLog).where(EmailLog.id == email_id)
-        result = await self.session.execute(stmt)
-        email = result.scalar_one_or_none()
-        if email is None:
-            return None
-        return EmailResponse.model_validate(email.__dict__, from_attributes=True)
-
     async def list_emails(self, agent_id: int, page: int = 1, limit: int = 10, client_id: Optional[int] = None, status: Optional[str] = None) -> List[EmailResponse]:
         offset = (page - 1) * limit
         stmt = select(EmailLog).where(EmailLog.agent_id == agent_id)

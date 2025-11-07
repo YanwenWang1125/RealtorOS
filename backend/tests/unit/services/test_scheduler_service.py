@@ -100,6 +100,13 @@ class TestSchedulerService:
     @patch('app.services.scheduler_service.AIAgent')
     async def test_process_and_send_due_emails_single_success(self, mock_ai_class, mock_email_class, test_session):
         """Test successfully processing a single due task."""
+        # Create agent first
+        from app.models.agent import Agent
+        agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+        test_session.add(agent)
+        await test_session.commit()
+        await test_session.refresh(agent)
+        
         # Create client
         crm = CRMService(test_session)
         client = await crm.create_client(ClientCreate(
@@ -109,7 +116,7 @@ class TestSchedulerService:
             property_address="100 Test St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=agent.id)
         
         # Create due task
         svc = SchedulerService(test_session)
@@ -118,7 +125,7 @@ class TestSchedulerService:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),  # Past time = due
             priority="high"
-        ))
+        ), agent_id=agent.id)
         
         # Mock AIAgent
         mock_ai = Mock()
@@ -142,7 +149,7 @@ class TestSchedulerService:
         assert count == 1
         
         # Verify task was updated
-        updated_task = await svc.get_task(task.id)
+        updated_task = await svc.get_task(task.id, agent_id=client.agent_id)
         assert updated_task.status == "completed"
         assert updated_task.email_sent_id == 1
         assert updated_task.completed_at is not None
@@ -157,21 +164,28 @@ class TestSchedulerService:
         mock_email.send_email.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.SendGridAPIClient')
+    @patch('app.services.email_service.boto3')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_multiple_tasks(self, mock_ai_class, mock_sg_class, test_session):
+    async def test_process_and_send_due_emails_multiple_tasks(self, mock_ai_class, mock_boto3, test_session):
         """Test processing multiple due tasks successfully."""
-        # Mock SendGrid
-        mock_response = Mock()
-        mock_response.headers = {"X-Message-Id": "sg-123"}
-        mock_sg_instance = Mock()
-        mock_sg_instance.send = Mock(return_value=mock_response)
-        mock_sg_class.return_value = mock_sg_instance
+        # Mock SES (boto3)
+        mock_ses_client = Mock()
+        mock_ses_client.send_email = Mock(return_value={'MessageId': 'ses-123'})
+        mock_boto3.client.return_value = mock_ses_client
         
         with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.SENDGRID_API_KEY = "test-key"
-            mock_settings.SENDGRID_FROM_EMAIL = "from@example.com"
-            mock_settings.SENDGRID_FROM_NAME = "Test From"
+            mock_settings.AWS_REGION = "us-east-1"
+            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
+            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
+            mock_settings.SES_FROM_EMAIL = "from@example.com"
+            mock_settings.SES_FROM_NAME = "Test From"
+            
+            # Create agent first
+            from app.models.agent import Agent
+            agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+            test_session.add(agent)
+            await test_session.commit()
+            await test_session.refresh(agent)
             
             # Create clients
             crm = CRMService(test_session)
@@ -184,7 +198,7 @@ class TestSchedulerService:
                     property_address=f"{100+i} Test St, City, ST 12345",
                     property_type="residential",
                     stage="lead"
-                ))
+                ), agent_id=agent.id)
                 clients.append(client)
             
             # Create due tasks for each client
@@ -197,7 +211,7 @@ class TestSchedulerService:
                     followup_type=followup_types[i],
                     scheduled_for=datetime.now(timezone.utc) - timedelta(hours=i+1),
                     priority="high"
-                ))
+                ), agent_id=agent.id)
                 tasks.append(task)
             
             # Mock AIAgent
@@ -215,7 +229,7 @@ class TestSchedulerService:
             
             # Verify all tasks were completed
             for task in tasks:
-                updated_task = await svc.get_task(task.id)
+                updated_task = await svc.get_task(task.id, agent_id=agent.id)
                 assert updated_task.status == "completed"
                 assert updated_task.email_sent_id is not None
             
@@ -226,6 +240,13 @@ class TestSchedulerService:
     @patch('app.services.scheduler_service.AIAgent')
     async def test_process_and_send_due_emails_missing_client(self, mock_ai_class, test_session):
         """Test handling task with missing client."""
+        # Create agent first
+        from app.models.agent import Agent
+        agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+        test_session.add(agent)
+        await test_session.commit()
+        await test_session.refresh(agent)
+        
         # Create task with non-existent client_id
         svc = SchedulerService(test_session)
         task = await svc.create_task(TaskCreate(
@@ -233,7 +254,7 @@ class TestSchedulerService:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),
             priority="high"
-        ))
+        ), agent_id=agent.id)
         
         # Process - should handle gracefully
         count = await svc.process_and_send_due_emails()
@@ -241,13 +262,20 @@ class TestSchedulerService:
         assert count == 0
         
         # Task should still be pending (not completed)
-        updated_task = await svc.get_task(task.id)
+        updated_task = await svc.get_task(task.id, agent_id=agent.id)
         assert updated_task.status == "pending"
 
     @pytest.mark.asyncio
     @patch('app.services.scheduler_service.AIAgent')
     async def test_process_and_send_due_emails_client_no_email(self, mock_ai_class, test_session):
         """Test handling client without email address."""
+        # Create agent first
+        from app.models.agent import Agent
+        agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+        test_session.add(agent)
+        await test_session.commit()
+        await test_session.refresh(agent)
+        
         # Create client with empty email string (simulating edge case where email might be empty)
         crm = CRMService(test_session)
         client = await crm.create_client(ClientCreate(
@@ -257,7 +285,7 @@ class TestSchedulerService:
             property_address="200 Test St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=agent.id)
         
         # Set email to empty string (simulating edge case - can't set to None due to constraint)
         from sqlalchemy import update as sql_update
@@ -272,7 +300,7 @@ class TestSchedulerService:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),
             priority="high"
-        ))
+        ), agent_id=agent.id)
         
         # Process - should skip client without valid email
         count = await svc.process_and_send_due_emails()
@@ -280,7 +308,7 @@ class TestSchedulerService:
         assert count == 0
         
         # Task should still be pending
-        updated_task = await svc.get_task(task.id)
+        updated_task = await svc.get_task(task.id, agent_id=agent.id)
         assert updated_task.status == "pending"
 
     @pytest.mark.asyncio
@@ -288,6 +316,13 @@ class TestSchedulerService:
     @patch('app.services.scheduler_service.AIAgent')
     async def test_process_and_send_due_emails_ai_generation_fails(self, mock_ai_class, mock_email_class, test_session):
         """Test handling AI email generation failure."""
+        # Create agent first
+        from app.models.agent import Agent
+        agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+        test_session.add(agent)
+        await test_session.commit()
+        await test_session.refresh(agent)
+        
         # Create client and task
         crm = CRMService(test_session)
         client = await crm.create_client(ClientCreate(
@@ -297,7 +332,7 @@ class TestSchedulerService:
             property_address="300 Test St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=agent.id)
         
         svc = SchedulerService(test_session)
         task = await svc.create_task(TaskCreate(
@@ -305,7 +340,7 @@ class TestSchedulerService:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),
             priority="high"
-        ))
+        ), agent_id=agent.id)
         
         # Mock AIAgent to return invalid response
         mock_ai = Mock()
@@ -318,7 +353,7 @@ class TestSchedulerService:
         assert count == 0
         
         # Task should still be pending
-        updated_task = await svc.get_task(task.id)
+        updated_task = await svc.get_task(task.id, agent_id=agent.id)
         assert updated_task.status == "pending"
 
     @pytest.mark.asyncio
@@ -326,6 +361,13 @@ class TestSchedulerService:
     @patch('app.services.scheduler_service.AIAgent')
     async def test_process_and_send_due_emails_email_send_fails(self, mock_ai_class, mock_email_class, test_session):
         """Test handling email sending failure."""
+        # Create agent first
+        from app.models.agent import Agent
+        agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+        test_session.add(agent)
+        await test_session.commit()
+        await test_session.refresh(agent)
+        
         # Create client and task
         crm = CRMService(test_session)
         client = await crm.create_client(ClientCreate(
@@ -335,7 +377,7 @@ class TestSchedulerService:
             property_address="400 Test St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=agent.id)
         
         svc = SchedulerService(test_session)
         task = await svc.create_task(TaskCreate(
@@ -343,7 +385,7 @@ class TestSchedulerService:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),
             priority="high"
-        ))
+        ), agent_id=agent.id)
         
         # Mock AIAgent - succeeds
         mock_ai = Mock()
@@ -356,7 +398,7 @@ class TestSchedulerService:
         
         # Mock EmailService - fails
         mock_email = Mock()
-        mock_email.send_email = AsyncMock(side_effect=Exception("SendGrid error"))
+        mock_email.send_email = AsyncMock(side_effect=Exception("SES error"))
         mock_email_class.return_value = mock_email
         
         # Process - should handle exception gracefully
@@ -365,33 +407,40 @@ class TestSchedulerService:
         assert count == 0
         
         # Task should still be pending (not updated due to error)
-        updated_task = await svc.get_task(task.id)
+        updated_task = await svc.get_task(task.id, agent_id=agent.id)
         assert updated_task.status == "pending"
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.SendGridAPIClient')
+    @patch('app.services.email_service.boto3')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_partial_success(self, mock_ai_class, mock_sg_class, test_session):
+    async def test_process_and_send_due_emails_partial_success(self, mock_ai_class, mock_boto3, test_session):
         """Test processing multiple tasks where some succeed and some fail."""
-        # Mock SendGrid to fail on second call
+        # Mock SES to fail on second call
         call_count = 0
-        def send_side_effect(*args, **kwargs):
+        def send_email_side_effect(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second call fails
-                raise Exception("SendGrid error")
-            mock_response = Mock()
-            mock_response.headers = {"X-Message-Id": f"sg-{call_count}"}
-            return mock_response
+                raise Exception("SES error")
+            return {'MessageId': f'ses-{call_count}'}
         
-        mock_sg_instance = Mock()
-        mock_sg_instance.send = Mock(side_effect=send_side_effect)
-        mock_sg_class.return_value = mock_sg_instance
+        mock_ses_client = Mock()
+        mock_ses_client.send_email = Mock(side_effect=send_email_side_effect)
+        mock_boto3.client.return_value = mock_ses_client
         
         with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.SENDGRID_API_KEY = "test-key"
-            mock_settings.SENDGRID_FROM_EMAIL = "from@example.com"
-            mock_settings.SENDGRID_FROM_NAME = "Test From"
+            mock_settings.AWS_REGION = "us-east-1"
+            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
+            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
+            mock_settings.SES_FROM_EMAIL = "from@example.com"
+            mock_settings.SES_FROM_NAME = "Test From"
+            
+            # Create agent first
+            from app.models.agent import Agent
+            agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+            test_session.add(agent)
+            await test_session.commit()
+            await test_session.refresh(agent)
             
             # Create clients
             crm = CRMService(test_session)
@@ -404,7 +453,7 @@ class TestSchedulerService:
                     property_address=f"{500+i} Test St, City, ST 12345",
                     property_type="residential",
                     stage="lead"
-                ))
+                ), agent_id=agent.id)
                 clients.append(client)
             
             # Create due tasks
@@ -416,7 +465,7 @@ class TestSchedulerService:
                     followup_type="Day 1",
                     scheduled_for=datetime.now(timezone.utc) - timedelta(hours=i+1),
                     priority="high"
-                ))
+                ), agent_id=agent.id)
                 tasks.append(task)
             
             # Mock AIAgent - succeeds for all
@@ -427,7 +476,7 @@ class TestSchedulerService:
             ])
             mock_ai_class.return_value = mock_ai
             
-            # Process due emails (using real EmailService, which will fail on second SendGrid call)
+            # Process due emails (using real EmailService, which will fail on second SES call)
             count = await svc.process_and_send_due_emails()
             
             # All 3 tasks should be processed (EmailService still returns response even on failure)
@@ -435,40 +484,47 @@ class TestSchedulerService:
             assert count == 3
             
             # All tasks are marked as completed (even though one email failed to send)
-            task1 = await svc.get_task(tasks[0].id)
+            task1 = await svc.get_task(tasks[0].id, agent_id=agent.id)
             assert task1.status == "completed"
             
-            task2 = await svc.get_task(tasks[1].id)
+            task2 = await svc.get_task(tasks[1].id, agent_id=agent.id)
             assert task2.status == "completed"  # Task completed, but email status will be "failed"
             
-            task3 = await svc.get_task(tasks[2].id)
+            task3 = await svc.get_task(tasks[2].id, agent_id=agent.id)
             assert task3.status == "completed"
             
             # Verify the second email has failed status
             from app.services.email_service import EmailService
             email_service = EmailService(test_session)
-            emails = await email_service.list_emails(client_id=clients[1].id)
+            emails = await email_service.list_emails(agent_id=agent.id, client_id=clients[1].id)
             # Find the email for task2
             task2_email = next((e for e in emails if e.task_id == tasks[1].id), None)
             assert task2_email is not None
             assert task2_email.status == "failed"  # Email sending failed
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.SendGridAPIClient')
+    @patch('app.services.email_service.boto3')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_verifies_email_log(self, mock_ai_class, mock_sg_class, test_session):
+    async def test_process_and_send_due_emails_verifies_email_log(self, mock_ai_class, mock_boto3, test_session):
         """Test that email logs are created when processing due tasks."""
-        # Mock SendGrid
-        mock_response = Mock()
-        mock_response.headers = {"X-Message-Id": "sg-test-123"}
-        mock_sg_instance = Mock()
-        mock_sg_instance.send = Mock(return_value=mock_response)
-        mock_sg_class.return_value = mock_sg_instance
+        # Mock SES (boto3)
+        mock_ses_client = Mock()
+        mock_ses_client.send_email = Mock(return_value={'MessageId': 'ses-test-123'})
+        mock_boto3.client.return_value = mock_ses_client
         
         with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.SENDGRID_API_KEY = "test-key"
-            mock_settings.SENDGRID_FROM_EMAIL = "from@example.com"
-            mock_settings.SENDGRID_FROM_NAME = "Test From"
+            mock_settings.AWS_REGION = "us-east-1"
+            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
+            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
+            mock_settings.SES_FROM_EMAIL = "from@example.com"
+            mock_settings.SES_FROM_NAME = "Test From"
+            
+            # Create agent first
+            from app.models.agent import Agent
+            agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+            test_session.add(agent)
+            await test_session.commit()
+            await test_session.refresh(agent)
             
             # Create client and task
             crm = CRMService(test_session)
@@ -479,7 +535,7 @@ class TestSchedulerService:
                 property_address="600 Test St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=agent.id)
             
             svc = SchedulerService(test_session)
             task = await svc.create_task(TaskCreate(
@@ -487,7 +543,7 @@ class TestSchedulerService:
                 followup_type="Day 1",
                 scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),
                 priority="high"
-            ))
+            ), agent_id=agent.id)
             
             # Mock AIAgent
             mock_ai = Mock()
@@ -514,21 +570,28 @@ class TestSchedulerService:
             assert email_logs[0].subject == "Test Subject"
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.SendGridAPIClient')
+    @patch('app.services.email_service.boto3')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_only_processes_due_tasks(self, mock_ai_class, mock_sg_class, test_session):
+    async def test_process_and_send_due_emails_only_processes_due_tasks(self, mock_ai_class, mock_boto3, test_session):
         """Test that only due tasks are processed, not future tasks."""
-        # Mock SendGrid
-        mock_response = Mock()
-        mock_response.headers = {"X-Message-Id": "sg-123"}
-        mock_sg_instance = Mock()
-        mock_sg_instance.send = Mock(return_value=mock_response)
-        mock_sg_class.return_value = mock_sg_instance
+        # Mock SES (boto3)
+        mock_ses_client = Mock()
+        mock_ses_client.send_email = Mock(return_value={'MessageId': 'ses-123'})
+        mock_boto3.client.return_value = mock_ses_client
         
         with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.SENDGRID_API_KEY = "test-key"
-            mock_settings.SENDGRID_FROM_EMAIL = "from@example.com"
-            mock_settings.SENDGRID_FROM_NAME = "Test From"
+            mock_settings.AWS_REGION = "us-east-1"
+            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
+            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
+            mock_settings.SES_FROM_EMAIL = "from@example.com"
+            mock_settings.SES_FROM_NAME = "Test From"
+            
+            # Create agent first
+            from app.models.agent import Agent
+            agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+            test_session.add(agent)
+            await test_session.commit()
+            await test_session.refresh(agent)
             
             # Create client
             crm = CRMService(test_session)
@@ -539,7 +602,7 @@ class TestSchedulerService:
                 property_address="700 Test St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=agent.id)
             
             svc = SchedulerService(test_session)
             
@@ -549,7 +612,7 @@ class TestSchedulerService:
                 followup_type="Day 1",
                 scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),  # Due
                 priority="high"
-            ))
+            ), agent_id=agent.id)
             
             # Create future task (not due)
             future_task = await svc.create_task(TaskCreate(
@@ -557,7 +620,7 @@ class TestSchedulerService:
                 followup_type="Day 3",
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=2),  # Future
                 priority="medium"
-            ))
+            ), agent_id=agent.id)
             
             # Mock AIAgent
             mock_ai = Mock()
@@ -574,10 +637,10 @@ class TestSchedulerService:
             assert count == 1
             
             # Verify only due task was processed
-            due_task_updated = await svc.get_task(due_task.id)
+            due_task_updated = await svc.get_task(due_task.id, agent_id=agent.id)
             assert due_task_updated.status == "completed"
             
-            future_task_updated = await svc.get_task(future_task.id)
+            future_task_updated = await svc.get_task(future_task.id, agent_id=agent.id)
             assert future_task_updated.status == "pending"  # Not processed
             
             # AI agent should only be called once (for due task)

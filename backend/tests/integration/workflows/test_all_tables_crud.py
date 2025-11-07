@@ -49,7 +49,13 @@ async def db_session():
     await postgresql.init_db()
     if postgresql.SessionLocal is None:
         raise RuntimeError("Database not initialized. SessionLocal is None.")
-    
+
+    # Create all tables if using SQLite (for in-memory testing)
+    from app.config import settings
+    if settings.DATABASE_URL.startswith("sqlite"):
+        async with postgresql.engine.begin() as conn:
+            await conn.run_sync(postgresql.Base.metadata.create_all)
+
     async with postgresql.SessionLocal() as session:
         # Clean up before each test
         await session.execute(delete(EmailLog))

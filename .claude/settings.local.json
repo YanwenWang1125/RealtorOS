@@ -6,7 +6,10 @@
       "Bash(ls:*)",
       "Bash(pip install:*)",
       "Bash(python:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(tee:*)",
+      "Bash(set DATABASE_URL=sqlite+aiosqlite:///:memory:)",
+      "Bash(final_test_results.txt)"
     ],
     "deny": [],
     "ask": []

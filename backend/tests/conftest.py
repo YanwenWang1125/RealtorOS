@@ -10,6 +10,13 @@ This file serves as a fallback for any tests that need basic fixtures.
 
 import sys
 from pathlib import Path
+import os
+
+# Set DATABASE_URL for testing BEFORE importing app modules
+# This ensures that the settings are loaded with the correct DATABASE_URL
+# Use TEST_DATABASE_URL if set, otherwise use SQLite in-memory database
+test_db_url_env = os.environ.get("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ["DATABASE_URL"] = test_db_url_env
 
 # Add backend directory to Python path so we can import app
 # This ensures tests work when run directly with python or with pytest

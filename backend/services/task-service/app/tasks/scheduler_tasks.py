@@ -26,20 +26,21 @@ def create_followup_tasks_task(self, client_id: int, agent_id: int):
     return asyncio.run(_run())
 
 @celery_app.task(bind=True)
-def reschedule_task_task(self, task_id: int, new_date: str):
+def reschedule_task_task(self, task_id: int, new_date: str, agent_id: int):
     """
     Reschedule a task to a new date.
     
     Args:
         task_id: The ID of the task to reschedule
         new_date: New scheduled date (ISO format string)
+        agent_id: The ID of the agent who owns the task
     """
     from datetime import datetime
     async def _run():
         await init_db()
         async for session in get_session():
             svc = SchedulerService(session)
-            await svc.reschedule_task(task_id, datetime.fromisoformat(new_date))
+            await svc.reschedule_task(task_id, datetime.fromisoformat(new_date), agent_id)
             return True
     return asyncio.run(_run())
 

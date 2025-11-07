@@ -8,7 +8,7 @@ in the RealtorOS system.
 import pytest
 import pytest_asyncio
 from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime
+from datetime import datetime, timezone
 from app.services.email_service import EmailService
 from app.services.scheduler_service import SchedulerService
 from app.services.crm_service import CRMService
@@ -46,7 +46,7 @@ class TestEmailService:
         task = await scheduler.create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow(),
+            scheduled_for=datetime.now(timezone.utc),
             priority="high"
         ), agent_id=agent.id)
         
@@ -92,7 +92,7 @@ class TestEmailService:
         task = await scheduler.create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow(),
+            scheduled_for=datetime.now(timezone.utc),
             priority="high"
         ), agent_id=agent.id)
         
@@ -139,7 +139,7 @@ class TestEmailService:
             task = await scheduler.create_task(TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow(),
+                scheduled_for=datetime.now(timezone.utc),
                 priority="high"
             ), agent_id=agent.id)
             await email_service.log_email(
@@ -187,7 +187,7 @@ class TestEmailService:
         task = await scheduler.create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow(),
+            scheduled_for=datetime.now(timezone.utc),
             priority="high"
         ), agent_id=agent.id)
         
@@ -248,7 +248,7 @@ class TestEmailService:
             task = await scheduler.create_task(TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow(),
+                scheduled_for=datetime.now(timezone.utc),
                 priority="high"
             ), agent_id=agent.id)
             
@@ -300,7 +300,7 @@ class TestEmailService:
                 task = await scheduler.create_task(TaskCreate(
                     client_id=client.id,
                     followup_type="Day 1",
-                    scheduled_for=datetime.utcnow(),
+                    scheduled_for=datetime.now(timezone.utc),
                     priority="high"
                 ), agent_id=agent.id)
                 
@@ -341,7 +341,7 @@ class TestEmailService:
         task = await scheduler.create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow(),
+            scheduled_for=datetime.now(timezone.utc),
             priority="high"
         ), agent_id=agent.id)
         

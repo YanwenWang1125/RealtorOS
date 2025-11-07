@@ -29,7 +29,7 @@ except ImportError as e:
 
 import pytest
 import pytest_asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete, select
 from app.db import postgresql
 from app.services.crm_service import CRMService
@@ -75,7 +75,22 @@ async def services(db_session):
 
 
 @pytest_asyncio.fixture
-async def sample_client(db_session):
+async def sample_agent(db_session):
+    """Create a sample agent for testing."""
+    from app.models.agent import Agent
+    agent = Agent(
+        email="test-agent@example.com",
+        name="Test Agent",
+        password_hash="dummy_hash",
+        is_active=True
+    )
+    db_session.add(agent)
+    await db_session.commit()
+    await db_session.refresh(agent)
+    return agent
+
+@pytest_asyncio.fixture
+async def sample_client(db_session, sample_agent):
     """Create a sample client for task/email testing."""
     crm = CRMService(db_session)
     client_data = ClientCreate(
@@ -86,7 +101,7 @@ async def sample_client(db_session):
         property_type="residential",
         stage="lead"
     )
-    return await crm.create_client(client_data)
+    return await crm.create_client(client_data, agent_id=sample_agent.id)
 
 
 # ============================================================================
@@ -529,10 +544,10 @@ class TestTaskCreate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
         assert created.id is not None
         assert created.client_id == sample_client.id
 
@@ -542,11 +557,11 @@ class TestTaskCreate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Week 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=7),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),
             priority="medium",
             notes="Important task notes"
         )
-        created = await services["scheduler"].create_task(task)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
         assert created.notes == "Important task notes"
 
     @pytest.mark.asyncio
@@ -557,10 +572,10 @@ class TestTaskCreate:
             task = TaskCreate(
                 client_id=sample_client.id,
                 followup_type=followup_type,
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             )
-            created = await services["scheduler"].create_task(task)
+            created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
             assert created.followup_type == followup_type
 
     @pytest.mark.asyncio
@@ -571,16 +586,16 @@ class TestTaskCreate:
             task = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority=priority
             )
-            created = await services["scheduler"].create_task(task)
+            created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
             assert created.priority == priority
 
     @pytest.mark.asyncio
     async def test_t05_create_followup_tasks(self, services, sample_client):
         """Test 30: Create followup tasks for client."""
-        tasks = await services["scheduler"].create_followup_tasks(sample_client.id)
+        tasks = await services["scheduler"].create_followup_tasks(sample_client.id, sample_client.agent_id)
         assert len(tasks) > 0
         assert all(t.client_id == sample_client.id for t in tasks)
 
@@ -591,10 +606,10 @@ class TestTaskCreate:
             task = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            created = await services["scheduler"].create_task(task)
+            created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
             assert created.client_id == sample_client.id
 
     @pytest.mark.asyncio
@@ -610,17 +625,28 @@ class TestTaskCreate:
                 property_type="residential",
                 stage="lead"
             )
-            created_client = await services["crm"].create_client(client)
+            # Need agent_id for create_client - use sample_agent fixture
+            from app.models.agent import Agent
+            stmt = select(Agent).where(Agent.is_active == True).limit(1)
+            result = await services["crm"].session.execute(stmt)
+            agent = result.scalar_one_or_none()
+            if not agent:
+                # Create a test agent if none exists
+                agent = Agent(email=f"test-agent-{i}@example.com", name="Test Agent", is_active=True)
+                services["crm"].session.add(agent)
+                await services["crm"].session.commit()
+                await services["crm"].session.refresh(agent)
+            created_client = await services["crm"].create_client(client, agent_id=agent.id)
             clients.append(created_client)
         
         for client in clients:
             task = TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             )
-            created_task = await services["scheduler"].create_task(task)
+            created_task = await services["scheduler"].create_task(task, agent_id=client.agent_id)
             assert created_task.client_id == client.id
 
 
@@ -633,17 +659,23 @@ class TestTaskRead:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
-        fetched = await services["scheduler"].get_task(created.id)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        fetched = await services["scheduler"].get_task(created.id, agent_id=sample_client.agent_id)
         assert fetched.id == created.id
 
     @pytest.mark.asyncio
     async def test_t09_get_nonexistent_task(self, services):
         """Test 34: Get non-existent task."""
-        result = await services["scheduler"].get_task(99999)
+        # Need agent_id for get_task - use sample_agent
+        from app.models.agent import Agent
+        stmt = select(Agent).where(Agent.is_active == True).limit(1)
+        result_stmt = await services["scheduler"].session.execute(stmt)
+        agent = result_stmt.scalar_one_or_none()
+        agent_id = agent.id if agent else 1
+        result = await services["scheduler"].get_task(99999, agent_id=agent_id)
         assert result is None
 
     @pytest.mark.asyncio
@@ -653,11 +685,11 @@ class TestTaskRead:
             task = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            await services["scheduler"].create_task(task)
-        tasks = await services["scheduler"].list_tasks()
+            await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        tasks = await services["scheduler"].list_tasks(agent_id=sample_client.agent_id)
         assert len(tasks) >= 5
 
     @pytest.mark.asyncio
@@ -668,17 +700,28 @@ class TestTaskRead:
             task = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             )
-            created = await services["scheduler"].create_task(task)
-            await services["scheduler"].update_task(created.id, TaskUpdate(status=status))
-        pending = await services["scheduler"].list_tasks(status="pending")
+            created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+            await services["scheduler"].update_task(created.id, TaskUpdate(status=status), agent_id=sample_client.agent_id)
+        pending = await services["scheduler"].list_tasks(agent_id=sample_client.agent_id, status="pending")
         assert len(pending) >= 1
 
     @pytest.mark.asyncio
     async def test_t12_list_tasks_filter_by_client(self, services):
         """Test 37: List tasks filtered by client."""
+        # Get or create agent for clients
+        from app.models.agent import Agent
+        stmt = select(Agent).where(Agent.is_active == True).limit(1)
+        result_stmt = await services["crm"].session.execute(stmt)
+        agent = result_stmt.scalar_one_or_none()
+        if not agent:
+            agent = Agent(email="test-agent@example.com", name="Test Agent", is_active=True)
+            services["crm"].session.add(agent)
+            await services["crm"].session.commit()
+            await services["crm"].session.refresh(agent)
+        
         client1 = await services["crm"].create_client(ClientCreate(
             name="Client 1",
             email="client1@example.com",
@@ -686,7 +729,7 @@ class TestTaskRead:
             property_address="1105 Test St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=agent.id)
         client2 = await services["crm"].create_client(ClientCreate(
             name="Client 2",
             email="client2@example.com",
@@ -694,16 +737,16 @@ class TestTaskRead:
             property_address="1106 Test St, City, ST 12345",
             property_type="residential",
             stage="lead"
-        ))
+        ), agent_id=agent.id)
         for i in range(3):
             task = TaskCreate(
                 client_id=client1.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            await services["scheduler"].create_task(task)
-        tasks = await services["scheduler"].list_tasks(client_id=client1.id)
+            await services["scheduler"].create_task(task, agent_id=client1.agent_id)
+        tasks = await services["scheduler"].list_tasks(agent_id=client1.agent_id, client_id=client1.id)
         assert all(t.client_id == client1.id for t in tasks)
 
     @pytest.mark.asyncio
@@ -713,12 +756,12 @@ class TestTaskRead:
             task = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            await services["scheduler"].create_task(task)
-        page1 = await services["scheduler"].list_tasks(page=1, limit=5)
-        page2 = await services["scheduler"].list_tasks(page=2, limit=5)
+            await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        page1 = await services["scheduler"].list_tasks(agent_id=sample_client.agent_id, page=1, limit=5)
+        page2 = await services["scheduler"].list_tasks(agent_id=sample_client.agent_id, page=2, limit=5)
         assert len(page1) == 5
         assert len(page2) == 5
 
@@ -729,18 +772,18 @@ class TestTaskRead:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() - timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) - timedelta(days=1),
             priority="high"
         )
-        await services["scheduler"].create_task(task)
+        await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
         # Create future task
         task2 = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        await services["scheduler"].create_task(task2)
+        await services["scheduler"].create_task(task2, agent_id=sample_client.agent_id)
         due = await services["scheduler"].get_due_tasks()
         assert len(due) >= 1
 
@@ -754,11 +797,11 @@ class TestTaskUpdate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
-        updated = await services["scheduler"].update_task(created.id, TaskUpdate(status="completed"))
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        updated = await services["scheduler"].update_task(created.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
         assert updated.status == "completed"
 
     @pytest.mark.asyncio
@@ -767,13 +810,13 @@ class TestTaskUpdate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
         statuses = ["pending", "completed", "skipped", "cancelled"]
         for status in statuses[1:]:
-            updated = await services["scheduler"].update_task(created.id, TaskUpdate(status=status))
+            updated = await services["scheduler"].update_task(created.id, TaskUpdate(status=status), agent_id=sample_client.agent_id)
             assert updated.status == status
 
     @pytest.mark.asyncio
@@ -782,11 +825,11 @@ class TestTaskUpdate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="low"
         )
-        created = await services["scheduler"].create_task(task)
-        updated = await services["scheduler"].update_task(created.id, TaskUpdate(priority="high"))
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        updated = await services["scheduler"].update_task(created.id, TaskUpdate(priority="high"), agent_id=sample_client.agent_id)
         assert updated.priority == "high"
 
     @pytest.mark.asyncio
@@ -795,11 +838,11 @@ class TestTaskUpdate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
-        updated = await services["scheduler"].update_task(created.id, TaskUpdate(notes="Updated notes"))
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        updated = await services["scheduler"].update_task(created.id, TaskUpdate(notes="Updated notes"), agent_id=sample_client.agent_id)
         assert updated.notes == "Updated notes"
 
     @pytest.mark.asyncio
@@ -808,12 +851,12 @@ class TestTaskUpdate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
-        new_date = datetime.utcnow() + timedelta(days=10)
-        updated = await services["scheduler"].update_task(created.id, TaskUpdate(scheduled_for=new_date))
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        new_date = datetime.now(timezone.utc) + timedelta(days=10)
+        updated = await services["scheduler"].update_task(created.id, TaskUpdate(scheduled_for=new_date), agent_id=sample_client.agent_id)
         assert updated.scheduled_for.date() == new_date.date()
 
     @pytest.mark.asyncio
@@ -822,12 +865,14 @@ class TestTaskUpdate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         created = await services["scheduler"].create_task(task)
-        new_date = datetime.utcnow() + timedelta(days=30)
-        rescheduled = await services["scheduler"].reschedule_task(created.id, new_date)
+        new_date = datetime.now(timezone.utc) + timedelta(days=30)
+        # Get agent_id from the created task
+        agent_id = created.agent_id
+        rescheduled = await services["scheduler"].reschedule_task(created.id, new_date, agent_id)
         assert rescheduled.scheduled_for.date() == new_date.date()
 
     @pytest.mark.asyncio
@@ -836,7 +881,7 @@ class TestTaskUpdate:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         created = await services["scheduler"].create_task(task)
@@ -852,7 +897,13 @@ class TestTaskUpdate:
     @pytest.mark.asyncio
     async def test_t22_update_nonexistent_task(self, services):
         """Test 47: Update non-existent task."""
-        result = await services["scheduler"].update_task(99999, TaskUpdate(status="completed"))
+        # Need agent_id - use sample_agent
+        from app.models.agent import Agent
+        stmt = select(Agent).where(Agent.is_active == True).limit(1)
+        result_stmt = await services["scheduler"].session.execute(stmt)
+        agent = result_stmt.scalar_one_or_none()
+        agent_id = agent.id if agent else 1
+        result = await services["scheduler"].update_task(99999, TaskUpdate(status="completed"), agent_id=agent_id)
         assert result is None
 
 
@@ -865,12 +916,12 @@ class TestTaskComplex:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
-        await services["scheduler"].update_task(created.id, TaskUpdate(status="completed"))
-        fetched = await services["scheduler"].get_task(created.id)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
+        await services["scheduler"].update_task(created.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
+        fetched = await services["scheduler"].get_task(created.id, agent_id=sample_client.agent_id)
         assert fetched.status == "completed"
 
     @pytest.mark.asyncio
@@ -886,20 +937,30 @@ class TestTaskComplex:
                 property_type="residential",
                 stage="lead"
             )
-            created = await services["crm"].create_client(client)
+            # Get or create agent
+            from app.models.agent import Agent
+            stmt = select(Agent).where(Agent.is_active == True).limit(1)
+            result_stmt = await services["crm"].session.execute(stmt)
+            agent = result_stmt.scalar_one_or_none()
+            if not agent:
+                agent = Agent(email=f"test-agent-{i}@example.com", name="Test Agent", is_active=True)
+                services["crm"].session.add(agent)
+                await services["crm"].session.commit()
+                await services["crm"].session.refresh(agent)
+            created = await services["crm"].create_client(client, agent_id=agent.id)
             clients.append(created)
         
         for client in clients:
-            tasks = await services["scheduler"].create_followup_tasks(client.id)
+            tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
             assert len(tasks) > 0
 
     @pytest.mark.asyncio
     async def test_t25_tasks_with_different_schedules(self, services, sample_client):
         """Test 50: Tasks with different schedules."""
         schedules = [
-            (datetime.utcnow() + timedelta(days=1), "Day 1"),
-            (datetime.utcnow() + timedelta(days=7), "Week 1"),
-            (datetime.utcnow() + timedelta(days=30), "Month 1")
+            (datetime.now(timezone.utc) + timedelta(days=1), "Day 1"),
+            (datetime.now(timezone.utc) + timedelta(days=7), "Week 1"),
+            (datetime.now(timezone.utc) + timedelta(days=30), "Month 1")
         ]
         for scheduled_for, followup_type in schedules:
             task = TaskCreate(
@@ -908,7 +969,7 @@ class TestTaskComplex:
                 scheduled_for=scheduled_for,
                 priority="high"
             )
-            created = await services["scheduler"].create_task(task)
+            created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
             assert created.scheduled_for.date() == scheduled_for.date()
 
     @pytest.mark.asyncio
@@ -917,13 +978,13 @@ class TestTaskComplex:
         task = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        created = await services["scheduler"].create_task(task)
+        created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
         assert created.status == "pending"
-        await services["scheduler"].update_task(created.id, TaskUpdate(status="completed"))
-        updated = await services["scheduler"].get_task(created.id)
+        await services["scheduler"].update_task(created.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
+        updated = await services["scheduler"].get_task(created.id, agent_id=sample_client.agent_id)
         assert updated.status == "completed"
 
     @pytest.mark.asyncio
@@ -934,14 +995,14 @@ class TestTaskComplex:
             task = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
-            created = await services["scheduler"].create_task(task)
+            created = await services["scheduler"].create_task(task, agent_id=sample_client.agent_id)
             if status != "pending":
-                await services["scheduler"].update_task(created.id, TaskUpdate(status=status))
+                await services["scheduler"].update_task(created.id, TaskUpdate(status=status), agent_id=sample_client.agent_id)
         
-        pending = await services["scheduler"].list_tasks(client_id=sample_client.id, status="pending")
+        pending = await services["scheduler"].list_tasks(agent_id=sample_client.agent_id, client_id=sample_client.id, status="pending")
         assert len(pending) >= 2
 
 
@@ -959,10 +1020,10 @@ class TestEmailLogCreate:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         
         email_log = await services["email"].log_email(
             task_id=task.id,
@@ -980,10 +1041,10 @@ class TestEmailLogCreate:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
-        task = await services["scheduler"].create_task(task_data)
+        task = await services["scheduler"].create_task(task_data, agent_id=sample_client.agent_id)
         
         email_log = await services["email"].log_email(
             task_id=task.id,
@@ -1001,7 +1062,7 @@ class TestEmailLogCreate:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1021,6 +1082,16 @@ class TestEmailLogCreate:
         """Test 56: Log emails for different clients."""
         clients = []
         for i in range(3):
+            # Get or create agent
+            from app.models.agent import Agent
+            stmt = select(Agent).where(Agent.is_active == True).limit(1)
+            result_stmt = await services["crm"].session.execute(stmt)
+            agent = result_stmt.scalar_one_or_none()
+            if not agent:
+                agent = Agent(email=f"test-agent-{i}@example.com", name="Test Agent", is_active=True)
+                services["crm"].session.add(agent)
+                await services["crm"].session.commit()
+                await services["crm"].session.refresh(agent)
             client = await services["crm"].create_client(ClientCreate(
                 name=f"Email Client {i}",
                 email=f"emailclient{i}@example.com",
@@ -1028,17 +1099,17 @@ class TestEmailLogCreate:
                 property_address=f"{1130+i} Email St, City, ST 12345",
                 property_type="residential",
                 stage="lead"
-            ))
+            ), agent_id=agent.id)
             clients.append(client)
         
         for client in clients:
             task_data = TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             )
-            task = await services["scheduler"].create_task(task_data)
+            task = await services["scheduler"].create_task(task_data, agent_id=client.agent_id)
             email_log = await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
@@ -1058,7 +1129,7 @@ class TestEmailLogRead:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1086,7 +1157,7 @@ class TestEmailLogRead:
             task_data = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
             task = await services["scheduler"].create_task(task_data)
@@ -1115,7 +1186,7 @@ class TestEmailLogRead:
             task_data = TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
             task = await services["scheduler"].create_task(task_data)
@@ -1135,7 +1206,7 @@ class TestEmailLogRead:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1158,7 +1229,7 @@ class TestEmailLogRead:
             task_data = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
             task = await services["scheduler"].create_task(task_data)
@@ -1184,7 +1255,7 @@ class TestEmailLogUpdate:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1206,7 +1277,7 @@ class TestEmailLogUpdate:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1227,7 +1298,7 @@ class TestEmailLogUpdate:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1249,7 +1320,7 @@ class TestEmailLogUpdate:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1282,7 +1353,7 @@ class TestEmailLogComplex:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1304,7 +1375,7 @@ class TestEmailLogComplex:
             task_data = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             )
             task = await services["scheduler"].create_task(task_data)
@@ -1326,7 +1397,7 @@ class TestEmailLogComplex:
             task_data = TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             )
             task = await services["scheduler"].create_task(task_data)
@@ -1375,7 +1446,7 @@ class TestCrossTableRelationships:
         task_data = TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         )
         task = await services["scheduler"].create_task(task_data)
@@ -1424,7 +1495,7 @@ class TestCrossTableRelationships:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         await services["crm"].delete_client(client.id)
@@ -1439,7 +1510,7 @@ class TestCrossTableRelationships:
             task = await services["scheduler"].create_task(TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             ))
         tasks = await services["crm"].get_client_tasks(sample_client.id)
@@ -1451,7 +1522,7 @@ class TestCrossTableRelationships:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         email_log = await services["email"].log_email(
@@ -1481,7 +1552,7 @@ class TestCrossTableRelationships:
             task = await services["scheduler"].create_task(TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             ))
             await services["email"].log_email(
@@ -1502,7 +1573,7 @@ class TestCrossTableRelationships:
             task = await services["scheduler"].create_task(TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=i),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
             ))
             tasks.append(task)
@@ -1525,7 +1596,7 @@ class TestCrossTableRelationships:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         email_log = await services["email"].log_email(
@@ -1612,7 +1683,7 @@ class TestAdvancedScenarios:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         # Multiple updates
@@ -1628,7 +1699,7 @@ class TestAdvancedScenarios:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         email_log = await services["email"].log_email(
@@ -1657,7 +1728,7 @@ class TestAdvancedScenarios:
             task = await services["scheduler"].create_task(TaskCreate(
                 client_id=client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             ))
             await services["email"].log_email(
@@ -1685,7 +1756,7 @@ class TestAdvancedScenarios:
             task = await services["scheduler"].create_task(TaskCreate(
                 client_id=sample_client.id,
                 followup_type="Day 1",
-                scheduled_for=datetime.utcnow() + timedelta(days=1),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                 priority="high"
             ))
             if status != "pending":
@@ -1714,7 +1785,7 @@ class TestAdvancedScenarios:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         assert task.created_at is not None
@@ -1747,7 +1818,7 @@ class TestAdvancedScenarios:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         
@@ -1804,7 +1875,7 @@ class TestAdvancedScenarios:
                 task = await services["scheduler"].create_task(TaskCreate(
                     client_id=client.id,
                     followup_type="Day 1",
-                    scheduled_for=datetime.utcnow() + timedelta(days=1),
+                    scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                     priority="high"
                 ))
                 await services["scheduler"].update_task(task.id, TaskUpdate(
@@ -1835,7 +1906,7 @@ class TestAdvancedScenarios:
                 task = await services["scheduler"].create_task(TaskCreate(
                     client_id=client.id,
                     followup_type="Day 1",
-                    scheduled_for=datetime.utcnow() + timedelta(days=1),
+                    scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
                     priority="high"
                 ))
                 await services["email"].log_email(
@@ -1896,7 +1967,7 @@ class TestEdgeCases:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         # Update with same values
@@ -1913,14 +1984,14 @@ class TestEdgeCases:
         past_task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() - timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) - timedelta(days=1),
             priority="high"
         ))
         # Far future
         future_task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=365),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=365),
             priority="high"
         ))
         assert past_task.id is not None
@@ -2011,7 +2082,7 @@ class TestFinalScenarios:
         task = await services["scheduler"].create_task(TaskCreate(
             client_id=sample_client.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ))
         email_log = await services["email"].log_email(

@@ -21,8 +21,4 @@ export * from './toaster';
 
 // Legacy/custom components
 export * from './Textarea';
-export * from './Loading';
-
-// Note: Modal.tsx exists but uses default export pattern
-// It can be imported directly: import Modal from '@/components/ui/Modal'
 

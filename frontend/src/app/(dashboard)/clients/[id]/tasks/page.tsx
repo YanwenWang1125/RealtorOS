@@ -12,7 +12,12 @@ import { useParams } from 'next/navigation'
 import { useTasks } from '@/lib/hooks/queries/useTasks'
 import TaskCard from '@/components/tasks/TaskCard'
 import TaskForm from '@/components/tasks/TaskForm'
-import Modal from '@/components/ui/Modal'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function ClientTasksPage() {
   const params = useParams()
@@ -90,19 +95,19 @@ export default function ClientTasksPage() {
         )}
       </div>
 
-      {/* Create Task Modal */}
-      {showCreateModal && (
-        <Modal
-          title="Create New Task"
-          onClose={() => setShowCreateModal(false)}
-        >
+      {/* Create Task Dialog */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+          </DialogHeader>
           <TaskForm
             clientId={parseInt(clientId)}
             onSave={() => setShowCreateModal(false)}
             onCancel={() => setShowCreateModal(false)}
           />
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

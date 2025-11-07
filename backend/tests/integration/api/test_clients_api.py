@@ -8,7 +8,7 @@ testing both success cases and error scenarios.
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from app.models.client import Client
 from app.models.task import Task
@@ -728,14 +728,14 @@ class TestGetClientTasks:
         task1 = Task(
             client_id=client_id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             status="pending",
             priority="high"
         )
         task2 = Task(
             client_id=client_id,
             followup_type="Week 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=7),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),
             status="pending",
             priority="medium"
         )

@@ -47,15 +47,19 @@ class EmailService:
         )
 
         try:
-            # Send email via Amazon SES using verified sender email
-            response = self.ses.send_email(
-                Source=f"{display_name} <{self.from_email}>",
-                Destination={'ToAddresses': [email_data.to_email]},
-                Message={
-                    'Subject': {'Data': email_data.subject},
-                    'Body': {'Html': {'Data': email_data.body}}
-                }
-            )
+            # Send email via Amazon SES using verified sender email (non-blocking)
+            import asyncio
+            def _send_email():
+                return self.ses.send_email(
+                    Source=f"{display_name} <{self.from_email}>",
+                    Destination={'ToAddresses': [email_data.to_email]},
+                    Message={
+                        'Subject': {'Data': email_data.subject},
+                        'Body': {'Html': {'Data': email_data.body}}
+                    }
+                )
+            # Run blocking SES call in thread pool to avoid blocking event loop
+            response = await asyncio.to_thread(_send_email)
             # Get MessageId from SES response
             message_id = response['MessageId']
             await self.update_email_status(email_log.id, "sent", ses_message_id=message_id)

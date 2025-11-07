@@ -30,7 +30,7 @@ except ImportError as e:
     ) from e
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.services.crm_service import CRMService
 from app.schemas.client_schema import ClientCreate, ClientUpdate
 from app.models.task import Task
@@ -88,14 +88,14 @@ class TestCRMService:
         t1 = Task(
             client_id=created.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             status="pending",
             priority="high",
         )
         t2 = Task(
             client_id=created.id,
             followup_type="Week 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=7),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),
             status="pending",
             priority="medium",
         )
@@ -254,7 +254,7 @@ class TestCRMService:
             task = Task(
                 client_id=created.id,
                 followup_type=task_info["followup_type"],
-                scheduled_for=datetime.utcnow() + timedelta(days=task_info["days_offset"]),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=task_info["days_offset"]),
                 status=task_info["status"],
                 priority=task_info["priority"],
                 notes=f"Task for {task_info['followup_type']}"

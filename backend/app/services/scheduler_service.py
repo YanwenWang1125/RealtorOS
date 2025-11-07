@@ -46,7 +46,7 @@ class SchedulerService:
         )
 
     async def create_followup_tasks(self, client_id: int, agent_id: int) -> List[TaskResponse]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         created: List[Task] = []
         # FOLLOWUP_SCHEDULE is a dict keyed by label {label: {days, priority, ...}}
         for label, cfg in self.followup_schedule.items():
@@ -114,22 +114,22 @@ class SchedulerService:
         return self._to_response(task)
 
     async def get_due_tasks(self) -> List[TaskResponse]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         stmt = select(Task).where(Task.scheduled_for <= now, Task.status == "pending")
         result = await self.session.execute(stmt)
         tasks = result.scalars().all()
         return [self._to_response(t) for t in tasks]
 
-    async def reschedule_task(self, task_id: int, new_date: datetime) -> Optional[TaskResponse]:
+    async def reschedule_task(self, task_id: int, new_date: datetime, agent_id: int) -> Optional[TaskResponse]:
         stmt = (
             update(Task)
-            .where(Task.id == task_id)
+            .where(Task.id == task_id, Task.agent_id == agent_id)
             .values(scheduled_for=new_date)
             .execution_options(synchronize_session="fetch")
         )
         await self.session.execute(stmt)
         await self.session.commit()
-        return await self.get_task(task_id)
+        return await self.get_task(task_id, agent_id)
 
     async def process_and_send_due_emails(self) -> int:
         """

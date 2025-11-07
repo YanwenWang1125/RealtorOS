@@ -148,29 +148,43 @@ class DashboardService:
         
         return activities
 
-    async def get_client_stats(self) -> Dict[str, int]:
+    async def get_client_stats(self, agent_id: int) -> Dict[str, int]:
         stages = ["lead", "negotiating", "under_contract", "closed", "lost"]
         stats: Dict[str, int] = {}
         for s in stages:
             count = await self._scalar(
-                select(func.count(Client.id)).where(Client.stage == s, Client.is_deleted == False)  # noqa: E712
+                select(func.count(Client.id)).where(
+                    Client.agent_id == agent_id,
+                    Client.stage == s,
+                    Client.is_deleted == False  # noqa: E712
+                )
             )
             stats[s] = count or 0
         return stats
 
-    async def get_task_stats(self) -> Dict[str, int]:
+    async def get_task_stats(self, agent_id: int) -> Dict[str, int]:
         statuses = ["pending", "completed", "skipped", "cancelled"]
         stats: Dict[str, int] = {}
         for s in statuses:
-            count = await self._scalar(select(func.count(Task.id)).where(Task.status == s))
+            count = await self._scalar(
+                select(func.count(Task.id)).where(
+                    Task.agent_id == agent_id,
+                    Task.status == s
+                )
+            )
             stats[s] = count or 0
         return stats
 
-    async def get_email_stats(self) -> Dict[str, int]:
+    async def get_email_stats(self, agent_id: int) -> Dict[str, int]:
         statuses = ["queued", "sent", "failed", "bounced", "delivered", "opened", "clicked"]
         stats: Dict[str, int] = {}
         for s in statuses:
-            count = await self._scalar(select(func.count(EmailLog.id)).where(EmailLog.status == s))
+            count = await self._scalar(
+                select(func.count(EmailLog.id)).where(
+                    EmailLog.agent_id == agent_id,
+                    EmailLog.status == s
+                )
+            )
             stats[s] = count or 0
         return stats
 

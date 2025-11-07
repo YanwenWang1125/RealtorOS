@@ -117,16 +117,16 @@ class SchedulerService:
         tasks = result.scalars().all()
         return [self._to_response(t) for t in tasks]
 
-    async def reschedule_task(self, task_id: int, new_date: datetime) -> Optional[TaskResponse]:
+    async def reschedule_task(self, task_id: int, new_date: datetime, agent_id: int) -> Optional[TaskResponse]:
         stmt = (
             update(Task)
-            .where(Task.id == task_id)
+            .where(Task.id == task_id, Task.agent_id == agent_id)
             .values(scheduled_for=new_date)
             .execution_options(synchronize_session="fetch")
         )
         await self.session.execute(stmt)
         await self.session.commit()
-        return await self.get_task(task_id, agent_id=None)  # Note: might need to pass agent_id
+        return await self.get_task(task_id, agent_id)
 
     async def process_and_send_due_emails(self) -> int:
         """

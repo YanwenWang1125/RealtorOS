@@ -59,7 +59,7 @@ export default function ClientDetailPage() {
     }
 
     // Find the first available task (prefer pending tasks, then any task)
-    const pendingTask = tasks?.find(t => t.status === 'pending');
+    const pendingTask = tasks?.find((t: any) => t.status === 'pending');
     const firstTask = pendingTask || tasks?.[0];
 
     if (!firstTask) {

@@ -29,7 +29,7 @@ except ImportError as e:
 
 import pytest
 import pytest_asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete
 from app.db import postgresql
 from app.services.crm_service import CRMService
@@ -317,7 +317,7 @@ class TestCRMRead:
             task = Task(
                 client_id=created.id,
                 followup_type=followup_type,
-                scheduled_for=datetime.utcnow() + timedelta(days=days),
+                scheduled_for=datetime.now(timezone.utc) + timedelta(days=days),
                 priority=priority,
                 status=status,
                 notes=f"Test task: {followup_type}"
@@ -608,14 +608,14 @@ class TestCRMComplexScenarios:
         task1 = Task(
             client_id=created.id,
             followup_type="Day 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=1),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             status="pending",
             priority="high"
         )
         task2 = Task(
             client_id=created.id,
             followup_type="Week 1",
-            scheduled_for=datetime.utcnow() + timedelta(days=7),
+            scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),
             status="pending",
             priority="medium"
         )

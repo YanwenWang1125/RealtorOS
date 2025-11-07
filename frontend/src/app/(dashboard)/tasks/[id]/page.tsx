@@ -14,7 +14,12 @@ import { useClients } from '@/lib/hooks/queries/useClients'
 import { useEmails } from '@/lib/hooks/queries/useEmails'
 import TaskForm from '@/components/tasks/TaskForm'
 import EmailPreview from '@/components/emails/EmailPreview'
-import Modal from '@/components/ui/Modal'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function TaskDetailPage() {
   const params = useParams()
@@ -197,33 +202,33 @@ export default function TaskDetailPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
-      {isEditing && (
-        <Modal
-          title="Edit Task"
-          onClose={() => setIsEditing(false)}
-        >
+      {/* Edit Dialog */}
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
           <TaskForm
             task={task}
             onSave={() => setIsEditing(false)}
             onCancel={() => setIsEditing(false)}
           />
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {/* Email Preview Modal */}
-      {showEmailModal && (
-        <Modal
-          title="Email Preview"
-          onClose={() => setShowEmailModal(false)}
-        >
+      {/* Email Preview Dialog */}
+      <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Email Preview</DialogTitle>
+          </DialogHeader>
           <EmailPreview
             task={task}
             client={client}
             onClose={() => setShowEmailModal(false)}
           />
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

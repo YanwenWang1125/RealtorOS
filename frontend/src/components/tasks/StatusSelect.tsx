@@ -82,7 +82,7 @@ export function StatusSelect({
                   variant="secondary"
                   className="mr-1"
                 >
-                  {TASK_STATUS_LABELS[status]}
+                  {TASK_STATUS_LABELS[status as keyof typeof TASK_STATUS_LABELS]}
                   <span
                     tabIndex={0}
                     className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer inline-flex items-center"

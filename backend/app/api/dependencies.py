@@ -49,34 +49,8 @@ async def get_current_agent(
 ) -> Agent:
     """Get the current authenticated agent from JWT token.
     
-    In development mode, if no token is provided, returns the first active agent
-    (usually the system agent) for easier development.
+    Requires valid authentication token in all environments.
     """
-    # Development mode: bypass auth if no token provided
-    if settings.ENVIRONMENT == "development" and credentials is None:
-        # Use test agent for development bypass
-        test_email = "yanwenwang1125@gmail.com"
-        stmt = select(Agent).where(
-            Agent.email == test_email,
-            Agent.is_active == True
-        )
-        result = await session.execute(stmt)
-        agent = result.scalar_one_or_none()
-        
-        # Fallback to first active agent if test agent not found
-        if agent is None:
-            stmt = select(Agent).where(Agent.is_active == True).order_by(Agent.id).limit(1)
-            result = await session.execute(stmt)
-            agent = result.scalar_one_or_none()
-        
-        if agent is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="No active agents found in database. Please run 'python -m app.db.ensure_agent' to create a test agent."
-            )
-        return agent
-    
-    # Production mode or if token is provided: require authentication
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

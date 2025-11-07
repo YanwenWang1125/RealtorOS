@@ -19,47 +19,73 @@ class TestSchedulerService:
     """Test cases for scheduler service."""
 
     @pytest.mark.asyncio
-    async def test_create_list_get_update_task(self, test_session):
+    async def test_create_list_get_update_task(self, test_session, sample_agent):
         svc = SchedulerService(test_session)
+        # Create client first
+        from app.services.crm_service import CRMService
+        from app.schemas.client_schema import ClientCreate
+        crm = CRMService(test_session)
+        client = await crm.create_client(ClientCreate(
+            name="Test Client",
+            email="test@example.com",
+            phone="+1-555-0000",
+            property_address="100 Test St",
+            property_type="residential",
+            stage="lead"
+        ), agent_id=sample_agent.id)
+        
         # create task
         tc = TaskCreate(
-            client_id=1,
+            client_id=client.id,
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high",
             notes="note",
         )
-        created = await svc.create_task(tc)
+        created = await svc.create_task(tc, agent_id=sample_agent.id)
         assert isinstance(created.id, int)
         assert created.status == "pending"
 
         # list
-        listed = await svc.list_tasks(client_id=1)
+        listed = await svc.list_tasks(agent_id=sample_agent.id, client_id=client.id)
         assert any(t.id == created.id for t in listed)
 
         # get
-        got = await svc.get_task(created.id)
+        got = await svc.get_task(created.id, agent_id=sample_agent.id)
         assert got is not None and got.id == created.id
 
         # update
-        updated = await svc.update_task(created.id, TaskUpdate(status="completed"))
+        updated = await svc.update_task(created.id, TaskUpdate(status="completed"), agent_id=sample_agent.id)
         assert updated is not None and updated.status == "completed"
 
     @pytest.mark.asyncio
-    async def test_get_due_and_reschedule(self, test_session):
+    async def test_get_due_and_reschedule(self, test_session, sample_agent):
         svc = SchedulerService(test_session)
+        # Create client first
+        from app.services.crm_service import CRMService
+        from app.schemas.client_schema import ClientCreate
+        crm = CRMService(test_session)
+        client = await crm.create_client(ClientCreate(
+            name="Test Client",
+            email="test@example.com",
+            phone="+1-555-0000",
+            property_address="100 Test St",
+            property_type="residential",
+            stage="lead"
+        ), agent_id=sample_agent.id)
+        
         past = TaskCreate(
-            client_id=2,
+            client_id=client.id,
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) - timedelta(hours=1),
             priority="medium",
         )
-        created = await svc.create_task(past)
+        created = await svc.create_task(past, agent_id=sample_agent.id)
         due = await svc.get_due_tasks()
         assert any(t.id == created.id for t in due)
 
         new_date = datetime.now(timezone.utc) + timedelta(days=2)
-        res = await svc.reschedule_task(created.id, new_date)
+        res = await svc.reschedule_task(created.id, new_date, agent_id=sample_agent.id)
         assert res is not None and res.scheduled_for == new_date
 
     @pytest.mark.asyncio

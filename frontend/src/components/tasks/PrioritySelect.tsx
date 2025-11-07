@@ -82,7 +82,7 @@ export function PrioritySelect({
                   variant="secondary"
                   className="mr-1"
                 >
-                  {PRIORITY_LABELS[priority]}
+                  {PRIORITY_LABELS[priority as keyof typeof PRIORITY_LABELS]}
                   <span
                     tabIndex={0}
                     className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer inline-flex items-center"

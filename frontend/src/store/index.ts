@@ -3,6 +3,5 @@
  */
 
 export * from './useUIStore';
-export * from './useFilterStore';
 export * from './useAuthStore';
 

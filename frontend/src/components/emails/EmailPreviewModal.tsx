@@ -65,70 +65,103 @@ export function EmailPreviewModal({
   const hasAttemptedGenerate = useRef(false);
   const isGeneratingRef = useRef(false);
   const isSavingRef = useRef(false); // Track when we're saving to prevent regeneration
+  const saveQueueRef = useRef<Promise<any> | null>(null); // Queue saves to prevent conflicts
+  const pendingSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track pending auto-save
 
-  // Save preview to database
+  // Save preview to database with queue to prevent conflicts
   const savePreviewToDatabase = useCallback(async (preview: { subject: string; body: string; custom_instructions?: string }, skipInvalidation = false) => {
-    try {
-      setIsSaving(true);
-      isSavingRef.current = true; // Mark that we're saving
-      const previewData = {
-        ...preview,
-        timestamp: Date.now()
-      };
-      
-      // Call API directly to avoid automatic invalidation from useUpdateTask hook
-      const result = await tasksApi.update(taskId, {
-        email_preview: previewData
-      });
-      
-      // Manually update the cache to avoid triggering useEffect
-      if (skipInvalidation) {
-        // Update cache directly without invalidating
-        queryClient.setQueryData(['task', taskId], (oldData: any) => {
-          if (oldData) {
-            return { ...oldData, email_preview: previewData };
-          }
-          return oldData;
-        });
-      } else {
-        // Update cache directly first, then invalidate to ensure fresh data
-        queryClient.setQueryData(['task', taskId], (oldData: any) => {
-          if (oldData) {
-            return { ...oldData, email_preview: previewData };
-          }
-          return oldData;
-        });
-        // Invalidate to ensure consistency, but cache is already updated
-        queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-      }
-      
-      console.log('Preview saved to database successfully', result);
-      return result;
-    } catch (error: any) {
-      console.error('Failed to save preview to database:', error);
-      const errorMessage = error.response?.data?.detail || 
-                          error.response?.data?.message ||
-                          error.message ||
-                          "Failed to save preview";
-      
-      // Show error toast but don't block the user
-      toast({
-        title: "Warning: Preview not saved",
-        description: "Preview saved locally. " + errorMessage,
-        variant: "default",
-      });
-      
-      // Fallback to localStorage
-      const storageKey = getPreviewStorageKey(taskId);
-      localStorage.setItem(storageKey, JSON.stringify({ ...preview, timestamp: Date.now() }));
-      throw error; // Re-throw to allow caller to handle if needed
-    } finally {
-      setIsSaving(false);
-      // Reset saving flag after a short delay to allow query to update
-      setTimeout(() => {
-        isSavingRef.current = false;
-      }, 1000);
+    // Queue saves to prevent concurrent conflicts
+    if (saveQueueRef.current) {
+      // Wait for previous save to complete
+      await saveQueueRef.current;
     }
+    
+    // Create new save promise
+    const savePromise = (async () => {
+      try {
+        setIsSaving(true);
+        isSavingRef.current = true; // Mark that we're saving
+        const previewData = {
+          ...preview,
+          timestamp: Date.now()
+        };
+        
+        // Call API directly to avoid automatic invalidation from useUpdateTask hook
+        const result = await tasksApi.update(taskId, {
+          email_preview: previewData
+        });
+        
+        // Always update cache first
+        queryClient.setQueryData(['task', taskId], (oldData: any) => {
+          if (oldData) {
+            return { ...oldData, email_preview: previewData };
+          }
+          return oldData;
+        });
+        
+        // Always invalidate to ensure UI consistency, but use a flag to prevent regeneration loop
+        if (!skipInvalidation) {
+          // For manual saves, invalidate immediately
+          await queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+        } else {
+          // For auto-saves, invalidate after a delay to prevent regeneration during save
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+          }, 2000);
+        }
+        
+        // Also save to localStorage as backup
+        const storageKey = getPreviewStorageKey(taskId);
+        localStorage.setItem(storageKey, JSON.stringify(previewData));
+        
+        console.log('Preview saved to database successfully', result);
+        return result;
+      } catch (error: any) {
+        console.error('Failed to save preview to database:', error);
+        const errorMessage = error.response?.data?.detail || 
+                            error.response?.data?.message ||
+                            error.message ||
+                            "Failed to save preview";
+        
+        // Always fallback to localStorage, even if error handling fails
+        try {
+          const storageKey = getPreviewStorageKey(taskId);
+          const previewData = {
+            ...preview,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(storageKey, JSON.stringify(previewData));
+          console.log('Preview saved to localStorage as fallback');
+        } catch (localStorageError) {
+          console.error('Failed to save to localStorage:', localStorageError);
+        }
+        
+        // Show error toast but don't block the user
+        toast({
+          title: "Warning: Preview not saved",
+          description: "Preview saved locally. " + errorMessage,
+          variant: "default",
+        });
+        
+        throw error; // Re-throw to allow caller to handle if needed
+      } finally {
+        setIsSaving(false);
+        // Reset saving flag immediately after save completes
+        isSavingRef.current = false;
+      }
+    })();
+    
+    // Store promise in queue
+    saveQueueRef.current = savePromise;
+    
+    // Clear queue after completion
+    savePromise.finally(() => {
+      if (saveQueueRef.current === savePromise) {
+        saveQueueRef.current = null;
+      }
+    });
+    
+    return savePromise;
   }, [taskId, queryClient, toast]);
 
   const handleGenerate = async () => {
@@ -182,16 +215,26 @@ export function EmailPreviewModal({
   // Load stored preview on open (from database or localStorage)
   useEffect(() => {
     if (!open) {
+      // Execute any pending auto-save before closing
+      if (pendingSaveTimeoutRef.current) {
+        clearTimeout(pendingSaveTimeoutRef.current);
+        // Execute the pending save immediately
+        if (hasGenerated && subject && body && !isGeneratingRef.current) {
+          savePreviewToDatabase({
+            subject,
+            body,
+            custom_instructions: customInstructions || undefined
+          }, true).catch(err => {
+            console.error('Failed to save pending preview before close:', err);
+          });
+        }
+        pendingSaveTimeoutRef.current = null;
+      }
+      
       // Reset flags when modal closes
       hasAttemptedGenerate.current = false;
       isGeneratingRef.current = false;
-      isSavingRef.current = false;
-      return;
-    }
-    
-    // Don't load if we're currently saving (to prevent regeneration during save)
-    if (isSavingRef.current) {
-      console.log('Skipping preview load - currently saving');
+      // Don't reset isSavingRef here - let it complete naturally
       return;
     }
     
@@ -207,15 +250,21 @@ export function EmailPreviewModal({
     }
     
     // Wait for task to load before attempting to load preview
-    const loadPreview = () => {
-      // Prevent duplicate generation attempts
-      if (hasAttemptedGenerate.current && hasGenerated) {
-        return;
+    const loadPreview = async () => {
+      // Wait for any ongoing save to complete (but don't block forever)
+      if (isSavingRef.current && saveQueueRef.current) {
+        try {
+          await Promise.race([
+            saveQueueRef.current,
+            new Promise(resolve => setTimeout(resolve, 2000)) // Max wait 2s
+          ]);
+        } catch (e) {
+          console.warn('Save queue wait failed:', e);
+        }
       }
       
-      // Don't load if we're saving
-      if (isSavingRef.current) {
-        console.log('Skipping preview load in loadPreview - currently saving');
+      // Prevent duplicate generation attempts
+      if (hasAttemptedGenerate.current && hasGenerated) {
         return;
       }
       
@@ -304,16 +353,29 @@ export function EmailPreviewModal({
   // Only save if user manually edited (not during initial generation)
   useEffect(() => {
     if (hasGenerated && subject && body && !isGeneratingRef.current) {
+      // Clear any pending save
+      if (pendingSaveTimeoutRef.current) {
+        clearTimeout(pendingSaveTimeoutRef.current);
+      }
+      
       // Debounce saves to avoid too many API calls
-      const timeoutId = setTimeout(() => {
+      pendingSaveTimeoutRef.current = setTimeout(() => {
         savePreviewToDatabase({
           subject,
           body,
           custom_instructions: customInstructions || undefined
-        }, true); // Skip invalidation to avoid triggering the first useEffect
+        }, true).catch(err => {
+          console.error('Auto-save failed:', err);
+        });
+        pendingSaveTimeoutRef.current = null;
       }, 1000); // Wait 1 second after last change
       
-      return () => clearTimeout(timeoutId);
+      return () => {
+        if (pendingSaveTimeoutRef.current) {
+          clearTimeout(pendingSaveTimeoutRef.current);
+          pendingSaveTimeoutRef.current = null;
+        }
+      };
     }
   }, [subject, body, customInstructions, hasGenerated, taskId, savePreviewToDatabase]);
 
@@ -325,7 +387,7 @@ export function EmailPreviewModal({
     try {
       await updateTask.mutateAsync({
         id: taskId,
-        data: { email_preview: null }
+        data: { email_preview: null as any as any }
       });
       // Don't invalidate here to avoid triggering useEffect
     } catch (error) {
@@ -354,7 +416,7 @@ export function EmailPreviewModal({
       try {
         await updateTask.mutateAsync({
           id: taskId,
-          data: { email_preview: null }
+          data: { email_preview: null as any }
         });
         queryClient.invalidateQueries({ queryKey: ['task', taskId] });
       } catch (error) {

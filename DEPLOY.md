@@ -85,3 +85,326 @@ This document provides a unified overview of the system architecture, Azure depl
     run: docker build -t $ACR_NAME.azurecr.io/realtoros-api:latest backend/
   - name: Build and push frontend
     run: docker build -t $ACR_NAME.azurecr.io/realtoros-frontend:latest frontend/
+  ```
+
+### 4. Secrets & Configuration
+- Store in **Azure Key Vault**:
+  - `DATABASE_URL`
+  - `OPENAI_API_KEY`
+  - `AWS_SES_ACCESS_KEY_ID`
+  - `AWS_SES_SECRET_ACCESS_KEY`
+  - `SECRET_KEY` (JWT signing)
+  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+- Use **Managed Identity** for Container Apps to access Key Vault
+- Inject secrets as environment variables at runtime
+
+### 5. Container Deployment
+- Deploy **Backend Container** to Azure Container Apps:
+  - Single replica initially (APScheduler requires single instance)
+  - Scale horizontally after implementing distributed locking (e.g., PostgreSQL advisory locks)
+  - Configure health checks: `/health` endpoint
+  - Set resource limits: 0.5 CPU, 1GB RAM (adjust based on load)
+
+- Deploy **Frontend Container**:
+  - Can scale horizontally (stateless)
+  - Configure build-time env vars
+  - Use Azure CDN for static assets (optional)
+
+### 6. Database Migration
+- Run Alembic migrations on deployment:
+  ```bash
+  kubectl exec -it <backend-pod> -- alembic upgrade head
+  # OR via init container in deployment manifest
+  ```
+
+### 7. Monitoring & Logging
+- Enable **Azure Monitor** and **Application Insights**
+- Configure log aggregation from containers
+- Set up alerts for:
+  - High error rates
+  - Database connection issues
+  - Email delivery failures
+  - APScheduler job failures
+
+---
+
+## 🔒 Security Best Practices
+
+### 1. Network Security
+- **Private Endpoints** for PostgreSQL and Key Vault
+- **VNet Integration** for Container Apps
+- **NSG Rules** to restrict traffic
+- **Azure Front Door** with WAF for public-facing endpoints
+
+### 2. Secrets Management
+- **Never** commit secrets to git
+- Use **Key Vault** for all sensitive data
+- Rotate secrets regularly (90 days)
+- Use **Managed Identity** instead of connection strings where possible
+
+### 3. Database Security
+- **SSL/TLS** required for PostgreSQL connections
+- **Firewall rules** to allow only Azure services
+- **Automated backups** with point-in-time restore
+- **Read replicas** for high availability (optional)
+
+### 4. Application Security
+- Keep dependencies updated (use Dependabot)
+- Scan containers for vulnerabilities (Azure Defender)
+- Implement rate limiting
+- Enable CORS only for trusted origins
+
+---
+
+## 📊 Deployment Options Comparison
+
+### Option 1: Azure Container Apps (Recommended for MVP)
+**Pros:**
+- Fully managed serverless containers
+- Built-in HTTPS, auto-scaling
+- Easy integration with Key Vault
+- Cost-effective for small scale
+
+**Cons:**
+- Less control than AKS
+- Single replica limitation for APScheduler (until distributed locking)
+
+**Best for:** Small to medium scale (< 10k clients)
+
+### Option 2: Azure Kubernetes Service (AKS)
+**Pros:**
+- Full Kubernetes control
+- Advanced scaling options
+- Best for microservices architecture
+- Can run APScheduler as separate job
+
+**Cons:**
+- Higher complexity
+- Requires Kubernetes expertise
+- Higher base cost
+
+**Best for:** Large scale (> 10k clients), complex requirements
+
+### Option 3: Azure App Service
+**Pros:**
+- Simple deployment
+- Good for web apps
+- Built-in CI/CD
+
+**Cons:**
+- Less container-native
+- More expensive than Container Apps
+- Limited scaling options
+
+**Best for:** Traditional web apps, less container-focused
+
+---
+
+## 🚀 Quick Deployment Guide
+
+### Prerequisites
+1. Azure CLI installed and logged in
+2. Azure subscription with appropriate permissions
+3. Docker and docker-compose installed locally
+4. GitHub repository set up
+
+### Step-by-Step Deployment
+
+#### 1. Prepare Azure Resources
+```bash
+# Set variables
+export RESOURCE_GROUP="realtoros-rg"
+export LOCATION="eastus"
+export ACR_NAME="realtorosacrXXXX"  # Must be globally unique
+export KEYVAULT_NAME="realtoros-kvXXXX"  # Must be globally unique
+
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create Azure Container Registry
+az acr create --resource-group $RESOURCE_GROUP \
+  --name $ACR_NAME --sku Basic
+
+# Create Key Vault
+az keyvault create --name $KEYVAULT_NAME \
+  --resource-group $RESOURCE_GROUP --location $LOCATION
+
+# Create PostgreSQL Flexible Server
+az postgres flexible-server create \
+  --resource-group $RESOURCE_GROUP \
+  --name realtoros-db \
+  --location $LOCATION \
+  --admin-user adminuser \
+  --admin-password <secure-password> \
+  --sku-name Standard_B1ms \
+  --version 16 \
+  --storage-size 32
+```
+
+#### 2. Store Secrets in Key Vault
+```bash
+# Database connection string
+az keyvault secret set --vault-name $KEYVAULT_NAME \
+  --name "DATABASE-URL" \
+  --value "postgresql+asyncpg://adminuser:<password>@realtoros-db.postgres.database.azure.com:5432/realtoros"
+
+# API Keys
+az keyvault secret set --vault-name $KEYVAULT_NAME \
+  --name "OPENAI-API-KEY" --value "<your-openai-key>"
+
+az keyvault secret set --vault-name $KEYVAULT_NAME \
+  --name "AWS-SES-ACCESS-KEY-ID" --value "<your-aws-key>"
+
+az keyvault secret set --vault-name $KEYVAULT_NAME \
+  --name "AWS-SES-SECRET-ACCESS-KEY" --value "<your-aws-secret>"
+
+az keyvault secret set --vault-name $KEYVAULT_NAME \
+  --name "SECRET-KEY" --value "<generate-32-char-random-string>"
+```
+
+#### 3. Build and Push Docker Images
+```bash
+# Login to ACR
+az acr login --name $ACR_NAME
+
+# Build and push backend
+docker build -t $ACR_NAME.azurecr.io/realtoros-api:latest ./backend
+docker push $ACR_NAME.azurecr.io/realtoros-api:latest
+
+# Build and push frontend
+docker build -t $ACR_NAME.azurecr.io/realtoros-frontend:latest ./frontend
+docker push $ACR_NAME.azurecr.io/realtoros-frontend:latest
+```
+
+#### 4. Deploy to Azure Container Apps
+```bash
+# Create Container Apps environment
+az containerapp env create \
+  --name realtoros-env \
+  --resource-group $RESOURCE_GROUP \
+  --location $LOCATION
+
+# Deploy backend
+az containerapp create \
+  --name realtoros-backend \
+  --resource-group $RESOURCE_GROUP \
+  --environment realtoros-env \
+  --image $ACR_NAME.azurecr.io/realtoros-api:latest \
+  --target-port 8000 \
+  --ingress external \
+  --min-replicas 1 \
+  --max-replicas 1 \
+  --cpu 0.5 --memory 1.0Gi \
+  --secrets database-url=keyvaultref:<keyvault-uri>,identityref:<identity-id> \
+  --env-vars DATABASE_URL=secretref:database-url
+
+# Deploy frontend
+az containerapp create \
+  --name realtoros-frontend \
+  --resource-group $RESOURCE_GROUP \
+  --environment realtoros-env \
+  --image $ACR_NAME.azurecr.io/realtoros-frontend:latest \
+  --target-port 3000 \
+  --ingress external \
+  --min-replicas 1 \
+  --max-replicas 5 \
+  --cpu 0.25 --memory 0.5Gi \
+  --env-vars NEXT_PUBLIC_API_URL=<backend-url>
+```
+
+#### 5. Run Database Migrations
+```bash
+# Get backend container name
+az containerapp exec \
+  --name realtoros-backend \
+  --resource-group $RESOURCE_GROUP \
+  --command "alembic upgrade head"
+```
+
+---
+
+## 📁 Deployment Files Location
+
+All deployment-related files are now organized in the `deploy/` directory:
+
+```
+deploy/
+├── azure/
+│   ├── bicep/              # Infrastructure as Code templates
+│   ├── container-apps/     # Container Apps configurations
+│   └── keyvault/          # Key Vault setup scripts
+├── docker/
+│   ├── docker-compose.prod.yml
+│   └── docker-compose.staging.yml
+├── scripts/
+│   ├── deploy-azure.sh    # Automated Azure deployment
+│   ├── setup-keyvault.sh  # Key Vault initialization
+│   └── build-images.sh    # Docker image build script
+└── github-actions/
+    └── azure-deploy.yml   # GitHub Actions CI/CD workflow
+```
+
+---
+
+## 🔄 CI/CD with GitHub Actions
+
+See `deploy/github-actions/azure-deploy.yml` for automated deployment pipeline.
+
+**Workflow:**
+1. Push to `main` branch triggers deployment
+2. Run tests
+3. Build Docker images
+4. Push to Azure Container Registry
+5. Deploy to Azure Container Apps
+6. Run database migrations
+7. Health check verification
+
+---
+
+## 🧪 Testing Deployment
+
+### Health Checks
+```bash
+# Backend health
+curl https://<backend-url>/health
+
+# Database connectivity
+curl https://<backend-url>/api/health/db
+
+# Frontend
+curl https://<frontend-url>
+```
+
+### Smoke Tests
+1. Create a test client via API
+2. Verify task creation
+3. Send test email
+4. Check dashboard metrics
+
+---
+
+## 📚 Additional Resources
+
+- [Azure Container Apps Documentation](https://learn.microsoft.com/en-us/azure/container-apps/)
+- [Azure PostgreSQL Flexible Server](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/)
+- [Azure Key Vault Best Practices](https://learn.microsoft.com/en-us/azure/key-vault/general/best-practices)
+- [APScheduler Documentation](https://apscheduler.readthedocs.io/)
+
+---
+
+## ⚠️ Important Notes
+
+1. **APScheduler Single Instance**: Current implementation requires single replica. For horizontal scaling, implement distributed locking using PostgreSQL advisory locks or Redis.
+
+2. **Email Service**: Using AWS SES requires AWS credentials. Consider migrating to Azure Communication Services for full Azure integration.
+
+3. **Costs**: Monitor Azure costs using Cost Management. Container Apps pricing is based on vCPU-seconds and memory GB-seconds.
+
+4. **Backups**: PostgreSQL Flexible Server has automated backups. Test restore procedures regularly.
+
+5. **Monitoring**: Set up Application Insights for comprehensive monitoring and alerting.
+
+---
+
+**Last Updated:** 2025-11-06
+**Architecture Version:** APScheduler (post-Celery migration)

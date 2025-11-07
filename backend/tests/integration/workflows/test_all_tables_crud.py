@@ -64,10 +64,22 @@ async def db_session():
         await session.commit()
         yield session
         # Clean up after each test
-        await session.execute(delete(EmailLog))
-        await session.execute(delete(Task))
-        await session.execute(delete(Client))
-        await session.commit()
+        # Rollback first if there's an error state
+        try:
+            await session.rollback()
+        except Exception:
+            pass  # Ignore rollback errors
+        try:
+            await session.execute(delete(EmailLog))
+            await session.execute(delete(Task))
+            await session.execute(delete(Client))
+            await session.commit()
+        except Exception:
+            # If cleanup fails, try to rollback and continue
+            try:
+                await session.rollback()
+            except Exception:
+                pass
 
 
 @pytest_asyncio.fixture
@@ -1490,7 +1502,7 @@ class TestCrossTableRelationships:
             property_type="residential",
             stage="lead"
         ))
-        tasks = await services["scheduler"].create_followup_tasks(client.id)
+        tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         assert len(tasks) > 0
         assert all(t.client_id == client.id for t in tasks)
 
@@ -1527,7 +1539,7 @@ class TestCrossTableRelationships:
             property_type="residential",
             stage="lead"
         ))
-        tasks = await services["scheduler"].create_followup_tasks(client.id)
+        tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         for task in tasks[:2]:
             email_log = await services["email"].log_email(
                 task_id=task.id,
@@ -1557,10 +1569,10 @@ class TestCrossTableRelationships:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=client.agent_id)
         await services["crm"].delete_client(client.id)
         # Task should still exist
-        fetched_task = await services["scheduler"].get_task(task.id)
+        fetched_task = await services["scheduler"].get_task(task.id, task.agent_id)
         assert fetched_task is not None
 
     @pytest.mark.asyncio
@@ -1572,7 +1584,7 @@ class TestCrossTableRelationships:
                 followup_type="Day 1",
                 scheduled_for=datetime.now(timezone.utc) + timedelta(days=i),
                 priority="high"
-            ))
+            ), agent_id=sample_client.agent_id)
         tasks = await services["crm"].get_client_tasks(sample_client.id)
         assert len(tasks) >= 3
 
@@ -1584,7 +1596,7 @@ class TestCrossTableRelationships:
             followup_type="Day 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         email_log = await services["email"].log_email(
             task_id=task.id,
             client_id=sample_client.id,
@@ -1596,8 +1608,8 @@ class TestCrossTableRelationships:
             from_email="test@example.com"
         )
         await services["email"].update_email_status(email_log.id, "sent")
-        await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"))
-        updated_task = await services["scheduler"].get_task(task.id)
+        await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
+        updated_task = await services["scheduler"].get_task(task.id, task.agent_id)
         assert updated_task.status == "completed"
 
     @pytest.mark.asyncio
@@ -1681,8 +1693,8 @@ class TestCrossTableRelationships:
         # Email sent successfully
         await services["email"].update_email_status(email_log.id, "sent")
         # Mark task as completed
-        await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"))
-        updated_task = await services["scheduler"].get_task(task.id)
+        await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
+        updated_task = await services["scheduler"].get_task(task.id, task.agent_id)
         updated_email = await services["email"].get_email(email_log.id)
         assert updated_task.status == "completed"
         assert updated_email.status == "sent"
@@ -1698,7 +1710,7 @@ class TestCrossTableRelationships:
             property_type="residential",
             stage="lead"
         ))
-        tasks = await services["scheduler"].create_followup_tasks(client.id)
+        tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         # Update client stage
         await services["crm"].update_client(client.id, ClientUpdate(stage="closed"))
         # Tasks should still exist
@@ -1731,7 +1743,7 @@ class TestAdvancedScenarios:
         
         tasks = []
         for client in clients:
-            client_tasks = await services["scheduler"].create_followup_tasks(client.id)
+            client_tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
             tasks.extend(client_tasks)
         
         emails = []
@@ -1762,9 +1774,9 @@ class TestAdvancedScenarios:
             priority="high"
         ))
         # Multiple updates
-        await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"))
-        await services["scheduler"].update_task(task.id, TaskUpdate(priority="low"))
-        updated = await services["scheduler"].get_task(task.id)
+        await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=sample_client.agent_id)
+        await services["scheduler"].update_task(task.id, TaskUpdate(priority="low"), agent_id=sample_client.agent_id)
+        updated = await services["scheduler"].get_task(task.id, task.agent_id)
         assert updated.status == "completed"
         assert updated.priority == "low"
 
@@ -1841,7 +1853,7 @@ class TestAdvancedScenarios:
                 priority="high"
             ))
             if status != "pending":
-                await services["scheduler"].update_task(task.id, TaskUpdate(status=status))
+                await services["scheduler"].update_task(task.id, TaskUpdate(status=status), agent_id=sample_client.agent_id)
         
         # Filter combinations
         pending = await services["scheduler"].list_tasks(
@@ -1909,7 +1921,7 @@ class TestAdvancedScenarios:
         # Verify persistence
         fetched = await services["crm"].get_client(original_id)
         assert fetched.stage == "negotiating"
-        fetched_task = await services["scheduler"].get_task(task.id)
+        fetched_task = await services["scheduler"].get_task(task.id, task.agent_id)
         assert fetched_task.client_id == original_id
 
     @pytest.mark.asyncio
@@ -1923,7 +1935,7 @@ class TestAdvancedScenarios:
             property_type="residential",
             stage="lead"
         ))
-        tasks = await services["scheduler"].create_followup_tasks(client.id)
+        tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         for task in tasks[:3]:
             await services["email"].log_email(
                 task_id=task.id,
@@ -1941,7 +1953,7 @@ class TestAdvancedScenarios:
         
         # Verify tasks and emails still exist
         for task in tasks:
-            fetched = await services["scheduler"].get_task(task.id)
+            fetched = await services["scheduler"].get_task(task.id, task.agent_id)
             assert fetched is not None
 
     @pytest.mark.asyncio
@@ -1967,7 +1979,7 @@ class TestAdvancedScenarios:
                 ))
                 await services["scheduler"].update_task(task.id, TaskUpdate(
                     status="completed" if j % 2 == 0 else "pending"
-                ))
+                ), agent_id=client.agent_id)
         
         # Complex filters
         lead_clients = await services["crm"].list_clients(stage="lead")
@@ -2064,7 +2076,7 @@ class TestEdgeCases:
         updated = await services["scheduler"].update_task(task.id, TaskUpdate(
             status="pending",
             priority="high"
-        ))
+        ), agent_id=sample_client.agent_id)
         assert updated is not None
 
     @pytest.mark.asyncio
@@ -2122,7 +2134,7 @@ class TestFinalScenarios:
             stage="lead"
         ))
         # Create tasks
-        tasks = await services["scheduler"].create_followup_tasks(client.id)
+        tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         # Send emails
         for task in tasks[:2]:
             await services["email"].log_email(
@@ -2139,7 +2151,7 @@ class TestFinalScenarios:
         await services["crm"].update_client(client.id, ClientUpdate(stage="negotiating"))
         # Complete tasks
         for task in tasks[:2]:
-            await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"))
+            await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=client.agent_id)
         
         # Verify
         updated_client = await services["crm"].get_client(client.id)
@@ -2189,7 +2201,7 @@ class TestFinalScenarios:
             from_email="test@example.com"
         )
         # Both should be committed
-        fetched_task = await services["scheduler"].get_task(task.id)
+        fetched_task = await services["scheduler"].get_task(task.id, task.agent_id)
         fetched_email = await services["email"].get_email(email_log.id)
         assert fetched_task is not None
         assert fetched_email is not None
@@ -2227,7 +2239,7 @@ class TestFinalScenarios:
             custom_fields={"test": True}
         ))
         # Tasks
-        tasks = await services["scheduler"].create_followup_tasks(client.id)
+        tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
         # Emails
         email_logs = []
         for task in tasks[:3]:
@@ -2249,7 +2261,7 @@ class TestFinalScenarios:
         
         # Complete tasks
         for task in tasks[:2]:
-            await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"))
+            await services["scheduler"].update_task(task.id, TaskUpdate(status="completed"), agent_id=client.agent_id)
         
         # Verify everything
         updated_client = await services["crm"].get_client(client.id)

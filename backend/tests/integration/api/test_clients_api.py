@@ -174,59 +174,49 @@ class TestCreateClient:
     @pytest.mark.asyncio
     async def test_create_client_triggers_task_creation(self, authenticated_client: AsyncClient, db_session):
         """Test that creating a client automatically triggers follow-up task creation."""
-        from unittest.mock import patch, MagicMock
+        client_data = {
+            "name": "Task Trigger Client",
+            "email": "tasktrigger@example.com",
+            "phone": "+1-555-0200",
+            "property_address": "200 Task St, City, ST 12345",
+            "property_type": "residential",
+            "stage": "lead"
+        }
+        response = await authenticated_client.post("/api/clients/", json=client_data)
         
-        # Mock the Celery task
-        with patch('app.api.routes.clients.create_followup_tasks_task') as mock_task:
-            mock_task.delay = MagicMock()
-            
-            client_data = {
-                "name": "Task Trigger Client",
-                "email": "tasktrigger@example.com",
-                "phone": "+1-555-0200",
-                "property_address": "200 Task St, City, ST 12345",
-                "property_type": "residential",
-                "stage": "lead"
-            }
-            response = await authenticated_client.post("/api/clients/", json=client_data)
-            
-            assert response.status_code == 200
-            data = response.json()
-            client_id = data["id"]
-            
-            # Verify the Celery task was called with the correct client_id
-            mock_task.delay.assert_called_once_with(client_id)
+        assert response.status_code == 200
+        data = response.json()
+        client_id = data["id"]
+        
+        # Verify that follow-up tasks were created automatically
+        from sqlalchemy import select
+        from app.models.task import Task
+        
+        stmt = select(Task).where(Task.client_id == client_id)
+        result = await db_session.execute(stmt)
+        tasks = result.scalars().all()
+        
+        # Should have 5 tasks based on follow-up schedule
+        assert len(tasks) == 5
 
     @pytest.mark.asyncio
     async def test_create_client_creates_followup_tasks(self, authenticated_client: AsyncClient, db_session):
         """Test that creating a client results in follow-up tasks being created in database."""
-        from unittest.mock import patch, MagicMock
-        from app.services.scheduler_service import SchedulerService
+        client_data = {
+            "name": "Follow-up Client",
+            "email": "followup@example.com",
+            "phone": "+1-555-0201",
+            "property_address": "201 Follow St, City, ST 12345",
+            "property_type": "commercial",
+            "stage": "lead"
+        }
+        response = await authenticated_client.post("/api/clients/", json=client_data)
         
-        # Mock the Celery task to avoid Redis connection
-        with patch('app.api.routes.clients.create_followup_tasks_task') as mock_task:
-            mock_task.delay = MagicMock()
-            
-            client_data = {
-                "name": "Follow-up Client",
-                "email": "followup@example.com",
-                "phone": "+1-555-0201",
-                "property_address": "201 Follow St, City, ST 12345",
-                "property_type": "commercial",
-                "stage": "lead"
-            }
-            response = await authenticated_client.post("/api/clients/", json=client_data)
-            
-            assert response.status_code == 200
-            data = response.json()
-            client_id = data["id"]
+        assert response.status_code == 200
+        data = response.json()
+        client_id = data["id"]
         
-        # Manually trigger task creation to verify the service works correctly
-        # (In production, this is done by the Celery task)
-        scheduler = SchedulerService(db_session)
-        await scheduler.create_followup_tasks(client_id)
-        
-        # Verify tasks were created
+        # Verify tasks were created automatically
         from sqlalchemy import select
         from app.models.task import Task
         
@@ -256,35 +246,36 @@ class TestCreateClient:
     @pytest.mark.asyncio
     async def test_create_client_task_creation_all_stages(self, authenticated_client: AsyncClient, db_session):
         """Test that task creation works for clients in all stages."""
-        from unittest.mock import patch, MagicMock
-        from app.services.scheduler_service import SchedulerService
+        from sqlalchemy import select
+        from app.models.task import Task
         
         stages = ["lead", "negotiating", "under_contract", "closed", "lost"]
+        client_ids = []
         
-        with patch('app.api.routes.clients.create_followup_tasks_task') as mock_task:
-            mock_task.delay = MagicMock()
+        for i, stage in enumerate(stages):
+            client_data = {
+                "name": f"Stage {stage} Client",
+                "email": f"stage{stage}{i}@example.com",
+                "phone": f"+1-555-{2000+i}",
+                "property_address": f"{200+i} {stage} St, City, ST 12345",
+                "property_type": "residential",
+                "stage": stage
+            }
+            response = await authenticated_client.post("/api/clients/", json=client_data)
             
-            for i, stage in enumerate(stages):
-                client_data = {
-                    "name": f"Stage {stage} Client",
-                    "email": f"stage{stage}{i}@example.com",
-                    "phone": f"+1-555-{2000+i}",
-                    "property_address": f"{200+i} {stage} St, City, ST 12345",
-                    "property_type": "residential",
-                    "stage": stage
-                }
-                response = await authenticated_client.post("/api/clients/", json=client_data)
-                
-                assert response.status_code == 200
-                data = response.json()
-                client_id = data["id"]
-                
-                # Verify task was triggered for each client
-                calls = [call[0][0] for call in mock_task.delay.call_args_list]
-                assert client_id in calls
+            assert response.status_code == 200
+            data = response.json()
+            client_id = data["id"]
+            client_ids.append(client_id)
             
-            # Verify task was called 5 times (once per client)
-            assert mock_task.delay.call_count == 5
+            # Verify tasks were created for each client
+            stmt = select(Task).where(Task.client_id == client_id)
+            result = await db_session.execute(stmt)
+            tasks = result.scalars().all()
+            assert len(tasks) == 5  # Should have 5 tasks per client
+        
+        # Verify all clients got tasks
+        assert len(client_ids) == 5
 
 
 class TestListClients:
@@ -688,7 +679,7 @@ class TestGetClientTasks:
 
     @pytest.mark.asyncio
     async def test_get_client_tasks_empty(self, authenticated_client: AsyncClient):
-        """Test getting tasks for a client with no tasks."""
+        """Test getting tasks for a client - tasks are automatically created."""
         # Create a client first
         client_data = {
             "name": "No Tasks Client",
@@ -701,13 +692,14 @@ class TestGetClientTasks:
         create_response = await authenticated_client.post("/api/clients/", json=client_data)
         client_id = create_response.json()["id"]
         
-        # Get tasks
+        # Get tasks - should have 5 automatically created tasks
         response = await authenticated_client.get(f"/api/clients/{client_id}/tasks")
         
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        assert len(data) == 0
+        # Tasks are automatically created when a client is created
+        assert len(data) == 5
 
     @pytest.mark.asyncio
     async def test_get_client_tasks_with_tasks(self, authenticated_client: AsyncClient, db_session):
@@ -726,11 +718,12 @@ class TestGetClientTasks:
         client_id = client_json["id"]
         agent_id = client_json["agent_id"]
         
-        # Create tasks directly in database
+        # Tasks are automatically created when client is created (5 tasks)
+        # Add 2 more tasks manually to verify the endpoint returns all tasks
         task1 = Task(
             agent_id=agent_id,
             client_id=client_id,
-            followup_type="Day 1",
+            followup_type="Custom Task 1",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             status="pending",
             priority="high"
@@ -738,7 +731,7 @@ class TestGetClientTasks:
         task2 = Task(
             agent_id=agent_id,
             client_id=client_id,
-            followup_type="Week 1",
+            followup_type="Custom Task 2",
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=7),
             status="pending",
             priority="medium"
@@ -746,12 +739,12 @@ class TestGetClientTasks:
         db_session.add_all([task1, task2])
         await db_session.commit()
         
-        # Get tasks
+        # Get tasks - should have 5 automatic + 2 manual = 7 total
         response = await authenticated_client.get(f"/api/clients/{client_id}/tasks")
         
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 2
+        assert len(data) == 7  # 5 automatic tasks + 2 manual tasks
         assert all("id" in item for item in data)
         assert all("followup_type" in item for item in data)
         assert all("status" in item for item in data)

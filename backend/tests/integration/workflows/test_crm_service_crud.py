@@ -64,24 +64,48 @@ async def db_session():
         await session.commit()
         yield session
         # Clean up after each test (same order)
-        await session.execute(delete(EmailLog))
-        await session.execute(delete(Task))
-        await session.execute(delete(Client))
-        await session.commit()
+        # Rollback first if there's an error state
+        try:
+            await session.rollback()
+        except Exception:
+            pass  # Ignore rollback errors
+        try:
+            await session.execute(delete(EmailLog))
+            await session.execute(delete(Task))
+            await session.execute(delete(Client))
+            await session.commit()
+        except Exception:
+            # If cleanup fails, try to rollback and continue
+            try:
+                await session.rollback()
+            except Exception:
+                pass
 
 
 @pytest_asyncio.fixture
 async def test_agent(db_session):
     """Create a test agent for use in tests."""
-    agent = Agent(
-        email="test-agent@example.com",
-        name="Test Agent",
-        password_hash="dummy_hash",
-        is_active=True
-    )
-    db_session.add(agent)
-    await db_session.commit()
-    await db_session.refresh(agent)
+    from sqlalchemy import select
+    
+    # Check if agent already exists
+    stmt = select(Agent).where(Agent.email == "test-agent@example.com")
+    result = await db_session.execute(stmt)
+    agent = result.scalar_one_or_none()
+    
+    if agent is None:
+        agent = Agent(
+            email="test-agent@example.com",
+            name="Test Agent",
+            password_hash="dummy_hash",
+            is_active=True
+        )
+        db_session.add(agent)
+        await db_session.commit()
+        await db_session.refresh(agent)
+    else:
+        # Refresh to ensure we have the latest state
+        await db_session.refresh(agent)
+    
     return agent
 
 

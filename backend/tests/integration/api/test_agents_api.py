@@ -161,7 +161,7 @@ async def test_get_profile_endpoint(db_session, async_client):
 async def test_get_profile_unauthorized(async_client):
     """Test getting profile without token fails."""
     response = await async_client.get("/api/agents/me")
-    assert response.status_code == 403  # Forbidden - no token provided
+    assert response.status_code == 401  # Unauthorized - no token provided
 
 
 @pytest.mark.asyncio
@@ -271,7 +271,7 @@ async def test_protected_endpoint_requires_auth(async_client):
     """Test that protected endpoints require authentication."""
     # Try to access clients endpoint without token
     response = await async_client.get("/api/clients")
-    assert response.status_code == 403  # Forbidden - no token
+    assert response.status_code == 401  # Unauthorized - no token
 
 
 @pytest.mark.asyncio

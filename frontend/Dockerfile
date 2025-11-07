@@ -5,10 +5,13 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
+COPY package-lock.json* ./
 
 # Install dependencies (including devDependencies for build)
-RUN npm ci
+# Try npm ci first (faster and more reliable), fall back to npm install if it fails
+# Use --legacy-peer-deps to handle peer dependency conflicts
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Rebuild the source code only when needed
 FROM base AS builder

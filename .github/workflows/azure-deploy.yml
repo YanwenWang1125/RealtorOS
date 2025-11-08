@@ -16,79 +16,80 @@ env:
   FRONTEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-frontend
 
 jobs:
-  # test:
-  #   name: Run Tests
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     # Application environment (non-sensitive, can be in workflow)
-  #     ENVIRONMENT: test
-  #     DEBUG: "true"
-  #     API_TITLE: RealtorOS API
-  #     API_VERSION: 1.0.0
-  #     # Database (using in-memory SQLite for tests)
-  #     DATABASE_URL: "sqlite+aiosqlite:///:memory:"
-  #     # OpenAI (can use secrets.OPENAI_API_KEY if you want to test with real API)
-  #     # Default test values will be set in a step if secrets are not provided
-  #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  #     OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-  #     OPENAI_MAX_TOKENS: "2000"
-  #     # AWS SES (can use secrets if needed for integration tests)
-  #     AWS_REGION: ${{ secrets.AWS_REGION }}
-  #     SES_FROM_EMAIL: ${{ secrets.SES_FROM_EMAIL }}
-  #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #     # Logging
-  #     LOG_LEVEL: INFO
-  #     # Security (can use secrets.TEST_SECRET_KEY, defaults to test value)
-  #     SECRET_KEY: ${{ secrets.TEST_SECRET_KEY }}
-  #     ALGORITHM: HS256
-  #     ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
-  #     # CORS
-  #     CORS_ORIGINS: http://localhost:3000
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    env:
+      # Application environment (non-sensitive, can be in workflow)
+      ENVIRONMENT: test
+      DEBUG: "true"
+      API_TITLE: RealtorOS API
+      API_VERSION: 1.0.0
+      # Database (using in-memory SQLite for tests)
+      DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+      # OpenAI (can use secrets.OPENAI_API_KEY if you want to test with real API)
+      # Default test values will be set in a step if secrets are not provided
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+      OPENAI_MAX_TOKENS: "2000"
+      # AWS SES (can use secrets if needed for integration tests)
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      SES_FROM_EMAIL: ${{ secrets.SES_FROM_EMAIL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # Logging
+      LOG_LEVEL: INFO
+      # Security (can use secrets.TEST_SECRET_KEY, defaults to test value)
+      SECRET_KEY: ${{ secrets.TEST_SECRET_KEY }}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+      # CORS
+      CORS_ORIGINS: http://localhost:3000
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Set up Python 3.11
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-  #     - name: Install backend dependencies
-  #       working-directory: ./backend
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install -r requirements.txt
-  #         pip install pytest pytest-asyncio pytest-cov
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
 
-  #     - name: Set test environment variables with defaults
-  #       run: |
-  #         # Set default test values if secrets are not provided
-  #         # This allows using GitHub Secrets for real API keys when needed,
-  #         # but falls back to test values for CI/CD
-  #         echo "OPENAI_API_KEY=${OPENAI_API_KEY:-test-key}" >> $GITHUB_ENV
-  #         echo "OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}" >> $GITHUB_ENV
-  #         echo "AWS_REGION=${AWS_REGION:-us-east-1}" >> $GITHUB_ENV
-  #         echo "SES_FROM_EMAIL=${SES_FROM_EMAIL:-test@example.com}" >> $GITHUB_ENV
-  #         echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test-key}" >> $GITHUB_ENV
-  #         echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test-secret}" >> $GITHUB_ENV
-  #         echo "SECRET_KEY=${SECRET_KEY:-test-secret-key-minimum-32-characters-long}" >> $GITHUB_ENV
+      - name: Set test environment variables with defaults
+        run: |
+          # Set default test values if secrets are not provided
+          # This allows using GitHub Secrets for real API keys when needed,
+          # but falls back to test values for CI/CD
+          echo "OPENAI_API_KEY=${OPENAI_API_KEY:-test-key}" >> $GITHUB_ENV
+          echo "OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}" >> $GITHUB_ENV
+          echo "AWS_REGION=${AWS_REGION:-us-east-1}" >> $GITHUB_ENV
+          echo "SES_FROM_EMAIL=${SES_FROM_EMAIL:-test@example.com}" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test-key}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test-secret}" >> $GITHUB_ENV
+          echo "SECRET_KEY=${SECRET_KEY:-test-secret-key-minimum-32-characters-long}" >> $GITHUB_ENV
 
-  #     - name: Run backend tests
-  #       working-directory: ./backend
-  #       run: |
-  #         pytest tests/ -v --cov=app --cov-report=xml
+      - name: Run backend tests
+        working-directory: ./backend
+        run: |
+          pytest tests/ -v --cov=app --cov-report=xml
 
-  #     - name: Upload coverage reports
-  #       uses: codecov/codecov-action@v3
-  #       with:
-  #         file: ./backend/coverage.xml
-  #         flags: backend
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
 
   build-and-push:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
+    needs: test
 
     steps:
       - name: Checkout code
@@ -134,29 +135,27 @@ jobs:
           echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
-      # - name: Build and push backend image
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ./backend
-      #     file: ./backend/Dockerfile
-      #     push: true
-      #     tags: |
-      #       ${{ env.BACKEND_IMAGE }}:latest
-      #       ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.SHORT_SHA }}
-      #     labels: |
-      #       org.opencontainers.image.created=${{ steps.tags.outputs.BUILD_DATE }}
-      #       org.opencontainers.image.revision=${{ github.sha }}
-      #     cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
-      #     cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.SHORT_SHA }}
+          labels: |
+            org.opencontainers.image.created=${{ steps.tags.outputs.BUILD_DATE }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
-        
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          no-cache: true
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           tags: |
@@ -168,102 +167,102 @@ jobs:
           cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
-  # deploy-backend:
-  #   name: Deploy Backend to Azure
-  #   runs-on: ubuntu-latest
-  #   needs: build-and-push
+  deploy-backend:
+    name: Deploy Backend to Azure
+    runs-on: ubuntu-latest
+    needs: build-and-push
 
-  #   steps:
-  #     - name: Log in to Azure
-  #       uses: azure/login@v1
-  #       with:
-  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-  #     - name: Deploy backend to Container Apps
-  #       uses: azure/CLI@v1
-  #       with:
-  #         inlineScript: |
-  #           az containerapp update \
-  #             --name ${{ env.BACKEND_APP_NAME }} \
-  #             --resource-group ${{ env.RESOURCE_GROUP }} \
-  #             --image ${{ env.BACKEND_IMAGE }}:latest \
-  #             --min-replicas 0
+      - name: Deploy backend to Container Apps
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.BACKEND_IMAGE }}:latest \
+              --min-replicas 0
 
-  #     - name: Run database migrations
-  #       uses: azure/CLI@v1
-  #       with:
-  #         inlineScript: |
-  #           az containerapp exec \
-  #             --name ${{ env.BACKEND_APP_NAME }} \
-  #             --resource-group ${{ env.RESOURCE_GROUP }} \
-  #             --command "alembic upgrade head" || true
+      - name: Run database migrations
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az containerapp exec \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --command "alembic upgrade head" || true
 
-  # deploy-frontend:
-  #   name: Deploy Frontend to Azure
-  #   runs-on: ubuntu-latest
-  #   needs: build-and-push
+  deploy-frontend:
+    name: Deploy Frontend to Azure
+    runs-on: ubuntu-latest
+    needs: build-and-push
 
-  #   steps:
-  #     - name: Log in to Azure
-  #       uses: azure/login@v1
-  #       with:
-  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-  #     - name: Deploy frontend to Container Apps
-  #       uses: azure/CLI@v1
-  #       with:
-  #         inlineScript: |
-  #           az containerapp update \
-  #             --name ${{ env.FRONTEND_APP_NAME }} \
-  #             --resource-group ${{ env.RESOURCE_GROUP }} \
-  #             --image ${{ env.FRONTEND_IMAGE }}:latest \
-  #             --min-replicas 0
+      - name: Deploy frontend to Container Apps
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name ${{ env.FRONTEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.FRONTEND_IMAGE }}:latest \
+              --min-replicas 0
 
-  # health-check:
-  #   name: Health Check
-  #   runs-on: ubuntu-latest
-  #   needs: [deploy-backend, deploy-frontend]
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
 
-  #   steps:
-  #     - name: Log in to Azure
-  #       uses: azure/login@v1
-  #       with:
-  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-  #     - name: Get backend URL
-  #       id: backend-url
-  #       uses: azure/CLI@v1
-  #       with:
-  #         inlineScript: |
-  #           BACKEND_URL=$(az containerapp show \
-  #             --name ${{ env.BACKEND_APP_NAME }} \
-  #             --resource-group ${{ env.RESOURCE_GROUP }} \
-  #             --query properties.configuration.ingress.fqdn -o tsv)
-  #           echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+      - name: Get backend URL
+        id: backend-url
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            BACKEND_URL=$(az containerapp show \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
 
-  #     - name: Get frontend URL
-  #       id: frontend-url
-  #       uses: azure/CLI@v1
-  #       with:
-  #         inlineScript: |
-  #           FRONTEND_URL=$(az containerapp show \
-  #             --name ${{ env.FRONTEND_APP_NAME }} \
-  #             --resource-group ${{ env.RESOURCE_GROUP }} \
-  #             --query properties.configuration.ingress.fqdn -o tsv)
-  #           echo "url=https://$FRONTEND_URL" >> $GITHUB_OUTPUT
+      - name: Get frontend URL
+        id: frontend-url
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            FRONTEND_URL=$(az containerapp show \
+              --name ${{ env.FRONTEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            echo "url=https://$FRONTEND_URL" >> $GITHUB_OUTPUT
 
-  #     - name: Check backend health
-  #       run: |
-  #         curl -f ${{ steps.backend-url.outputs.url }}/health || exit 1
+      - name: Check backend health
+        run: |
+          curl -f ${{ steps.backend-url.outputs.url }}/health || exit 1
 
-  #     - name: Check frontend health
-  #       run: |
-  #         curl -f ${{ steps.frontend-url.outputs.url }} || exit 1
+      - name: Check frontend health
+        run: |
+          curl -f ${{ steps.frontend-url.outputs.url }} || exit 1
 
-  #     - name: Deployment summary
-  #       run: |
-  #         echo "### Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
-  #         echo "" >> $GITHUB_STEP_SUMMARY
-  #         echo "**Backend URL:** ${{ steps.backend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
-  #         echo "**Frontend URL:** ${{ steps.frontend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
-  #         echo "**API Docs:** ${{ steps.backend-url.outputs.url }}/docs" >> $GITHUB_STEP_SUMMARY
+      - name: Deployment summary
+        run: |
+          echo "### Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend URL:** ${{ steps.backend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend URL:** ${{ steps.frontend-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**API Docs:** ${{ steps.backend-url.outputs.url }}/docs" >> $GITHUB_STEP_SUMMARY

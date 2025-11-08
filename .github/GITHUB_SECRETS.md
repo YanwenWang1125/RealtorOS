@@ -15,6 +15,7 @@
 | `ACR_USERNAME` | ACR 用户名 | `realtorosacr12345` | ✅ |
 | `ACR_PASSWORD` | ACR 密码 | `...` | ✅ |
 | `NEXT_PUBLIC_API_URL` | 前端 API URL（用于构建时） | `https://realtoros-backend.eastus.azurecontainerapps.io` | ✅ |
+| `DB_PASSWORD` | PostgreSQL 数据库管理员密码（至少 8 个字符） | `SecurePass123!` | ✅ |
 
 ### 后端应用配置（部署时必需）
 
@@ -22,7 +23,7 @@
 
 | Secret 名称 | 描述 | 示例 | 必需 |
 |------------|------|------|------|
-| `DATABASE_URL` | PostgreSQL 数据库连接字符串 | `postgresql+asyncpg://user:pass@host:5432/db` | ✅ |
+| `DATABASE_URL` | PostgreSQL 数据库连接字符串（如果未设置，将自动从 `DB_PASSWORD` 构建） | `postgresql+asyncpg://user:pass@host:5432/db` | ⚠️ 可选* |
 | `OPENAI_API_KEY` | OpenAI API 密钥 | `sk-...` | ✅ |
 | `OPENAI_MODEL` | OpenAI 模型名称 | `gpt-4` | ✅ |
 | `AWS_REGION` | AWS 区域 | `us-east-1` | ✅ |
@@ -81,7 +82,12 @@
 1. **测试环境**：默认使用内存 SQLite 数据库，不会影响生产数据
 2. **API 密钥**：如果不需要测试真实 API，可以不设置 `OPENAI_API_KEY` 和 AWS 相关密钥
 3. **安全性**：所有 Secrets 都会被加密存储，不会在日志中显示
-4. **最小配置**：至少需要设置部署相关的 5 个 Secrets 才能完成部署
+4. **数据库配置**：
+   - 如果设置了 `DATABASE_URL`，工作流将使用该值
+   - 如果未设置 `DATABASE_URL`，工作流将自动创建 PostgreSQL 服务器并使用 `DB_PASSWORD` 构建连接字符串
+   - **首次部署**：必须设置 `DB_PASSWORD`，工作流会自动创建数据库服务器
+   - **后续部署**：可以继续使用 `DB_PASSWORD` 或直接设置 `DATABASE_URL`
+5. **最小配置**：至少需要设置部署相关的 6 个 Secrets（包括 `DB_PASSWORD`）才能完成首次部署
 
 ## 🚀 快速开始
 
@@ -89,15 +95,16 @@
 
 需要设置以下 Secrets：
 
-**Azure 部署（5个）：**
+**Azure 部署（6个）：**
 - `AZURE_CREDENTIALS`
 - `ACR_NAME`
 - `ACR_USERNAME`
 - `ACR_PASSWORD`
 - `NEXT_PUBLIC_API_URL`
+- `DB_PASSWORD` ⭐ **新增：用于自动创建数据库**
 
 **后端应用配置（9个）：**
-- `DATABASE_URL`
+- `DATABASE_URL`（可选，如果未设置将自动构建）
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 - `AWS_REGION`
@@ -107,7 +114,7 @@
 - `SECRET_KEY`
 - `CORS_ORIGINS`
 
-**总计：14 个必需的 Secrets**
+**总计：15 个必需的 Secrets**（如果使用自动数据库创建）
 
 ### 完整配置（包含测试）
 

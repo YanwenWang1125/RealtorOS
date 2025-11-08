@@ -16,6 +16,9 @@ env:
   FRONTEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-frontend
   CONTAINER_ENV_NAME: realtoros-env
   LOCATION: eastus
+  DB_SERVER_NAME: realtoros-db
+  DB_NAME: realtoros
+  DB_ADMIN_USER: adminuser
 
 jobs:
   test:
@@ -169,10 +172,119 @@ jobs:
           cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
+  provision-database:
+    name: Provision PostgreSQL Database
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Check if PostgreSQL server exists
+        id: check-db
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            if az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "PostgreSQL server already exists"
+            else
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "PostgreSQL server does not exist, will create it"
+            fi
+
+      - name: Create PostgreSQL Flexible Server
+        if: steps.check-db.outputs.exists == 'false'
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            echo "Creating PostgreSQL Flexible Server..."
+            az postgres flexible-server create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ env.DB_SERVER_NAME }} \
+              --location ${{ env.LOCATION }} \
+              --admin-user ${{ env.DB_ADMIN_USER }} \
+              --admin-password "${{ secrets.DB_PASSWORD }}" \
+              --sku-name Standard_B1ms \
+              --version 16 \
+              --storage-size 32 \
+              --public-access 0.0.0.0-255.255.255.255 \
+              --output table
+
+      - name: Check if database exists
+        id: check-database
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            if az postgres flexible-server db show \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server-name ${{ env.DB_SERVER_NAME }} \
+              --database-name ${{ env.DB_NAME }} &>/dev/null; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "Database already exists"
+            else
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "Database does not exist, will create it"
+            fi
+
+      - name: Create database
+        if: steps.check-database.outputs.exists == 'false'
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            echo "Creating database '${{ env.DB_NAME }}'..."
+            az postgres flexible-server db create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server-name ${{ env.DB_SERVER_NAME }} \
+              --database-name ${{ env.DB_NAME }} \
+              --output table
+
+      - name: Get database connection details
+        id: db-connection
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            DB_HOST="${{ env.DB_SERVER_NAME }}.postgres.database.azure.com"
+            DB_USER="${{ env.DB_ADMIN_USER }}"
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            DB_NAME="${{ env.DB_NAME }}"
+            
+            # Construct DATABASE_URL
+            DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}"
+            
+            echo "DATABASE_URL=${DATABASE_URL}" >> $GITHUB_ENV
+            echo "DB_HOST=${DB_HOST}" >> $GITHUB_ENV
+            
+            echo "Database connection details:"
+            echo "  Host: ${DB_HOST}"
+            echo "  Database: ${DB_NAME}"
+            echo "  User: ${DB_USER}"
+            echo ""
+            echo "⚠️  IMPORTANT: Update your GitHub secret 'DATABASE_URL' with the following value:"
+            echo "${DATABASE_URL}"
+
+      - name: Verify database connectivity
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            echo "Verifying database server is accessible..."
+            DB_HOST="${{ env.DB_SERVER_NAME }}.postgres.database.azure.com"
+            
+            # Check if we can resolve the hostname
+            if nslookup ${DB_HOST} &>/dev/null; then
+              echo "✅ Database hostname resolves: ${DB_HOST}"
+            else
+              echo "⚠️  Warning: Cannot resolve hostname ${DB_HOST}"
+              echo "This may be normal if DNS hasn't propagated yet"
+            fi
+
   deploy-backend:
     name: Deploy Backend to Azure
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [build-and-push, provision-database]
 
     steps:
       - name: Log in to Azure
@@ -208,6 +320,21 @@ jobs:
         uses: azure/CLI@v1
         with:
           inlineScript: |
+            # Construct DATABASE_URL - use secret if provided, otherwise build from components
+            if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+              DATABASE_URL="${{ secrets.DATABASE_URL }}"
+              echo "Using DATABASE_URL from GitHub secrets"
+            else
+              # Construct DATABASE_URL from database server details
+              DB_HOST="${{ env.DB_SERVER_NAME }}.postgres.database.azure.com"
+              DB_USER="${{ env.DB_ADMIN_USER }}"
+              DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+              DB_NAME="${{ env.DB_NAME }}"
+              DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}"
+              echo "Constructed DATABASE_URL from database server details"
+              echo "Database: ${DB_HOST}/${DB_NAME}"
+            fi
+            
             # Check if backend container app exists
             if az containerapp show --name ${{ env.BACKEND_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
               echo "Updating existing backend container app..."
@@ -221,7 +348,7 @@ jobs:
                   DEBUG=false \
                   API_TITLE="RealtorOS API" \
                   API_VERSION="1.0.0" \
-                  DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+                  DATABASE_URL="${DATABASE_URL}" \
                   OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
                   OPENAI_MODEL="${{ secrets.OPENAI_MODEL }}" \
                   OPENAI_MAX_TOKENS="2000" \
@@ -255,7 +382,7 @@ jobs:
                   DEBUG=false \
                   API_TITLE="RealtorOS API" \
                   API_VERSION="1.0.0" \
-                  DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+                  DATABASE_URL="${DATABASE_URL}" \
                   OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
                   OPENAI_MODEL="${{ secrets.OPENAI_MODEL }}" \
                   OPENAI_MAX_TOKENS="2000" \

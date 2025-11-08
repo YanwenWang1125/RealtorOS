@@ -16,6 +16,22 @@
 | `ACR_PASSWORD` | ACR 密码 | `...` | ✅ |
 | `NEXT_PUBLIC_API_URL` | 前端 API URL（用于构建时） | `https://realtoros-backend.eastus.azurecontainerapps.io` | ✅ |
 
+### 后端应用配置（部署时必需）
+
+这些 Secrets 用于配置后端容器应用的环境变量：
+
+| Secret 名称 | 描述 | 示例 | 必需 |
+|------------|------|------|------|
+| `DATABASE_URL` | PostgreSQL 数据库连接字符串 | `postgresql+asyncpg://user:pass@host:5432/db` | ✅ |
+| `OPENAI_API_KEY` | OpenAI API 密钥 | `sk-...` | ✅ |
+| `OPENAI_MODEL` | OpenAI 模型名称 | `gpt-4` | ✅ |
+| `AWS_REGION` | AWS 区域 | `us-east-1` | ✅ |
+| `SES_FROM_EMAIL` | AWS SES 发件人邮箱（必须已验证） | `agent@example.com` | ✅ |
+| `AWS_ACCESS_KEY_ID` | AWS 访问密钥 ID | `AKIA...` | ✅ |
+| `AWS_SECRET_ACCESS_KEY` | AWS 密钥 | `...` | ✅ |
+| `SECRET_KEY` | JWT 签名密钥（至少 32 字符） | `...` | ✅ |
+| `CORS_ORIGINS` | 允许的 CORS 源（逗号分隔） | `https://realtoros-frontend.eastus.azurecontainerapps.io` | ✅ |
+
 ### 测试相关（可选，但推荐）
 
 这些 Secrets 用于测试环境。如果不设置，工作流会使用默认测试值：
@@ -71,12 +87,27 @@
 
 ### 最小配置（仅部署）
 
-只需要设置这 5 个 Secrets：
+需要设置以下 Secrets：
+
+**Azure 部署（5个）：**
 - `AZURE_CREDENTIALS`
 - `ACR_NAME`
 - `ACR_USERNAME`
 - `ACR_PASSWORD`
 - `NEXT_PUBLIC_API_URL`
+
+**后端应用配置（9个）：**
+- `DATABASE_URL`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `AWS_REGION`
+- `SES_FROM_EMAIL`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `SECRET_KEY`
+- `CORS_ORIGINS`
+
+**总计：14 个必需的 Secrets**
 
 ### 完整配置（包含测试）
 

@@ -14,6 +14,8 @@ env:
   FRONTEND_APP_NAME: realtoros-frontend
   BACKEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-api
   FRONTEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-frontend
+  CONTAINER_ENV_NAME: realtoros-env
+  LOCATION: eastus
 
 jobs:
   test:
@@ -178,15 +180,66 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Check if Container App environment exists
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Check if container app environment exists
+            if ! az containerapp env show --name ${{ env.CONTAINER_ENV_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+              echo "Creating Container App environment..."
+              az containerapp env create \
+                --name ${{ env.CONTAINER_ENV_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --location ${{ env.LOCATION }}
+            else
+              echo "Container App environment already exists"
+            fi
+
+      - name: Get ACR credentials for deployment
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            ACR_USERNAME=$(az acr credential show --name ${{ secrets.ACR_NAME }} --query username --output tsv)
+            ACR_PASSWORD=$(az acr credential show --name ${{ secrets.ACR_NAME }} --query 'passwords[0].value' --output tsv)
+            echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
+            echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
+
       - name: Deploy backend to Container Apps
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            az containerapp update \
-              --name ${{ env.BACKEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --image ${{ env.BACKEND_IMAGE }}:latest \
-              --min-replicas 0
+            # Check if backend container app exists
+            if az containerapp show --name ${{ env.BACKEND_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+              echo "Updating existing backend container app..."
+              az containerapp update \
+                --name ${{ env.BACKEND_APP_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --image ${{ env.BACKEND_IMAGE }}:latest \
+                --min-replicas 0
+            else
+              echo "Creating new backend container app..."
+              az containerapp create \
+                --name ${{ env.BACKEND_APP_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --environment ${{ env.CONTAINER_ENV_NAME }} \
+                --image ${{ env.BACKEND_IMAGE }}:latest \
+                --registry-server ${{ secrets.ACR_NAME }}.azurecr.io \
+                --registry-username $ACR_USERNAME \
+                --registry-password $ACR_PASSWORD \
+                --target-port 8000 \
+                --ingress external \
+                --min-replicas 0 \
+                --max-replicas 10 \
+                --cpu 0.5 \
+                --memory 1.0Gi \
+                --env-vars \
+                  DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+                  OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+                  AWS_SES_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+                  AWS_SES_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+                  SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+                  LOG_LEVEL=INFO
+            fi
 
       - name: Run database migrations
         uses: azure/CLI@v1
@@ -208,15 +261,58 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Get backend URL for frontend
+        id: backend-url
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            BACKEND_URL=$(az containerapp show \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Get ACR credentials for deployment
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            ACR_USERNAME=$(az acr credential show --name ${{ secrets.ACR_NAME }} --query username --output tsv)
+            ACR_PASSWORD=$(az acr credential show --name ${{ secrets.ACR_NAME }} --query 'passwords[0].value' --output tsv)
+            echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
+            echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
+
       - name: Deploy frontend to Container Apps
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            az containerapp update \
-              --name ${{ env.FRONTEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --image ${{ env.FRONTEND_IMAGE }}:latest \
-              --min-replicas 0
+            # Check if frontend container app exists
+            if az containerapp show --name ${{ env.FRONTEND_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+              echo "Updating existing frontend container app..."
+              az containerapp update \
+                --name ${{ env.FRONTEND_APP_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --image ${{ env.FRONTEND_IMAGE }}:latest \
+                --min-replicas 0 \
+                --set-env-vars NEXT_PUBLIC_API_URL=${{ steps.backend-url.outputs.url }}
+            else
+              echo "Creating new frontend container app..."
+              az containerapp create \
+                --name ${{ env.FRONTEND_APP_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --environment ${{ env.CONTAINER_ENV_NAME }} \
+                --image ${{ env.FRONTEND_IMAGE }}:latest \
+                --registry-server ${{ secrets.ACR_NAME }}.azurecr.io \
+                --registry-username $ACR_USERNAME \
+                --registry-password $ACR_PASSWORD \
+                --target-port 3000 \
+                --ingress external \
+                --min-replicas 0 \
+                --max-replicas 10 \
+                --cpu 0.25 \
+                --memory 0.5Gi \
+                --env-vars \
+                  NEXT_PUBLIC_API_URL=${{ steps.backend-url.outputs.url }}
+            fi
 
   health-check:
     name: Health Check

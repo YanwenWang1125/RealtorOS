@@ -134,6 +134,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# Allow frontend/src/lib/ (TypeScript source files)
+!frontend/src/lib/
 lib64/
 parts/
 sdist/

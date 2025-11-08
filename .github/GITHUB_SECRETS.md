@@ -16,6 +16,7 @@
 | `ACR_PASSWORD` | ACR 密码 | `...` | ✅ |
 | `NEXT_PUBLIC_API_URL` | 前端 API URL（用于构建时） | `https://realtoros-backend.eastus.azurecontainerapps.io` | ✅ |
 | `DB_PASSWORD` | PostgreSQL 数据库管理员密码（至少 8 个字符） | `SecurePass123!` | ✅ |
+| `AZURE_LOCATION` | Azure 区域（可选，默认从资源组位置或 `canadacentral`） | `canadacentral`, `eastus2`, `westus2`, `centralus` | ❌ |
 
 ### 后端应用配置（部署时必需）
 
@@ -87,6 +88,11 @@
    - 如果未设置 `DATABASE_URL`，工作流将自动创建 PostgreSQL 服务器并使用 `DB_PASSWORD` 构建连接字符串
    - **首次部署**：必须设置 `DB_PASSWORD`，工作流会自动创建数据库服务器
    - **后续部署**：可以继续使用 `DB_PASSWORD` 或直接设置 `DATABASE_URL`
+   - **区域选择**：
+     - 如果资源组已存在，工作流会自动使用资源组所在的区域
+     - 如果资源组不存在，默认使用 `canadacentral`
+     - 如果某个区域不支持 PostgreSQL Flexible Server，工作流会自动尝试备用区域（canadacentral, eastus2, westus2, centralus, westus3, eastus）
+     - **自定义区域**：可以通过设置 `AZURE_LOCATION` secret 来覆盖自动检测
 5. **最小配置**：至少需要设置部署相关的 6 个 Secrets（包括 `DB_PASSWORD`）才能完成首次部署
 
 ## 🚀 快速开始

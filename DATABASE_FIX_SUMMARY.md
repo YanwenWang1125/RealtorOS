@@ -81,14 +81,20 @@ The PostgreSQL server is created with:
    - Go to repository Settings → Secrets and variables → Actions
    - Add new secret: `DB_PASSWORD` with a secure password (min 8 chars)
 
-2. **Optional: Add `DATABASE_URL` secret** (if you want to use a custom connection string):
+2. **Optional: Add `AZURE_LOCATION` secret** (if you want to override auto-detection):
+   - The workflow automatically detects the region from your existing resource group (`realtoros-rg`)
+   - If resource group exists in `canadacentral`, it will use that region
+   - If you want to override, set `AZURE_LOCATION` secret (e.g., `canadacentral`, `eastus2`, `westus2`)
+   - If the specified region is restricted, the workflow will automatically try fallback regions
+
+3. **Optional: Add `DATABASE_URL` secret** (if you want to use a custom connection string):
    - Format: `postgresql+asyncpg://adminuser:<password>@realtoros-db.postgres.database.azure.com:5432/realtoros`
 
-3. **Trigger deployment**:
+4. **Trigger deployment**:
    - Push to `main` branch, or
    - Manually trigger workflow from GitHub Actions UI
 
-4. **Verify database creation**:
+5. **Verify database creation**:
    - Check workflow logs for "PostgreSQL server already exists" or "Creating PostgreSQL Flexible Server..."
    - Verify database connectivity in the "Verify database connectivity" step
 
@@ -98,6 +104,10 @@ The PostgreSQL server is created with:
 - Check that `DB_PASSWORD` secret is set (minimum 8 characters)
 - Verify Azure service principal has permissions to create PostgreSQL resources
 - Check Azure resource group exists: `realtoros-rg`
+- **Region restrictions**: If you see "location is restricted" error:
+  - The workflow will automatically try fallback regions (eastus2, westus2, centralus, westus3, eastus)
+  - You can set `AZURE_LOCATION` secret to specify a preferred region
+  - Check Azure service availability in your subscription
 
 ### If connection still fails:
 - Verify database server hostname: `realtoros-db.postgres.database.azure.com`

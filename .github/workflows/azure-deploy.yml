@@ -15,7 +15,7 @@ env:
   BACKEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-api
   FRONTEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-frontend
   CONTAINER_ENV_NAME: realtoros-env
-  LOCATION: eastus
+  LOCATION: canadacentral
   DB_SERVER_NAME: realtoros-db
   DB_NAME: realtoros
   DB_ADMIN_USER: adminuser
@@ -201,18 +201,67 @@ jobs:
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            echo "Creating PostgreSQL Flexible Server..."
-            az postgres flexible-server create \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --name ${{ env.DB_SERVER_NAME }} \
-              --location ${{ env.LOCATION }} \
-              --admin-user ${{ env.DB_ADMIN_USER }} \
-              --admin-password "${{ secrets.DB_PASSWORD }}" \
-              --sku-name Standard_B1ms \
-              --version 16 \
-              --storage-size 32 \
-              --public-access 0.0.0.0-255.255.255.255 \
-              --output table
+            LOCATION="canadacentral"
+            FALLBACK_REGIONS=("eastus2" "westus2" "centralus" "westus3" "eastus")
+            FINAL_LOCATION=""
+            
+            echo "Creating PostgreSQL Flexible Server in: ${LOCATION}"
+            
+            # Function to try creating server in a region
+            try_create_server() {
+              local REGION=$1
+              echo "Trying to create server in region: ${REGION}"
+              
+              # Temporarily disable exit on error
+              set +e
+              az postgres flexible-server create \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --name ${{ env.DB_SERVER_NAME }} \
+                --location "${REGION}" \
+                --admin-user ${{ env.DB_ADMIN_USER }} \
+                --admin-password "${{ secrets.DB_PASSWORD }}" \
+                --sku-name Standard_B1ms \
+                --version 16 \
+                --storage-size 32 \
+                --public-access 0.0.0.0-255.255.255.255 \
+                --output table 2>&1
+              local CREATE_RESULT=$?
+              set -e
+              
+              if [ ${CREATE_RESULT} -eq 0 ]; then
+                echo "✅ Successfully created PostgreSQL server in ${REGION}"
+                FINAL_LOCATION="${REGION}"
+                return 0
+              else
+                echo "❌ Failed to create server in ${REGION} (exit code: ${CREATE_RESULT})"
+                return 1
+              fi
+            }
+            
+            # Try Canada Central first
+            if try_create_server "${LOCATION}"; then
+              echo "FINAL_LOCATION=${FINAL_LOCATION}" >> $GITHUB_ENV
+            else
+              echo "⚠️  Canada Central failed, trying fallback regions..."
+              
+              # Try fallback regions
+              for REGION in "${FALLBACK_REGIONS[@]}"; do
+                if try_create_server "${REGION}"; then
+                  echo "FINAL_LOCATION=${FINAL_LOCATION}" >> $GITHUB_ENV
+                  break
+                fi
+              done
+              
+              # If all regions failed, exit with error
+              if [ -z "${FINAL_LOCATION}" ]; then
+                echo "❌ ERROR: Failed to create PostgreSQL server in all attempted regions"
+                echo "Regions tried: ${LOCATION} and fallbacks: ${FALLBACK_REGIONS[*]}"
+                echo "Please check Azure service availability"
+                exit 1
+              fi
+            fi
+            
+            echo "PostgreSQL server created in: ${FINAL_LOCATION}"
 
       - name: Check if database exists
         id: check-database
@@ -259,6 +308,7 @@ jobs:
             echo "DB_HOST=${DB_HOST}" >> $GITHUB_ENV
             
             echo "Database connection details:"
+            echo "  Server Location: ${FINAL_LOCATION:-canadacentral}"
             echo "  Host: ${DB_HOST}"
             echo "  Database: ${DB_NAME}"
             echo "  User: ${DB_USER}"

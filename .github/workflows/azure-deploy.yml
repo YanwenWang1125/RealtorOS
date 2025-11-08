@@ -290,7 +290,7 @@ jobs:
             echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
             echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
 
-      - name: Construct DATABASE_URL
+      - name: Construct DATABASE_URL and prepare environment variables
         id: db-url
         run: |
           # Use DATABASE_URL from secrets if provided, otherwise build from components
@@ -312,9 +312,25 @@ jobs:
       - name: Run Alembic migrations
         run: |
           echo "Running Alembic migrations..."
-          docker login ${{ env.ACR_LOGIN_SERVER }} -u ${{ env.ACR_USERNAME }} -p ${{ env.ACR_PASSWORD }}
+          echo "${{ env.ACR_PASSWORD }}" | docker login ${{ env.ACR_LOGIN_SERVER }} --username "${{ env.ACR_USERNAME }}" --password-stdin
           docker run --rm \
-            -e DATABASE_URL=${{ env.DATABASE_URL }} \
+            -e ENVIRONMENT=production \
+            -e DEBUG=false \
+            -e API_TITLE="RealtorOS API" \
+            -e API_VERSION="1.0.0" \
+            -e DATABASE_URL="${{ env.DATABASE_URL }}" \
+            -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            -e OPENAI_MODEL="${{ secrets.OPENAI_MODEL }}" \
+            -e OPENAI_MAX_TOKENS="2000" \
+            -e AWS_REGION="${{ secrets.AWS_REGION }}" \
+            -e SES_FROM_EMAIL="${{ secrets.SES_FROM_EMAIL }}" \
+            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -e SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            -e ALGORITHM="HS256" \
+            -e ACCESS_TOKEN_EXPIRE_MINUTES="1440" \
+            -e LOG_LEVEL=INFO \
+            -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
             ${{ env.BACKEND_IMAGE }}:latest \
             alembic upgrade head
 

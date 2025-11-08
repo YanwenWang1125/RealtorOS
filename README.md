@@ -159,7 +159,7 @@ realtoros/
 - **Docker and Docker Compose** (recommended)
 - **Node.js 18+** (for local frontend development)
 - **Python 3.11+** (for local backend development)
-- **PostgreSQL 16+** (if running locally)
+- **PostgreSQL 18+** (if running locally)
 
 ### Environment Setup
 
@@ -265,7 +265,7 @@ realtoros/
    docker run -d -p 5432:5432 \
      -e POSTGRES_PASSWORD=dev_password \
      -e POSTGRES_DB=realtoros \
-     --name postgres postgres:16-alpine
+     --name postgres postgres:18-alpine
    ```
 
 ---
@@ -711,7 +711,7 @@ I need help deploying RealtorOS, an AI-powered CRM with FastAPI + Next.js + Post
 Tech Stack:
 - Backend: FastAPI with APScheduler (NOT Celery/Redis)
 - Frontend: Next.js 14 with App Router
-- Database: PostgreSQL 16
+- Database: PostgreSQL 18
 - Email: AWS SES
 - AI: OpenAI GPT-4 for email generation
 

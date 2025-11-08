@@ -18,7 +18,7 @@ Added automatic database provisioning to the GitHub Actions workflow.
 #### Added Environment Variables
 - `DB_SERVER_NAME`: `realtoros-db`
 - `DB_NAME`: `realtoros`
-- `DB_ADMIN_USER`: `adminuser`
+- `DB_ADMIN_USER`: `postgres`
 
 #### Added New Job: `provision-database`
 This job runs before backend deployment and:
@@ -54,7 +54,7 @@ Added documentation for:
    - Workflow checks if PostgreSQL server exists
    - If not, creates PostgreSQL Flexible Server with:
      - Name: `realtoros-db`
-     - Admin user: `adminuser`
+     - Admin user: `postgres`
      - Password: from `DB_PASSWORD` secret
      - Database: `realtoros`
    - Constructs `DATABASE_URL` automatically
@@ -70,7 +70,7 @@ Added documentation for:
 
 The PostgreSQL server is created with:
 - **SKU**: `Standard_B1ms` (Basic tier, 1 vCore, 2GB RAM)
-- **Version**: PostgreSQL 16
+- **Version**: PostgreSQL 18
 - **Storage**: 32GB
 - **Public Access**: `0.0.0.0-255.255.255.255` (allows all IPs)
   - ⚠️ **Security Note**: For production, consider using private endpoints or restricting IP ranges
@@ -88,7 +88,7 @@ The PostgreSQL server is created with:
    - If the specified region is restricted, the workflow will automatically try fallback regions
 
 3. **Optional: Add `DATABASE_URL` secret** (if you want to use a custom connection string):
-   - Format: `postgresql+asyncpg://adminuser:<password>@realtoros-db.postgres.database.azure.com:5432/realtoros`
+   - Format: `postgresql+asyncpg://postgres:<password>@realtoros-db.postgres.database.azure.com:5432/realtoros`
 
 4. **Trigger deployment**:
    - Push to `main` branch, or

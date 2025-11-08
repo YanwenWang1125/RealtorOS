@@ -234,10 +234,10 @@ az postgres flexible-server create \
   --resource-group $RESOURCE_GROUP \
   --name realtoros-db \
   --location $LOCATION \
-  --admin-user adminuser \
+  --admin-user postgres \
   --admin-password <secure-password> \
   --sku-name Standard_B1ms \
-  --version 16 \
+  --version 18 \
   --storage-size 32
 ```
 
@@ -246,7 +246,7 @@ az postgres flexible-server create \
 # Database connection string
 az keyvault secret set --vault-name $KEYVAULT_NAME \
   --name "DATABASE-URL" \
-  --value "postgresql+asyncpg://adminuser:<password>@realtoros-db.postgres.database.azure.com:5432/realtoros"
+  --value "postgresql+asyncpg://postgres:<password>@realtoros-db.postgres.database.azure.com:5432/realtoros"
 
 # API Keys
 az keyvault secret set --vault-name $KEYVAULT_NAME \

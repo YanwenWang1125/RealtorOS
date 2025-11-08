@@ -220,6 +220,7 @@ jobs:
                 --location "${REGION}" \
                 --admin-user ${{ env.DB_ADMIN_USER }} \
                 --admin-password "${{ secrets.DB_PASSWORD }}" \
+                --tier Burstable \
                 --sku-name Standard_B1ms \
                 --version 16 \
                 --storage-size 32 \

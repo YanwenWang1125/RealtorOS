@@ -263,10 +263,65 @@ jobs:
               echo "This may be normal if DNS hasn't propagated yet"
             fi
 
+  run-migrations:
+    name: Run Alembic Migrations
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get ACR login server
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            ACR_LOGIN_SERVER=$(az acr show --name ${{ secrets.ACR_NAME }} --query loginServer --output tsv)
+            echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> $GITHUB_ENV
+
+      - name: Get ACR credentials
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            ACR_USERNAME=$(az acr credential show --name ${{ secrets.ACR_NAME }} --query username --output tsv)
+            ACR_PASSWORD=$(az acr credential show --name ${{ secrets.ACR_NAME }} --query 'passwords[0].value' --output tsv)
+            echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
+            echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
+
+      - name: Construct DATABASE_URL
+        id: db-url
+        run: |
+          # Use DATABASE_URL from secrets if provided, otherwise build from components
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            echo "Using DATABASE_URL from GitHub secrets"
+          else
+            # Construct DATABASE_URL from database server details
+            DB_HOST="${{ env.DB_SERVER_NAME }}.postgres.database.azure.com"
+            DB_USER="${{ env.DB_ADMIN_USER }}"
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            DB_NAME="${{ env.DB_NAME }}"
+            DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}"
+            echo "Constructed DATABASE_URL from database server details"
+            echo "Database: ${DB_HOST}/${DB_NAME}"
+          fi
+          echo "DATABASE_URL=${DATABASE_URL}" >> $GITHUB_ENV
+
+      - name: Run Alembic migrations
+        run: |
+          echo "Running Alembic migrations..."
+          docker login ${{ env.ACR_LOGIN_SERVER }} -u ${{ env.ACR_USERNAME }} -p ${{ env.ACR_PASSWORD }}
+          docker run --rm \
+            -e DATABASE_URL=${{ env.DATABASE_URL }} \
+            ${{ env.BACKEND_IMAGE }}:latest \
+            alembic upgrade head
+
   deploy-backend:
     name: Deploy Backend to Azure
     runs-on: ubuntu-latest
-    needs: [build-and-push, provision-database]
+    needs: [build-and-push, provision-database, run-migrations]
 
     steps:
       - name: Log in to Azure
@@ -378,15 +433,6 @@ jobs:
                   LOG_LEVEL=INFO \
                   CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}"
             fi
-
-      - name: Run database migrations
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            az containerapp exec \
-              --name ${{ env.BACKEND_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --command "alembic upgrade head" || true
 
   deploy-frontend:
     name: Deploy Frontend to Azure

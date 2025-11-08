@@ -33,7 +33,9 @@ RUN echo "=== File Verification ===" && \
     (test -f src/lib/hooks/mutations/useAuth.ts && echo "✓ useAuth.ts found" || echo "✗ useAuth.ts NOT found") && \
     (test -f src/lib/hooks/queries/useClients.ts && echo "✓ useClients.ts found" || echo "✗ useClients.ts NOT found") && \
     (test -f src/lib/hooks/ui/useToast.ts && echo "✓ useToast.ts found" || echo "✗ useToast.ts NOT found") && \
-    echo "" && echo "Directory structure:" && find src/lib/hooks -type f 2>/dev/null | head -10 || echo "src/lib/hooks not found"
+    echo "" && echo "Directory structure:" && find src/lib/hooks -type f 2>/dev/null | head -10 || echo "src/lib/hooks not found" && \
+    echo "" && echo "=== Recursive listing of hooks directory ===" && \
+    ls -R /app/src/lib/hooks || echo "hooks not found"
 
 # Set environment variables for build
 ARG NEXT_PUBLIC_API_URL

@@ -155,6 +155,7 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          no-cache: true
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           tags: |

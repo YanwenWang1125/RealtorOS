@@ -23,6 +23,8 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy all files except what's in .dockerignore
 # This ensures all source files, config files, and public directory are included
 COPY . .
+# Ensure public directory exists (in case it's empty or wasn't copied)
+RUN mkdir -p ./public
 
 # Verify what files are actually copied (debug)
 RUN echo "=== File Verification ===" && \
@@ -51,6 +53,8 @@ ENV NEXT_PUBLIC_EMAIL_URL=$NEXT_PUBLIC_EMAIL_URL
 ENV NEXT_PUBLIC_ANALYTICS_URL=$NEXT_PUBLIC_ANALYTICS_URL
 
 # Build the application
+# Ensure public directory exists (even if empty) for standalone output
+RUN mkdir -p ./public
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -65,7 +69,12 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copy built application
-COPY --from=builder /app/public ./public
+# Copy public directory using bind mount to handle empty/missing directory gracefully
+RUN mkdir -p ./public
+RUN --mount=type=bind,from=builder,source=/app/public,target=/mnt/public \
+    if [ -d /mnt/public ] && [ "$(ls -A /mnt/public 2>/dev/null)" ]; then \
+      cp -r /mnt/public/* ./public/ 2>/dev/null || true; \
+    fi
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 

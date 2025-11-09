@@ -5,7 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/lib/hooks/ui/useToast';
 import { AgentCreate, AgentLogin, AgentUpdate } from '@/lib/types/agent.types';
 
+// Helper function to clear all queries and reset cache after login
+const clearCacheAndSetAuth = (queryClient: ReturnType<typeof useQueryClient>, setAuth: (data: any) => void, data: any) => {
+  // Clear all React Query cache to prevent showing data from previous user
+  queryClient.clear();
+  // Set new auth data
+  setAuth(data);
+  // Invalidate all queries to force refetch with new token
+  queryClient.invalidateQueries();
+};
+
 export const useRegister = () => {
+  const queryClient = useQueryClient();
   const setAuth = useAuthStore((state) => state.setAuth);
   const router = useRouter();
   const { toast } = useToast();
@@ -13,7 +24,7 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (data: AgentCreate) => agentsApi.register(data),
     onSuccess: (data) => {
-      setAuth(data);
+      clearCacheAndSetAuth(queryClient, setAuth, data);
       toast({
         title: 'Registration successful',
         description: 'Welcome to RealtorOS!',
@@ -31,6 +42,7 @@ export const useRegister = () => {
 };
 
 export const useLoginEmail = () => {
+  const queryClient = useQueryClient();
   const setAuth = useAuthStore((state) => state.setAuth);
   const router = useRouter();
   const { toast } = useToast();
@@ -38,7 +50,7 @@ export const useLoginEmail = () => {
   return useMutation({
     mutationFn: (credentials: AgentLogin) => agentsApi.loginEmail(credentials),
     onSuccess: (data) => {
-      setAuth(data);
+      clearCacheAndSetAuth(queryClient, setAuth, data);
       toast({
         title: 'Login successful',
         description: `Welcome back, ${data.agent.name}!`,
@@ -56,6 +68,7 @@ export const useLoginEmail = () => {
 };
 
 export const useLoginGoogle = () => {
+  const queryClient = useQueryClient();
   const setAuth = useAuthStore((state) => state.setAuth);
   const router = useRouter();
   const { toast } = useToast();
@@ -63,7 +76,7 @@ export const useLoginGoogle = () => {
   return useMutation({
     mutationFn: (googleToken: string) => agentsApi.loginGoogle(googleToken),
     onSuccess: (data) => {
-      setAuth(data);
+      clearCacheAndSetAuth(queryClient, setAuth, data);
       toast({
         title: 'Login successful',
         description: `Welcome, ${data.agent.name}!`,

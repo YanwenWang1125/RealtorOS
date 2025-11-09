@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils/cn';
 import { ROUTES } from '@/lib/constants/routes';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -24,9 +25,12 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { agent, logout } = useAuthStore();
 
   const handleLogout = () => {
+    // Clear all React Query cache before logging out
+    queryClient.clear();
     logout();
     router.push('/login');
   };

@@ -8,8 +8,24 @@ const getApiBaseUrl = () => {
   // Get the API URL from environment
   const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
   
-  // Require API URL to be set - no fallback to /api
+  // Check if we're in build phase (Next.js static generation)
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' ||
+                      process.env.npm_lifecycle_event === 'build' ||
+                      process.argv.includes('build');
+  
+  // During build time, allow placeholder URL (won't be used, just for module initialization)
+  // At runtime, require actual API URL
   if (!envUrl) {
+    if (isBuildTime) {
+      // Build time: use placeholder (this won't be used in actual requests during build)
+      const placeholder = 'http://localhost:8000';
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📦 Build time: Using placeholder URL (will be replaced at runtime)');
+      }
+      return placeholder;
+    }
+    
+    // Runtime: require actual URL
     const errorMsg = typeof window !== 'undefined'
       ? '❌ ERROR: NEXT_PUBLIC_API_URL environment variable is required. Please set it at build time or ensure it is available in the browser.'
       : '❌ ERROR: NEXT_PUBLIC_API_URL or API_URL environment variable is required for server-side requests.';
@@ -65,8 +81,20 @@ const getServiceUrl = (serviceEnvVar: string | undefined) => {
   const mainApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
   const urlToUse = serviceEnvVar || mainApiUrl;
   
-  // Require URL to be set - no fallback
+  // Check if we're in build phase
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' ||
+                      process.env.npm_lifecycle_event === 'build' ||
+                      process.argv.includes('build');
+  
+  // During build time, allow placeholder URL
+  // At runtime, require actual URL
   if (!urlToUse) {
+    if (isBuildTime) {
+      // Build time: use placeholder
+      return 'http://localhost:8000';
+    }
+    
+    // Runtime: require actual URL
     const errorMsg = serviceEnvVar
       ? `❌ ERROR: ${serviceEnvVar} environment variable is required.`
       : '❌ ERROR: NEXT_PUBLIC_API_URL or API_URL environment variable is required.';

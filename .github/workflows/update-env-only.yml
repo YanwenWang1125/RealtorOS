@@ -56,6 +56,13 @@ jobs:
         with:
           inlineScript: |
             echo "Updating backend environment variables..."
+            # Remove old AWS_SES_* variables if they exist (they should use AWS_ACCESS_KEY_ID instead)
+            az containerapp update \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --remove-env-vars AWS_SES_ACCESS_KEY_ID AWS_SES_SECRET_ACCESS_KEY 2>/dev/null || echo "Old AWS_SES_* variables not found (or already removed)"
+            
+            # Update with correct environment variables
             az containerapp update \
               --name ${{ env.BACKEND_APP_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -72,6 +79,8 @@ jobs:
                 SES_FROM_EMAIL="${{ secrets.SES_FROM_EMAIL }}" \
                 AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
                 AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+                GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+                GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
                 SECRET_KEY="${{ secrets.SECRET_KEY }}" \
                 ALGORITHM="HS256" \
                 ACCESS_TOKEN_EXPIRE_MINUTES="1440" \
@@ -103,6 +112,7 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --set-env-vars \
                 NEXT_PUBLIC_API_URL=${{ steps.backend-url.outputs.url }} \
+                NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
               --output table
             echo "✅ Frontend environment variables updated"
 

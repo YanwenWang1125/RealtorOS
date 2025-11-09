@@ -404,7 +404,11 @@ jobs:
               
               echo "Environment created. Actual location: $ACTUAL_LOCATION"
               
-              if [ "$ACTUAL_LOCATION" != "$REQUIRED_LOCATION" ]; then
+              # Normalize location strings for comparison (lowercase, remove spaces)
+              NORMALIZED_ACTUAL_LOC=$(echo "$ACTUAL_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+              NORMALIZED_REQUIRED_LOC=$(echo "$REQUIRED_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+              
+              if [ "$NORMALIZED_ACTUAL_LOC" != "$NORMALIZED_REQUIRED_LOC" ]; then
                 echo "⚠️  WARNING: Environment was created in $ACTUAL_LOCATION instead of $REQUIRED_LOCATION"
                 echo "⚠️  Container apps will be created in $ACTUAL_LOCATION, which may not be the desired location."
                 echo "⚠️  To fix this, delete the environment and re-run the workflow."
@@ -420,7 +424,11 @@ jobs:
               
               echo "Container App environment exists. Current location: $ENV_LOCATION"
               
-              if [ "$ENV_LOCATION" != "$REQUIRED_LOCATION" ]; then
+              # Normalize location strings for comparison (lowercase, remove spaces)
+              NORMALIZED_ENV_LOC=$(echo "$ENV_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+              NORMALIZED_REQUIRED_LOC=$(echo "$REQUIRED_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+              
+              if [ "$NORMALIZED_ENV_LOC" != "$NORMALIZED_REQUIRED_LOC" ]; then
                 echo "⚠️  WARNING: Container App environment is in $ENV_LOCATION, but container apps should be in $REQUIRED_LOCATION"
                 echo "⚠️  Container apps will be created in the same region as the environment ($ENV_LOCATION)."
                 echo "⚠️  To move container apps to $REQUIRED_LOCATION, you need to:"
@@ -570,7 +578,11 @@ jobs:
             echo "Backend container app location: $BACKEND_ENV_LOCATION"
             echo "Required location: $REQUIRED_LOCATION"
             
-            if [ "$BACKEND_ENV_LOCATION" != "$REQUIRED_LOCATION" ]; then
+            # Normalize location strings for comparison (lowercase, remove spaces)
+            NORMALIZED_BACKEND_LOC=$(echo "$BACKEND_ENV_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+            NORMALIZED_REQUIRED_LOC=$(echo "$REQUIRED_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+            
+            if [ "$NORMALIZED_BACKEND_LOC" != "$NORMALIZED_REQUIRED_LOC" ]; then
               echo "❌ ERROR: Backend container app is in $BACKEND_ENV_LOCATION, but must be in $REQUIRED_LOCATION"
               echo "❌ Container apps must be in canadacentral. Please delete the environment and container apps, then re-run the workflow."
               exit 1
@@ -734,7 +746,11 @@ jobs:
             echo "Frontend container app location: $FRONTEND_ENV_LOCATION"
             echo "Required location: $REQUIRED_LOCATION"
             
-            if [ "$FRONTEND_ENV_LOCATION" != "$REQUIRED_LOCATION" ]; then
+            # Normalize location strings for comparison (lowercase, remove spaces)
+            NORMALIZED_FRONTEND_LOC=$(echo "$FRONTEND_ENV_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+            NORMALIZED_REQUIRED_LOC=$(echo "$REQUIRED_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+            
+            if [ "$NORMALIZED_FRONTEND_LOC" != "$NORMALIZED_REQUIRED_LOC" ]; then
               echo "❌ ERROR: Frontend container app is in $FRONTEND_ENV_LOCATION, but must be in $REQUIRED_LOCATION"
               echo "❌ Container apps must be in canadacentral. Please delete the environment and container apps, then re-run the workflow."
               exit 1

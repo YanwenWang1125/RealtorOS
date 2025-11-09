@@ -370,17 +370,47 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Check and create Container App environment in correct region
+      - name: Check and create Container App environment
         uses: azure/CLI@v1
         with:
           inlineScript: |
+            set -e  # Exit on error
+            PREFERRED_LOCATION="${{ env.LOCATION }}"
+            REQUIRED_LOCATION="canadacentral"
+            echo "Preferred location: $PREFERRED_LOCATION"
+            echo "Required location for container apps: $REQUIRED_LOCATION"
+            
             # Check if container app environment exists
             if ! az containerapp env show --name ${{ env.CONTAINER_ENV_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
-              echo "Creating Container App environment in ${{ env.LOCATION }}..."
+              # Always create environment in canadacentral to ensure container apps are in the required location
+              echo "Container App environment does not exist. Creating in $REQUIRED_LOCATION..."
+              
+              # Explicitly create with location parameter
               az containerapp env create \
                 --name ${{ env.CONTAINER_ENV_NAME }} \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
-                --location ${{ env.LOCATION }}
+                --location "$REQUIRED_LOCATION" \
+                --output table
+              
+              # Wait a moment for creation to complete
+              echo "Waiting for environment to be fully created..."
+              sleep 10
+              
+              # Verify the location after creation
+              ACTUAL_LOCATION=$(az containerapp env show \
+                --name ${{ env.CONTAINER_ENV_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --query location -o tsv)
+              
+              echo "Environment created. Actual location: $ACTUAL_LOCATION"
+              
+              if [ "$ACTUAL_LOCATION" != "$REQUIRED_LOCATION" ]; then
+                echo "⚠️  WARNING: Environment was created in $ACTUAL_LOCATION instead of $REQUIRED_LOCATION"
+                echo "⚠️  Container apps will be created in $ACTUAL_LOCATION, which may not be the desired location."
+                echo "⚠️  To fix this, delete the environment and re-run the workflow."
+              else
+                echo "✅ Container App environment created successfully in $ACTUAL_LOCATION"
+              fi
             else
               # Check if environment is in the correct region
               ENV_LOCATION=$(az containerapp env show \
@@ -388,16 +418,17 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --query location -o tsv)
               
-              if [ "$ENV_LOCATION" != "${{ env.LOCATION }}" ]; then
-                echo "⚠️  WARNING: Container App environment exists in $ENV_LOCATION, but desired location is ${{ env.LOCATION }}"
-                echo "⚠️  Container Apps Environment cannot be migrated. You need to:"
+              echo "Container App environment exists. Current location: $ENV_LOCATION"
+              
+              if [ "$ENV_LOCATION" != "$REQUIRED_LOCATION" ]; then
+                echo "⚠️  WARNING: Container App environment is in $ENV_LOCATION, but container apps should be in $REQUIRED_LOCATION"
+                echo "⚠️  Container apps will be created in the same region as the environment ($ENV_LOCATION)."
+                echo "⚠️  To move container apps to $REQUIRED_LOCATION, you need to:"
                 echo "   1. Delete existing container apps (backend and frontend)"
                 echo "   2. Delete the existing environment"
-                echo "   3. Re-run this workflow to create environment in ${{ env.LOCATION }}"
-                echo "   Or use the migration script: deploy/scripts/migrate-to-canadacentral.sh"
-                exit 1
+                echo "   3. Re-run this workflow to create environment in $REQUIRED_LOCATION"
               else
-                echo "✅ Container App environment exists in correct region: $ENV_LOCATION"
+                echo "✅ Container App environment is in the required location: $ENV_LOCATION"
               fi
             fi
 
@@ -523,6 +554,28 @@ jobs:
                   ACCESS_TOKEN_EXPIRE_MINUTES="1440" \
                   LOG_LEVEL=INFO \
                   CORS_ORIGINS="${CORS_INITIAL_VALUE}"
+            fi
+            
+            # Verify backend container app location
+            echo ""
+            echo "Verifying backend container app location..."
+            BACKEND_ENV_ID=$(az containerapp show \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query "properties.environmentId" -o tsv)
+            
+            BACKEND_ENV_LOCATION=$(az containerapp env show --ids "$BACKEND_ENV_ID" --query location -o tsv)
+            
+            REQUIRED_LOCATION="canadacentral"
+            echo "Backend container app location: $BACKEND_ENV_LOCATION"
+            echo "Required location: $REQUIRED_LOCATION"
+            
+            if [ "$BACKEND_ENV_LOCATION" != "$REQUIRED_LOCATION" ]; then
+              echo "❌ ERROR: Backend container app is in $BACKEND_ENV_LOCATION, but must be in $REQUIRED_LOCATION"
+              echo "❌ Container apps must be in canadacentral. Please delete the environment and container apps, then re-run the workflow."
+              exit 1
+            else
+              echo "✅ Backend container app is in the required location: $BACKEND_ENV_LOCATION"
             fi
 
   deploy-frontend:
@@ -665,6 +718,28 @@ jobs:
               echo "⚠️  WARNING: NEXT_PUBLIC_API_URL mismatch!"
               echo "  Expected: $BACKEND_URL"
               echo "  Actual: $ACTUAL_API_URL"
+            fi
+            
+            # Verify frontend container app location
+            echo ""
+            echo "Verifying frontend container app location..."
+            FRONTEND_ENV_ID=$(az containerapp show \
+              --name ${{ env.FRONTEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query "properties.environmentId" -o tsv)
+            
+            FRONTEND_ENV_LOCATION=$(az containerapp env show --ids "$FRONTEND_ENV_ID" --query location -o tsv)
+            
+            REQUIRED_LOCATION="canadacentral"
+            echo "Frontend container app location: $FRONTEND_ENV_LOCATION"
+            echo "Required location: $REQUIRED_LOCATION"
+            
+            if [ "$FRONTEND_ENV_LOCATION" != "$REQUIRED_LOCATION" ]; then
+              echo "❌ ERROR: Frontend container app is in $FRONTEND_ENV_LOCATION, but must be in $REQUIRED_LOCATION"
+              echo "❌ Container apps must be in canadacentral. Please delete the environment and container apps, then re-run the workflow."
+              exit 1
+            else
+              echo "✅ Frontend container app is in the required location: $FRONTEND_ENV_LOCATION"
             fi
 
       - name: Get frontend URL and update backend CORS_ORIGINS

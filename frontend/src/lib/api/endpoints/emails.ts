@@ -1,24 +1,30 @@
 import { emailClient } from '../client';
 import { Email, EmailPreviewRequest, EmailSendRequest, EmailPreviewResponse } from '@/lib/types/email.types';
+import { getApiPath } from '../utils/path';
 
 export const emailsApi = {
   list: async (params?: { page?: number; limit?: number; client_id?: number; status?: string }) => {
-    const { data } = await emailClient.get<Email[]>('/api/emails', { params });
+    // Backend route is "/api/emails/" (with trailing slash), so we need trailing slash to avoid 301 redirect
+    const path = getApiPath(emailClient.defaults.baseURL, '/emails/');
+    const { data } = await emailClient.get<Email[]>(path, { params });
     return data;
   },
 
   getById: async (id: number) => {
-    const { data } = await emailClient.get<Email>(`/api/emails/${id}`);
+    const path = getApiPath(emailClient.defaults.baseURL, `/emails/${id}`);
+    const { data } = await emailClient.get<Email>(path);
     return data;
   },
 
   preview: async (request: EmailPreviewRequest) => {
-    const { data } = await emailClient.post<EmailPreviewResponse>('/api/emails/preview', request);
+    const path = getApiPath(emailClient.defaults.baseURL, '/emails/preview');
+    const { data } = await emailClient.post<EmailPreviewResponse>(path, request);
     return data;
   },
 
   send: async (request: EmailSendRequest) => {
-    const { data } = await emailClient.post<Email>('/api/emails/send', request);
+    const path = getApiPath(emailClient.defaults.baseURL, '/emails/send');
+    const { data } = await emailClient.post<Email>(path, request);
     return data;
   },
 };

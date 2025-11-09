@@ -7,32 +7,38 @@ import {
   TokenResponse,
   Agent,
 } from '@/lib/types/agent.types';
+import { getApiPath } from '../utils/path';
 
 export const agentsApi = {
   register: async (data: AgentCreate): Promise<TokenResponse> => {
-    const response = await apiClient.post<TokenResponse>('/api/agents/register', data);
+    const path = getApiPath(apiClient.defaults.baseURL, '/agents/register');
+    const response = await apiClient.post<TokenResponse>(path, data);
     return response.data;
   },
 
   loginEmail: async (credentials: AgentLogin): Promise<TokenResponse> => {
-    const response = await apiClient.post<TokenResponse>('/api/agents/login', credentials);
+    const path = getApiPath(apiClient.defaults.baseURL, '/agents/login');
+    const response = await apiClient.post<TokenResponse>(path, credentials);
     return response.data;
   },
 
   loginGoogle: async (googleToken: string): Promise<TokenResponse> => {
-    const response = await apiClient.post<TokenResponse>('/api/agents/google', {
+    const path = getApiPath(apiClient.defaults.baseURL, '/agents/google');
+    const response = await apiClient.post<TokenResponse>(path, {
       credential: googleToken,
     });
     return response.data;
   },
 
   getProfile: async (): Promise<Agent> => {
-    const response = await apiClient.get<Agent>('/api/agents/me');
+    const path = getApiPath(apiClient.defaults.baseURL, '/agents/me');
+    const response = await apiClient.get<Agent>(path);
     return response.data;
   },
 
   updateProfile: async (data: AgentUpdate): Promise<Agent> => {
-    const response = await apiClient.patch<Agent>('/api/agents/me', data);
+    const path = getApiPath(apiClient.defaults.baseURL, '/agents/me');
+    const response = await apiClient.patch<Agent>(path, data);
     return response.data;
   },
 };

@@ -1,44 +1,96 @@
 import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
-// Use relative path /api which will be proxied by Next.js rewrites
-// This allows the backend URL to be configured at runtime via environment variables
-// The rewrites in next.config.mjs will proxy /api/* to the actual backend URL
+// Use environment variable directly to avoid CORS redirect issues
+// Next.js rewrites can cause HTTP->HTTPS redirects which break CORS preflight
+// By using the HTTPS URL directly, we avoid redirect issues
 const getApiBaseUrl = () => {
-  // In browser, use relative path (will be proxied by Next.js)
+  // Get the API URL from environment
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
+  
+  // In browser, use HTTPS URL directly if available (avoids CORS redirect issues)
+  // Fall back to relative path /api for local development
   if (typeof window !== 'undefined') {
+    if (envUrl && envUrl.startsWith('https://')) {
+      // Use HTTPS URL directly - avoids proxy redirect issues
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🌐 Browser: Using HTTPS URL directly:', envUrl);
+      }
+      return envUrl;
+    }
+    // Fallback to relative path for local dev (localhost)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🌐 Browser: Using relative path /api (local dev)');
+      console.log(`   NEXT_PUBLIC_API_URL: ${envUrl || 'NOT SET'}`);
+    }
     return '/api';
   }
-  // On server side, try to use environment variable, fallback to relative path
-  return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || '/api';
+  
+  // On server side, use environment variable, fallback to relative path
+  const serverUrl = envUrl || '/api';
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🖥️  Server: Axios baseURL =', serverUrl);
+  }
+  return serverUrl;
 };
 
+const apiBaseUrl = getApiBaseUrl();
 export const apiClient = axios.create({
-  baseURL: getApiBaseUrl(),
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 30000,
 });
+
+// Log the actual baseURL being used (development only)
+if (process.env.NODE_ENV !== 'production' && typeof window === 'undefined') {
+  console.log('📡 apiClient baseURL:', apiBaseUrl);
+}
 
 // Helper function to get service URL
 const getServiceUrl = (serviceEnvVar: string | undefined) => {
+  const mainApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
+  
   if (typeof window !== 'undefined') {
-    // In browser, use relative path (will be proxied by Next.js)
-    return serviceEnvVar ? `/api` : '/api';
+    // In browser, use HTTPS URL directly if available (avoids CORS redirect issues)
+    // Use service-specific URL if provided, otherwise use main API URL
+    const urlToUse = serviceEnvVar || mainApiUrl;
+    
+    if (urlToUse && urlToUse.startsWith('https://')) {
+      // Use HTTPS URL directly
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`🌐 Browser: Service URL (${serviceEnvVar ? 'custom' : 'default'}) =`, urlToUse);
+      }
+      return urlToUse;
+    }
+    
+    // Fallback to relative path for local dev
+    return '/api';
   }
+  
   // On server side, use environment variable if available, otherwise fallback to /api
-  return serviceEnvVar || process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || '/api';
+  const serverUrl = serviceEnvVar || mainApiUrl || '/api';
+  if (process.env.NODE_ENV !== 'production' && serviceEnvVar) {
+    console.log(`🖥️  Server: Service URL (${serviceEnvVar ? 'custom' : 'default'}) =`, serverUrl);
+  }
+  return serverUrl;
 };
 
 // CRM service client - uses CRM URL if available (for microservices), otherwise falls back to API URL
+const crmBaseUrl = getServiceUrl(process.env.NEXT_PUBLIC_CRM_URL);
 export const crmClient = axios.create({
-  baseURL: getServiceUrl(process.env.NEXT_PUBLIC_CRM_URL),
+  baseURL: crmBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 30000,
 });
+
+// Log the actual baseURL being used (development only)
+if (process.env.NODE_ENV !== 'production' && typeof window === 'undefined') {
+  console.log('📡 crmClient baseURL:', crmBaseUrl);
+}
 
 // Task service client - uses Task URL if available (for microservices), otherwise falls back to API URL
 export const taskClient = axios.create({

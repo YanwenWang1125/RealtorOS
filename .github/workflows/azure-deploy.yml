@@ -266,7 +266,7 @@ jobs:
   run-migrations:
     name: Run Alembic Migrations
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [build-and-push, provision-database]
 
     steps:
       - name: Log in to Azure
@@ -293,20 +293,48 @@ jobs:
       - name: Construct DATABASE_URL and prepare environment variables
         id: db-url
         run: |
-          # Use DATABASE_URL from secrets if provided, otherwise build from components
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            echo "Using DATABASE_URL from GitHub secrets"
-          else
+          # Prefer building from DB_PASSWORD if available, otherwise use DATABASE_URL secret
+          if [ -n "${{ secrets.DB_PASSWORD }}" ]; then
             # Construct DATABASE_URL from database server details
             DB_HOST="${{ env.DB_SERVER_NAME }}.postgres.database.azure.com"
             DB_USER="${{ env.DB_ADMIN_USER }}"
             DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
             DB_NAME="${{ env.DB_NAME }}"
             DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}"
-            echo "Constructed DATABASE_URL from database server details"
-            echo "Database: ${DB_HOST}/${DB_NAME}"
+            echo "✅ Constructed DATABASE_URL from database server details"
+            echo "Database host: ${DB_HOST}"
+            echo "Database name: ${DB_NAME}"
+            echo "Database user: ${DB_USER}"
+          elif [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            echo "⚠️  Using DATABASE_URL from GitHub secrets"
+            # Extract and verify hostname from DATABASE_URL
+            DB_HOST=$(echo "${DATABASE_URL}" | sed -E 's|postgresql\+?[^:]*://[^:]+:[^@]+@([^:/]+).*|\1|')
+            echo "Database host from secret: ${DB_HOST}"
+            if [ "${DB_HOST}" = "postgres" ] || [ -z "${DB_HOST}" ]; then
+              echo "❌ ERROR: DATABASE_URL secret contains invalid hostname '${DB_HOST}'"
+              echo "Please update DATABASE_URL secret with correct Azure PostgreSQL server address"
+              echo "Expected format: postgresql+asyncpg://postgres:PASSWORD@realtoros-db.postgres.database.azure.com:5432/realtoros"
+              exit 1
+            fi
+          else
+            echo "❌ ERROR: Neither DB_PASSWORD nor DATABASE_URL secret is set!"
+            echo "Please set either:"
+            echo "  - DB_PASSWORD (recommended, will auto-construct DATABASE_URL)"
+            echo "  - DATABASE_URL (full connection string)"
+            exit 1
           fi
+          
+          # Verify DATABASE_URL is set and show masked version for debugging
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "❌ ERROR: DATABASE_URL is empty!"
+            exit 1
+          fi
+          
+          # Show masked DATABASE_URL for debugging (mask password)
+          DB_URL_MASKED=$(echo "${DATABASE_URL}" | sed -E 's|://([^:]+):[^@]+@|://\1:***@|')
+          echo "DATABASE_URL (masked): ${DB_URL_MASKED}"
+          
           echo "DATABASE_URL=${DATABASE_URL}" >> $GITHUB_ENV
 
       - name: Run Alembic migrations

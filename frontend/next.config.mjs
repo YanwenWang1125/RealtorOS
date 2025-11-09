@@ -31,21 +31,25 @@ const nextConfig = {
     // If the URL starts with http:// (and not localhost), convert to https://
     if (apiUrl.startsWith('http://') && !apiUrl.includes('localhost')) {
       apiUrl = apiUrl.replace('http://', 'https://');
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('⚠️  Converted HTTP to HTTPS:', apiUrl);
-      }
+      console.warn('⚠️  Converted HTTP to HTTPS:', apiUrl);
     }
     
-    // Log the API URL being used (only in development)
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔗 Next.js API Rewrite Configuration:');
-      console.log(`   Using API URL: ${apiUrl}`);
-      console.log(`   Protocol: ${apiUrl.startsWith('https://') ? 'HTTPS ✅' : apiUrl.startsWith('http://') ? 'HTTP ⚠️' : 'UNKNOWN'}`);
-      console.log(`   NEXT_PUBLIC_API_URL: ${process.env.NEXT_PUBLIC_API_URL || 'NOT SET'}`);
-      console.log(`   API_URL: ${process.env.API_URL || 'NOT SET'}`);
-      if (!process.env.NEXT_PUBLIC_API_URL && !process.env.API_URL) {
-        console.warn('⚠️  WARNING: No API URL env var found, using fallback:', apiUrl);
-      }
+    // Log the API URL being used (always log in production for debugging)
+    console.log('🔗 Next.js API Rewrite Configuration:');
+    console.log(`   Using API URL: ${apiUrl}`);
+    console.log(`   Protocol: ${apiUrl.startsWith('https://') ? 'HTTPS ✅' : apiUrl.startsWith('http://') ? 'HTTP ⚠️' : 'UNKNOWN'}`);
+    console.log(`   NEXT_PUBLIC_API_URL: ${process.env.NEXT_PUBLIC_API_URL || 'NOT SET'}`);
+    console.log(`   API_URL: ${process.env.API_URL || 'NOT SET'}`);
+    if (!process.env.NEXT_PUBLIC_API_URL && !process.env.API_URL) {
+      console.warn('⚠️  WARNING: No API URL env var found, using fallback:', apiUrl);
+    }
+    
+    // Validate that apiUrl is a valid URL
+    try {
+      new URL(apiUrl);
+    } catch (e) {
+      console.error('❌ ERROR: Invalid API URL:', apiUrl);
+      throw new Error(`Invalid API URL: ${apiUrl}. Please set NEXT_PUBLIC_API_URL or API_URL environment variable.`);
     }
     
     // Also handle /health endpoint

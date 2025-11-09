@@ -9,20 +9,17 @@ const getApiBaseUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
   
   // In browser, use HTTPS URL directly if available (avoids CORS redirect issues)
-  // Fall back to relative path /api for local development
+  // Fall back to relative path /api which will be proxied by Next.js rewrites
   if (typeof window !== 'undefined') {
     if (envUrl && envUrl.startsWith('https://')) {
       // Use HTTPS URL directly - avoids proxy redirect issues
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('🌐 Browser: Using HTTPS URL directly:', envUrl);
-      }
+      console.log('🌐 Browser: Using HTTPS URL directly:', envUrl);
       return envUrl;
     }
-    // Fallback to relative path for local dev (localhost)
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🌐 Browser: Using relative path /api (local dev)');
-      console.log(`   NEXT_PUBLIC_API_URL: ${envUrl || 'NOT SET'}`);
-    }
+    // Fallback to relative path - will be proxied by Next.js rewrites
+    // This is the expected behavior when NEXT_PUBLIC_API_URL is not set at build time
+    console.log('🌐 Browser: Using relative path /api (will be proxied by Next.js)');
+    console.log(`   NEXT_PUBLIC_API_URL: ${envUrl || 'NOT SET (using proxy)'}`);
     return '/api';
   }
   

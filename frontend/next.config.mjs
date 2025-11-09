@@ -22,6 +22,24 @@ const nextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        // Apply headers to all routes
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups', // Allows popups and postMessage for OAuth
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'unsafe-none', // Allows embedding content from other origins
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

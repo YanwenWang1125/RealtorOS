@@ -174,6 +174,7 @@ jobs:
             NEXT_PUBLIC_TASK_URL=
             NEXT_PUBLIC_EMAIL_URL=
             NEXT_PUBLIC_ANALYTICS_URL=
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=
           tags: |
             ${{ env.FRONTEND_IMAGE }}:placeholder
           labels: |
@@ -695,6 +696,7 @@ jobs:
             NEXT_PUBLIC_TASK_URL=
             NEXT_PUBLIC_EMAIL_URL=
             NEXT_PUBLIC_ANALYTICS_URL=
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ steps.rebuild-tags.outputs.SHORT_SHA }}

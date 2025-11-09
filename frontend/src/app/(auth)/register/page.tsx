@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRegister, useLoginGoogle } from '@/lib/hooks/mutations/useAuth';
 import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleOAuth } from '@/providers/GoogleOAuthProvider';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
@@ -23,6 +24,7 @@ export default function RegisterPage() {
   const [isMounted, setIsMounted] = useState(false);
   const { mutate: register, isPending } = useRegister();
   const { mutate: loginGoogle } = useLoginGoogle();
+  const { isAvailable: isGoogleOAuthAvailable } = useGoogleOAuth();
 
   useEffect(() => {
     setIsMounted(true);
@@ -57,15 +59,17 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Google Sign-Up */}
-          <div className="flex justify-center">
-            {isMounted && (
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                text="signup_with"
-              />
-            )}
-          </div>
+          {isGoogleOAuthAvailable && (
+            <div className="flex justify-center">
+              {isMounted && (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  text="signup_with"
+                />
+              )}
+            </div>
+          )}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

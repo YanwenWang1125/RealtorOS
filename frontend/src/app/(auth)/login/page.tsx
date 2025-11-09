@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useLoginEmail, useLoginGoogle } from '@/lib/hooks/mutations/useAuth';
 import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleOAuth } from '@/providers/GoogleOAuthProvider';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [isMounted, setIsMounted] = useState(false);
   const { mutate: loginEmail, isPending: isEmailPending } = useLoginEmail();
   const { mutate: loginGoogle } = useLoginGoogle();
+  const { isAvailable: isGoogleOAuthAvailable } = useGoogleOAuth();
 
   useEffect(() => {
     setIsMounted(true);
@@ -47,14 +49,16 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Google Sign-In */}
-          <div className="flex justify-center">
-            {isMounted && (
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-              />
-            )}
-          </div>
+          {isGoogleOAuthAvailable && (
+            <div className="flex justify-center">
+              {isMounted && (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                />
+              )}
+            </div>
+          )}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

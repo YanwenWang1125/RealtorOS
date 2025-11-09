@@ -1,34 +1,48 @@
 import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
-// Use environment variable directly to avoid CORS redirect issues
-// Next.js rewrites can cause HTTP->HTTPS redirects which break CORS preflight
-// By using the HTTPS URL directly, we avoid redirect issues
+// Use environment variable directly - no proxy layer
+// NEXT_PUBLIC_API_URL must be set at build time for browser code
+// API_URL can be used at runtime for server-side code
 const getApiBaseUrl = () => {
   // Get the API URL from environment
   const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
   
-  // In browser, use HTTPS URL directly if available (avoids CORS redirect issues)
-  // Fall back to relative path /api which will be proxied by Next.js rewrites
-  if (typeof window !== 'undefined') {
-    if (envUrl && envUrl.startsWith('https://')) {
-      // Use HTTPS URL directly - avoids proxy redirect issues
-      console.log('🌐 Browser: Using HTTPS URL directly:', envUrl);
-      return envUrl;
-    }
-    // Fallback to relative path - will be proxied by Next.js rewrites
-    // This is the expected behavior when NEXT_PUBLIC_API_URL is not set at build time
-    console.log('🌐 Browser: Using relative path /api (will be proxied by Next.js)');
-    console.log(`   NEXT_PUBLIC_API_URL: ${envUrl || 'NOT SET (using proxy)'}`);
-    return '/api';
+  // Require API URL to be set - no fallback to /api
+  if (!envUrl) {
+    const errorMsg = typeof window !== 'undefined'
+      ? '❌ ERROR: NEXT_PUBLIC_API_URL environment variable is required. Please set it at build time or ensure it is available in the browser.'
+      : '❌ ERROR: NEXT_PUBLIC_API_URL or API_URL environment variable is required for server-side requests.';
+    
+    console.error(errorMsg);
+    console.error(`   NEXT_PUBLIC_API_URL: ${process.env.NEXT_PUBLIC_API_URL || 'NOT SET'}`);
+    console.error(`   API_URL: ${process.env.API_URL || 'NOT SET'}`);
+    throw new Error(errorMsg);
   }
   
-  // On server side, use environment variable, fallback to relative path
-  const serverUrl = envUrl || '/api';
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🖥️  Server: Axios baseURL =', serverUrl);
+  // Ensure HTTPS is used (not HTTP) to avoid CORS issues
+  let apiUrl = envUrl;
+  if (apiUrl.startsWith('http://') && !apiUrl.includes('localhost')) {
+    apiUrl = apiUrl.replace('http://', 'https://');
+    console.warn('⚠️  Converted HTTP to HTTPS:', apiUrl);
   }
-  return serverUrl;
+  
+  // Validate URL format
+  try {
+    new URL(apiUrl);
+  } catch (e) {
+    const errorMsg = `❌ ERROR: Invalid API URL format: ${apiUrl}`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+  
+  if (typeof window !== 'undefined') {
+    console.log('🌐 Browser: Using API URL directly:', apiUrl);
+  } else if (process.env.NODE_ENV !== 'production') {
+    console.log('🖥️  Server: Using API URL:', apiUrl);
+  }
+  
+  return apiUrl;
 };
 
 const apiBaseUrl = getApiBaseUrl();
@@ -46,32 +60,45 @@ if (process.env.NODE_ENV !== 'production' && typeof window === 'undefined') {
 }
 
 // Helper function to get service URL
+// Uses service-specific URL if provided, otherwise falls back to main API URL
 const getServiceUrl = (serviceEnvVar: string | undefined) => {
   const mainApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
+  const urlToUse = serviceEnvVar || mainApiUrl;
   
-  if (typeof window !== 'undefined') {
-    // In browser, use HTTPS URL directly if available (avoids CORS redirect issues)
-    // Use service-specific URL if provided, otherwise use main API URL
-    const urlToUse = serviceEnvVar || mainApiUrl;
-    
-    if (urlToUse && urlToUse.startsWith('https://')) {
-      // Use HTTPS URL directly
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`🌐 Browser: Service URL (${serviceEnvVar ? 'custom' : 'default'}) =`, urlToUse);
-      }
-      return urlToUse;
+  // Require URL to be set - no fallback
+  if (!urlToUse) {
+    const errorMsg = serviceEnvVar
+      ? `❌ ERROR: ${serviceEnvVar} environment variable is required.`
+      : '❌ ERROR: NEXT_PUBLIC_API_URL or API_URL environment variable is required.';
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+  
+  // Ensure HTTPS is used (not HTTP) to avoid CORS issues
+  let finalUrl = urlToUse;
+  if (finalUrl.startsWith('http://') && !finalUrl.includes('localhost')) {
+    finalUrl = finalUrl.replace('http://', 'https://');
+    console.warn('⚠️  Converted HTTP to HTTPS:', finalUrl);
+  }
+  
+  // Validate URL format
+  try {
+    new URL(finalUrl);
+  } catch (e) {
+    const errorMsg = `❌ ERROR: Invalid service URL format: ${finalUrl}`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+  
+  if (process.env.NODE_ENV !== 'production') {
+    if (typeof window !== 'undefined') {
+      console.log(`🌐 Browser: Service URL (${serviceEnvVar ? 'custom' : 'default'}) =`, finalUrl);
+    } else {
+      console.log(`🖥️  Server: Service URL (${serviceEnvVar ? 'custom' : 'default'}) =`, finalUrl);
     }
-    
-    // Fallback to relative path for local dev
-    return '/api';
   }
   
-  // On server side, use environment variable if available, otherwise fallback to /api
-  const serverUrl = serviceEnvVar || mainApiUrl || '/api';
-  if (process.env.NODE_ENV !== 'production' && serviceEnvVar) {
-    console.log(`🖥️  Server: Service URL (${serviceEnvVar ? 'custom' : 'default'}) =`, serverUrl);
-  }
-  return serverUrl;
+  return finalUrl;
 };
 
 // CRM service client - uses CRM URL if available (for microservices), otherwise falls back to API URL

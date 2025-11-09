@@ -165,10 +165,10 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          # Note: NEXT_PUBLIC_API_URL is intentionally not set here (or set to empty)
-          # The frontend code now uses relative paths (/api) which are proxied by Next.js rewrites
-          # The rewrites function in next.config.mjs reads NEXT_PUBLIC_API_URL at server startup (runtime)
-          # This allows the backend URL to be configured via container app environment variables
+          # Note: NEXT_PUBLIC_API_URL should be set at build time for browser code
+          # The frontend code now uses full URLs directly (no proxy layer)
+          # NEXT_PUBLIC_API_URL will be set as a container app environment variable
+          # but it needs to be available at build time for browser code to access it
           build-args: |
             NEXT_PUBLIC_API_URL=
           tags: |

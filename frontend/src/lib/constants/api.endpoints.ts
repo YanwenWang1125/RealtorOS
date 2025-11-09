@@ -2,12 +2,12 @@
  * API endpoint constants.
  * Centralized definition of all API endpoints.
  * 
- * Uses relative paths which will be proxied by Next.js rewrites.
- * The rewrites in next.config.mjs will proxy /api/* to the actual backend URL
- * configured via NEXT_PUBLIC_API_URL or API_URL environment variable at runtime.
+ * These are relative paths that will be combined with the full backend URL
+ * from NEXT_PUBLIC_API_URL or API_URL environment variable.
+ * The frontend now uses direct HTTPS connections (no proxy layer).
  */
 
-// Use relative paths - Next.js rewrites will handle the proxying
+// API base path - will be combined with full backend URL from environment variable
 const API_BASE = '/api';
 
 export const API_ENDPOINTS = {

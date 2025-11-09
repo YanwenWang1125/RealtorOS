@@ -15,6 +15,8 @@ env:
   BACKEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-api
   FRONTEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-frontend
   CONTAINER_ENV_NAME: realtoros-env
+  # Note: LOCATION is only used when creating new Container App environments
+  # Existing environments may be in different regions (e.g., East US)
   LOCATION: canadacentral
   DB_SERVER_NAME: realtoros-db
   DB_NAME: realtoros
@@ -161,8 +163,12 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          # Note: NEXT_PUBLIC_API_URL is intentionally not set here (or set to empty)
+          # The frontend code now uses relative paths (/api) which are proxied by Next.js rewrites
+          # The rewrites function in next.config.mjs reads NEXT_PUBLIC_API_URL at server startup (runtime)
+          # This allows the backend URL to be configured via container app environment variables
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_API_URL=
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.SHORT_SHA }}
@@ -487,24 +493,44 @@ jobs:
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            # Wait for backend container app to be ready
+            # Wait for backend container app to be ready and get its URL
             echo "Waiting for backend container app to be ready..."
-            for i in {1..30}; do
+            MAX_ATTEMPTS=30
+            ATTEMPT=0
+            
+            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              ATTEMPT=$((ATTEMPT + 1))
+              
               if az containerapp show --name ${{ env.BACKEND_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
                 BACKEND_URL=$(az containerapp show \
                   --name ${{ env.BACKEND_APP_NAME }} \
                   --resource-group ${{ env.RESOURCE_GROUP }} \
                   --query properties.configuration.ingress.fqdn -o tsv)
-                if [ -n "$BACKEND_URL" ] && [ "$BACKEND_URL" != "null" ]; then
-                  echo "Backend URL: $BACKEND_URL"
+                
+                if [ -n "$BACKEND_URL" ] && [ "$BACKEND_URL" != "null" ] && [ "$BACKEND_URL" != "" ]; then
+                  echo "✅ Backend URL retrieved: $BACKEND_URL"
                   echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+                  echo "fqdn=$BACKEND_URL" >> $GITHUB_OUTPUT
                   exit 0
+                else
+                  echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Backend FQDN not available yet..."
                 fi
+              else
+                echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Backend container app not found yet..."
               fi
-              echo "Attempt $i/30: Backend not ready yet, waiting..."
-              sleep 5
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                sleep 5
+              fi
             done
-            echo "ERROR: Backend container app not found or not ready"
+            
+            echo "❌ ERROR: Backend container app not found or FQDN not available after $MAX_ATTEMPTS attempts"
+            echo "Trying to get more information..."
+            az containerapp show \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query "{provisioningState:properties.provisioningState,ingress:properties.configuration.ingress}" \
+              --output json || echo "Could not retrieve container app details"
             exit 1
 
       - name: Get ACR credentials for deployment
@@ -516,10 +542,29 @@ jobs:
             echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
             echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
 
+      - name: Verify backend URL before deployment
+        run: |
+          BACKEND_URL="${{ steps.backend-url.outputs.url }}"
+          if [ -z "$BACKEND_URL" ] || [ "$BACKEND_URL" = "" ]; then
+            echo "❌ ERROR: Backend URL is empty!"
+            exit 1
+          fi
+          echo "✅ Backend URL verified: $BACKEND_URL"
+          echo "This URL will be set as NEXT_PUBLIC_API_URL in the frontend container app"
+
       - name: Deploy frontend to Container Apps
         uses: azure/CLI@v1
         with:
           inlineScript: |
+            BACKEND_URL="${{ steps.backend-url.outputs.url }}"
+            
+            if [ -z "$BACKEND_URL" ] || [ "$BACKEND_URL" = "" ]; then
+              echo "❌ ERROR: Backend URL is not available!"
+              exit 1
+            fi
+            
+            echo "Deploying frontend with backend URL: $BACKEND_URL"
+            
             # Check if frontend container app exists
             if az containerapp show --name ${{ env.FRONTEND_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
               echo "Updating existing frontend container app..."
@@ -529,8 +574,11 @@ jobs:
                 --image ${{ env.FRONTEND_IMAGE }}:latest \
                 --min-replicas 0 \
                 --set-env-vars \
-                  NEXT_PUBLIC_API_URL=${{ steps.backend-url.outputs.url }} \
+                  NEXT_PUBLIC_API_URL="$BACKEND_URL" \
                   NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+              
+              echo "✅ Frontend container app updated successfully"
+              echo "NEXT_PUBLIC_API_URL set to: $BACKEND_URL"
             else
               echo "Creating new frontend container app..."
               az containerapp create \
@@ -548,8 +596,27 @@ jobs:
                 --cpu 0.25 \
                 --memory 0.5Gi \
                 --env-vars \
-                  NEXT_PUBLIC_API_URL=${{ steps.backend-url.outputs.url }} \
+                  NEXT_PUBLIC_API_URL="$BACKEND_URL" \
                   NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+              
+              echo "✅ Frontend container app created successfully"
+              echo "NEXT_PUBLIC_API_URL set to: $BACKEND_URL"
+            fi
+            
+            # Verify the environment variable was set correctly
+            echo ""
+            echo "Verifying environment variables..."
+            ACTUAL_API_URL=$(az containerapp show \
+              --name ${{ env.FRONTEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query "properties.template.containers[0].env[?name=='NEXT_PUBLIC_API_URL'].value" -o tsv)
+            
+            if [ "$ACTUAL_API_URL" = "$BACKEND_URL" ]; then
+              echo "✅ NEXT_PUBLIC_API_URL verified: $ACTUAL_API_URL"
+            else
+              echo "⚠️  WARNING: NEXT_PUBLIC_API_URL mismatch!"
+              echo "  Expected: $BACKEND_URL"
+              echo "  Actual: $ACTUAL_API_URL"
             fi
 
   health-check:

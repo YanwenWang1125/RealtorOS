@@ -1,17 +1,39 @@
 import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
+// Use relative path /api which will be proxied by Next.js rewrites
+// This allows the backend URL to be configured at runtime via environment variables
+// The rewrites in next.config.mjs will proxy /api/* to the actual backend URL
+const getApiBaseUrl = () => {
+  // In browser, use relative path (will be proxied by Next.js)
+  if (typeof window !== 'undefined') {
+    return '/api';
+  }
+  // On server side, try to use environment variable, fallback to relative path
+  return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || '/api';
+};
+
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 30000,
 });
 
+// Helper function to get service URL
+const getServiceUrl = (serviceEnvVar: string | undefined) => {
+  if (typeof window !== 'undefined') {
+    // In browser, use relative path (will be proxied by Next.js)
+    return serviceEnvVar ? `/api` : '/api';
+  }
+  // On server side, use environment variable if available, otherwise fallback to /api
+  return serviceEnvVar || process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || '/api';
+};
+
 // CRM service client - uses CRM URL if available (for microservices), otherwise falls back to API URL
 export const crmClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_CRM_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: getServiceUrl(process.env.NEXT_PUBLIC_CRM_URL),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,7 +42,7 @@ export const crmClient = axios.create({
 
 // Task service client - uses Task URL if available (for microservices), otherwise falls back to API URL
 export const taskClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_TASK_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: getServiceUrl(process.env.NEXT_PUBLIC_TASK_URL),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -29,7 +51,7 @@ export const taskClient = axios.create({
 
 // Email service client - uses Email URL if available (for microservices), otherwise falls back to API URL
 export const emailClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_EMAIL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: getServiceUrl(process.env.NEXT_PUBLIC_EMAIL_URL),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -38,7 +60,7 @@ export const emailClient = axios.create({
 
 // Analytics service client - uses Analytics URL if available (for microservices), otherwise falls back to API URL
 export const analyticsClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_ANALYTICS_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: getServiceUrl(process.env.NEXT_PUBLIC_ANALYTICS_URL),
   headers: {
     'Content-Type': 'application/json',
   },

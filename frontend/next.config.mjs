@@ -23,11 +23,19 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    // Read API URL from environment variable at runtime (server startup)
+    // This allows the URL to be set in the container app without rebuilding
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:8000';
+    
+    // Also handle /health endpoint
     return [
       {
         source: '/api/:path*',
         destination: `${apiUrl}/api/:path*`,
+      },
+      {
+        source: '/health',
+        destination: `${apiUrl}/health`,
       },
     ];
   },

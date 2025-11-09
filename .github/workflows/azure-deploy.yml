@@ -159,21 +159,23 @@ jobs:
           cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
 
-      - name: Build and push frontend image
+      - name: Build and push frontend image (placeholder)
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          # Note: NEXT_PUBLIC_API_URL should be set at build time for browser code
-          # The frontend code now uses full URLs directly (no proxy layer)
-          # NEXT_PUBLIC_API_URL will be set as a container app environment variable
-          # but it needs to be available at build time for browser code to access it
+          # Note: This is a placeholder build. The actual build with correct NEXT_PUBLIC_API_URL
+          # will happen in the deploy-frontend step after we know the backend URL.
+          # This build is mainly for caching dependencies.
           build-args: |
-            NEXT_PUBLIC_API_URL=
+            NEXT_PUBLIC_API_URL=https://placeholder.azurecontainerapps.io
+            NEXT_PUBLIC_CRM_URL=
+            NEXT_PUBLIC_TASK_URL=
+            NEXT_PUBLIC_EMAIL_URL=
+            NEXT_PUBLIC_ANALYTICS_URL=
           tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.SHORT_SHA }}
+            ${{ env.FRONTEND_IMAGE }}:placeholder
           labels: |
             org.opencontainers.image.created=${{ steps.tags.outputs.BUILD_DATE }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -596,6 +598,9 @@ jobs:
     needs: deploy-backend
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Log in to Azure
         uses: azure/login@v1
         with:
@@ -663,7 +668,41 @@ jobs:
             exit 1
           fi
           echo "✅ Backend URL verified: $BACKEND_URL"
-          echo "This URL will be set as NEXT_PUBLIC_API_URL in the frontend container app"
+          echo "This URL will be used to build the frontend image with NEXT_PUBLIC_API_URL"
+
+      - name: Set image tags for rebuild
+        id: rebuild-tags
+        run: |
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx for frontend rebuild
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry for rebuild
+        run: |
+          echo "$ACR_PASSWORD" | docker login ${{ secrets.ACR_NAME }}.azurecr.io --username "$ACR_USERNAME" --password-stdin
+
+      - name: Rebuild and push frontend image with correct API URL
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ steps.backend-url.outputs.url }}
+            NEXT_PUBLIC_CRM_URL=
+            NEXT_PUBLIC_TASK_URL=
+            NEXT_PUBLIC_EMAIL_URL=
+            NEXT_PUBLIC_ANALYTICS_URL=
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.rebuild-tags.outputs.SHORT_SHA }}
+          labels: |
+            org.opencontainers.image.created=${{ steps.rebuild-tags.outputs.BUILD_DATE }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
       - name: Deploy frontend to Container Apps
         uses: azure/CLI@v1

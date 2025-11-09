@@ -15,8 +15,10 @@ env:
   BACKEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-api
   FRONTEND_IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/realtoros-frontend
   CONTAINER_ENV_NAME: realtoros-env
-  # Note: LOCATION is only used when creating new Container App environments
-  # Existing environments may be in different regions (e.g., East US)
+  # LOCATION is used when creating new Container App environments
+  # If the environment already exists, this setting won't affect it
+  # Note: If database is in a different region, there will be cross-region latency (~50-100ms)
+  # but functionality will work normally. For best performance, keep all resources in the same region.
   LOCATION: canadacentral
   DB_SERVER_NAME: realtoros-db
   DB_NAME: realtoros
@@ -328,6 +330,14 @@ jobs:
         run: |
           echo "Running Alembic migrations..."
           echo "${{ env.ACR_PASSWORD }}" | docker login ${{ env.ACR_LOGIN_SERVER }} --username "${{ env.ACR_USERNAME }}" --password-stdin
+          
+          # Set CORS_ORIGINS for migration (not critical, just needs a valid value)
+          if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
+            CORS_VALUE="${{ secrets.CORS_ORIGINS }}"
+          else
+            CORS_VALUE="https://realtoros-frontend.${{ env.LOCATION }}.azurecontainerapps.io"
+          fi
+          
           docker run --rm \
             -e ENVIRONMENT=production \
             -e DEBUG=false \
@@ -345,7 +355,7 @@ jobs:
             -e ALGORITHM="HS256" \
             -e ACCESS_TOKEN_EXPIRE_MINUTES="1440" \
             -e LOG_LEVEL=INFO \
-            -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
+            -e CORS_ORIGINS="${CORS_VALUE}" \
             ${{ env.BACKEND_IMAGE }}:latest \
             alembic upgrade head
 
@@ -360,19 +370,35 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Check if Container App environment exists
+      - name: Check and create Container App environment in correct region
         uses: azure/CLI@v1
         with:
           inlineScript: |
             # Check if container app environment exists
             if ! az containerapp env show --name ${{ env.CONTAINER_ENV_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
-              echo "Creating Container App environment..."
+              echo "Creating Container App environment in ${{ env.LOCATION }}..."
               az containerapp env create \
                 --name ${{ env.CONTAINER_ENV_NAME }} \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --location ${{ env.LOCATION }}
             else
-              echo "Container App environment already exists"
+              # Check if environment is in the correct region
+              ENV_LOCATION=$(az containerapp env show \
+                --name ${{ env.CONTAINER_ENV_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --query location -o tsv)
+              
+              if [ "$ENV_LOCATION" != "${{ env.LOCATION }}" ]; then
+                echo "⚠️  WARNING: Container App environment exists in $ENV_LOCATION, but desired location is ${{ env.LOCATION }}"
+                echo "⚠️  Container Apps Environment cannot be migrated. You need to:"
+                echo "   1. Delete existing container apps (backend and frontend)"
+                echo "   2. Delete the existing environment"
+                echo "   3. Re-run this workflow to create environment in ${{ env.LOCATION }}"
+                echo "   Or use the migration script: deploy/scripts/migrate-to-canadacentral.sh"
+                exit 1
+              else
+                echo "✅ Container App environment exists in correct region: $ENV_LOCATION"
+              fi
             fi
 
       - name: Get ACR credentials for deployment
@@ -413,6 +439,19 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --remove-env-vars AWS_SES_ACCESS_KEY_ID AWS_SES_SECRET_ACCESS_KEY 2>/dev/null || echo "Old AWS_SES_* variables not found (or already removed)"
               
+              # Get current CORS_ORIGINS to preserve it if secret is not set
+              CURRENT_CORS=$(az containerapp show \
+                --name ${{ env.BACKEND_APP_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --query "properties.template.containers[0].env[?name=='CORS_ORIGINS'].value" -o tsv)
+              
+              # Use secret if available, otherwise keep current value (will be updated by auto-update step)
+              if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
+                CORS_VALUE="${{ secrets.CORS_ORIGINS }}"
+              else
+                CORS_VALUE="${CURRENT_CORS:-https://realtoros-frontend.${{ env.LOCATION }}.azurecontainerapps.io}"
+              fi
+              
               # Update with correct environment variables
               az containerapp update \
                 --name ${{ env.BACKEND_APP_NAME }} \
@@ -438,9 +477,18 @@ jobs:
                   ALGORITHM="HS256" \
                   ACCESS_TOKEN_EXPIRE_MINUTES="1440" \
                   LOG_LEVEL=INFO \
-                  CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}"
+                  CORS_ORIGINS="${CORS_VALUE}"
             else
               echo "Creating new backend container app..."
+              # Use placeholder CORS_ORIGINS if secret is not set - will be updated automatically after frontend deployment
+              CORS_PLACEHOLDER="https://realtoros-frontend.${{ env.LOCATION }}.azurecontainerapps.io"
+              if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
+                CORS_INITIAL_VALUE="${{ secrets.CORS_ORIGINS }}"
+              else
+                CORS_INITIAL_VALUE="$CORS_PLACEHOLDER"
+              fi
+              echo "Using CORS_ORIGINS: $CORS_INITIAL_VALUE (will be updated to actual frontend URL after deployment)"
+              
               az containerapp create \
                 --name ${{ env.BACKEND_APP_NAME }} \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -474,7 +522,7 @@ jobs:
                   ALGORITHM="HS256" \
                   ACCESS_TOKEN_EXPIRE_MINUTES="1440" \
                   LOG_LEVEL=INFO \
-                  CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}"
+                  CORS_ORIGINS="${CORS_INITIAL_VALUE}"
             fi
 
   deploy-frontend:
@@ -617,6 +665,60 @@ jobs:
               echo "⚠️  WARNING: NEXT_PUBLIC_API_URL mismatch!"
               echo "  Expected: $BACKEND_URL"
               echo "  Actual: $ACTUAL_API_URL"
+            fi
+
+      - name: Get frontend URL and update backend CORS_ORIGINS
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Get frontend URL
+            FRONTEND_URL=$(az containerapp show \
+              --name ${{ env.FRONTEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            
+            if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" = "" ]; then
+              echo "⚠️  WARNING: Could not get frontend URL. CORS_ORIGINS will use GitHub Secret value."
+              exit 0
+            fi
+            
+            FRONTEND_FULL_URL="https://$FRONTEND_URL"
+            echo "Frontend URL: $FRONTEND_FULL_URL"
+            
+            # Get current CORS_ORIGINS from backend
+            CURRENT_CORS=$(az containerapp show \
+              --name ${{ env.BACKEND_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query "properties.template.containers[0].env[?name=='CORS_ORIGINS'].value" -o tsv)
+            
+            # Build new CORS_ORIGINS: use frontend URL, append any additional origins from secret if provided
+            if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
+              # If secret exists, combine frontend URL with secret values (comma-separated)
+              NEW_CORS_ORIGINS="$FRONTEND_FULL_URL,${{ secrets.CORS_ORIGINS }}"
+              # Remove duplicates
+              NEW_CORS_ORIGINS=$(echo "$NEW_CORS_ORIGINS" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+            else
+              # If no secret, just use frontend URL
+              NEW_CORS_ORIGINS="$FRONTEND_FULL_URL"
+            fi
+            
+            # Only update if CORS_ORIGINS has changed
+            if [ "$CURRENT_CORS" != "$NEW_CORS_ORIGINS" ]; then
+              echo "Updating backend CORS_ORIGINS..."
+              echo "  Old: $CURRENT_CORS"
+              echo "  New: $NEW_CORS_ORIGINS"
+              
+              # Get all current environment variables
+              az containerapp update \
+                --name ${{ env.BACKEND_APP_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --set-env-vars \
+                  CORS_ORIGINS="$NEW_CORS_ORIGINS" \
+                --output table
+              
+              echo "✅ Backend CORS_ORIGINS updated successfully"
+            else
+              echo "✅ Backend CORS_ORIGINS is already correct: $NEW_CORS_ORIGINS"
             fi
 
   health-check:

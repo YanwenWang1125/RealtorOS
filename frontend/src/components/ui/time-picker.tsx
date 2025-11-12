@@ -39,6 +39,10 @@ export function TimePicker({
   const minuteContainerRef = React.useRef<HTMLDivElement>(null)
   const hourButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({})
   const minuteButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({})
+  
+  // Refs for wheel event handlers
+  const hourWheelHandlerRef = React.useRef<((e: WheelEvent) => void) | null>(null)
+  const minuteWheelHandlerRef = React.useRef<((e: WheelEvent) => void) | null>(null)
 
   // Update internal state when external value changes
   React.useEffect(() => {
@@ -83,24 +87,51 @@ export function TimePicker({
     }
   }, [minute, open])
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>, type: "hour" | "minute") => {
-    e.preventDefault()
-    const arr = type === "hour" ? hours : minutes
-    const current = type === "hour" ? hour : minute
-    const index = arr.indexOf(current)
-    let next = index + (e.deltaY > 0 ? 1 : -1)
-    if (next < 0) next = arr.length - 1
-    if (next >= arr.length) next = 0
-    const nextValue = arr[next]
-    
-    if (type === "hour") {
-      setHour(nextValue)
-      onChange(`${nextValue}:${minute}`)
-    } else {
-      setMinute(nextValue)
-      onChange(`${hour}:${nextValue}`)
+  // Create wheel event handlers that can preventDefault
+  React.useEffect(() => {
+    const createWheelHandler = (type: "hour" | "minute") => {
+      return (e: WheelEvent) => {
+        e.preventDefault()
+        const arr = type === "hour" ? hours : minutes
+        const current = type === "hour" ? hour : minute
+        const index = arr.indexOf(current)
+        let next = index + (e.deltaY > 0 ? 1 : -1)
+        if (next < 0) next = arr.length - 1
+        if (next >= arr.length) next = 0
+        const nextValue = arr[next]
+        
+        if (type === "hour") {
+          setHour(nextValue)
+          onChange(`${nextValue}:${minute}`)
+        } else {
+          setMinute(nextValue)
+          onChange(`${hour}:${nextValue}`)
+        }
+      }
     }
-  }
+
+    hourWheelHandlerRef.current = createWheelHandler("hour")
+    minuteWheelHandlerRef.current = createWheelHandler("minute")
+
+    const hourContainer = hourContainerRef.current
+    const minuteContainer = minuteContainerRef.current
+
+    if (hourContainer && hourWheelHandlerRef.current) {
+      hourContainer.addEventListener("wheel", hourWheelHandlerRef.current, { passive: false })
+    }
+    if (minuteContainer && minuteWheelHandlerRef.current) {
+      minuteContainer.addEventListener("wheel", minuteWheelHandlerRef.current, { passive: false })
+    }
+
+    return () => {
+      if (hourContainer && hourWheelHandlerRef.current) {
+        hourContainer.removeEventListener("wheel", hourWheelHandlerRef.current)
+      }
+      if (minuteContainer && minuteWheelHandlerRef.current) {
+        minuteContainer.removeEventListener("wheel", minuteWheelHandlerRef.current)
+      }
+    }
+  }, [hour, minute, onChange])
 
   const displayValue = value || (hour && minute ? `${hour}:${minute}` : placeholder)
   const isValue = Boolean(value)
@@ -131,7 +162,6 @@ export function TimePicker({
           {/* Hour Column */}
           <div
             ref={hourContainerRef}
-            onWheel={(e) => handleWheel(e, "hour")}
             className="flex-1 max-h-48 overflow-y-auto text-center scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-thumb-rounded-full"
           >
             <div className="text-xs text-muted-foreground mb-1 font-medium tracking-wide">Hour</div>
@@ -165,7 +195,6 @@ export function TimePicker({
           {/* Minute Column */}
           <div
             ref={minuteContainerRef}
-            onWheel={(e) => handleWheel(e, "minute")}
             className="flex-1 max-h-48 overflow-y-auto text-center scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-thumb-rounded-full"
           >
             <div className="text-xs text-muted-foreground mb-1 font-medium tracking-wide">Minute</div>

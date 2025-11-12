@@ -39,6 +39,14 @@ export const clientsApi = {
     return data;
   },
 
+  bulkDelete: async (ids: number[]) => {
+    const path = getApiPath(crmClient.defaults.baseURL, '/clients/bulk');
+    const { data } = await crmClient.delete<{ success: boolean; deleted_count: number; failed_ids: number[]; total_requested: number }>(path, {
+      data: { ids }
+    });
+    return data;
+  },
+
   getTasks: async (id: number) => {
     const path = getApiPath(crmClient.defaults.baseURL, `/clients/${id}/tasks`);
     const { data } = await crmClient.get<Task[]>(path);

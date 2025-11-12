@@ -31,7 +31,7 @@ export function StatsGrid({ stats, isLoading }: StatsGridProps) {
       title: 'Active Clients',
       value: stats.active_clients,
       icon: UserCheck,
-      link: '/clients?stage=lead,negotiating,under_contract',
+      link: '/clients?stage=lead,negotiating',
       color: 'text-green-600'
     },
     {

@@ -2,7 +2,7 @@
 
 > **An intelligent CRM system that automates client follow-ups, generates personalized emails using AI, and tracks email engagement in real-time.**
 
-RealtorOS helps real estate agents never miss a follow-up by automatically scheduling tasks, generating personalized emails with OpenAI, sending them via AWS SES, and tracking engagement through secure webhooks. Built with tenant isolation and multi-agent support.
+RealtorOS helps real estate agents never miss a follow-up by automatically scheduling tasks, generating personalized emails with OpenAI, sending them via SendGrid, and tracking engagement through secure webhooks. Built with tenant isolation and multi-agent support.
 
 ---
 
@@ -29,7 +29,7 @@ RealtorOS helps real estate agents never miss a follow-up by automatically sched
 - 🏠 **Complete Client Management** - Full CRUD operations with pipeline stages (lead → closed)
 - 🤖 **AI-Powered Email Generation** - Personalized follow-up emails using OpenAI GPT models
 - ⏰ **Automated Follow-Up System** - Intelligent scheduling with predefined sequences (Day 1, Day 3, Week 1, Week 2, Month 1)
-- 📧 **Email Automation** - AWS SES integration with real-time engagement tracking
+- 📧 **Email Automation** - SendGrid integration with real-time engagement tracking
 - 📊 **Dashboard Analytics** - KPIs, open rates, click rates, conversion metrics (tenant-scoped)
 - 🔒 **Secure Authentication** - JWT-based authentication with Google OAuth support
 - 🎯 **Task Management** - Track, reschedule, and manage follow-up tasks
@@ -48,7 +48,7 @@ RealtorOS helps real estate agents never miss a follow-up by automatically sched
 - **PostgreSQL** - Production-grade relational database with SQLAlchemy ORM
 - **APScheduler** - In-process task scheduling for automated follow-ups
 - **OpenAI API** - AI-powered email content generation (GPT-3.5/GPT-4)
-- **AWS SES** - Reliable email delivery via boto3
+- **SendGrid** - Reliable email delivery via SendGrid API
 - **Alembic** - Database migrations and version control
 - **JWT** - Token-based authentication
 - **Google OAuth** - Social authentication support
@@ -73,7 +73,7 @@ Frontend (Next.js) → FastAPI Backend → PostgreSQL
                           ↓
                     APScheduler (in-process)
                           ↓
-              OpenAI API | AWS SES
+              OpenAI API | SendGrid
 ```
 
 ### Key Services
@@ -81,7 +81,7 @@ Frontend (Next.js) → FastAPI Backend → PostgreSQL
 1. **CRM Service** - Client data operations (CRUD) with agent scoping
 2. **Scheduler Service** - Follow-up scheduling and task management
 3. **AI Agent Service** - OpenAI email generation
-4. **Email Service** - AWS SES integration and email logging (async, non-blocking)
+4. **Email Service** - SendGrid integration and email logging (async, non-blocking)
 5. **Dashboard Service** - Analytics and KPI aggregation (agent-scoped)
 6. **Agent Service** - Authentication and agent management
 
@@ -180,11 +180,9 @@ realtoros/
    Required variables (see [Configuration](#-configuration) section):
    - `DATABASE_URL` - PostgreSQL connection string
    - `OPENAI_API_KEY` - OpenAI API key for email generation
-   - `AWS_REGION` - AWS region for SES
-   - `AWS_ACCESS_KEY_ID` - AWS access key for SES
-   - `AWS_SECRET_ACCESS_KEY` - AWS secret key for SES
-   - `SES_FROM_EMAIL` - Verified sender email in SES
-   - `SES_FROM_NAME` - Display name for emails
+   - `SENDGRID_API_KEY` - SendGrid API key for email sending
+   - `SENDGRID_FROM_EMAIL` - Verified sender email in SendGrid
+   - `SENDGRID_FROM_NAME` - Display name for emails
    - `SECRET_KEY` - Secret key for JWT encryption (minimum 32 characters)
    - `GOOGLE_CLIENT_ID` - Google OAuth client ID (optional)
    - `GOOGLE_CLIENT_SECRET` - Google OAuth client secret (optional)
@@ -291,12 +289,10 @@ OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4-turbo-preview
 OPENAI_MAX_TOKENS=500
 
-# Amazon SES (for email delivery)
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=AKIA...
-AWS_SECRET_ACCESS_KEY=...
-SES_FROM_EMAIL=agent@yourdomain.com
-SES_FROM_NAME=Your Real Estate Team
+# SendGrid (for email delivery)
+SENDGRID_API_KEY=SG...
+SENDGRID_FROM_EMAIL=agent@yourdomain.com
+SENDGRID_FROM_NAME=Your Real Estate Team
 
 # Authentication
 SECRET_KEY=your-secret-key-minimum-32-characters-long
@@ -375,7 +371,7 @@ The system uses **PostgreSQL** with **SQLAlchemy ORM** and **asyncpg** driver fo
 - `to_email`, `subject`, `body`
 - `from_name`, `from_email`
 - `status` (queued, sent, delivered, opened, clicked, bounced, failed, etc.)
-- `ses_message_id` (indexed for webhook lookups)
+- `sendgrid_message_id` (indexed for webhook lookups)
 - `created_at`, `sent_at`, `opened_at`, `clicked_at`
 - `error_message`, `webhook_events` (JSON array)
 
@@ -485,7 +481,7 @@ When a new client is created, the system automatically creates 5 follow-up tasks
 **Automated Processing**
 - APScheduler runs every 60 seconds
 - Processes all due tasks automatically
-- Generates AI emails and sends via AWS SES
+- Generates AI emails and sends via SendGrid
 - Updates task and email status
 
 ### AI-Powered Email Generation
@@ -513,8 +509,8 @@ When a new client is created, the system automatically creates 5 follow-up tasks
 
 ### Email Management & Tracking
 
-**AWS SES Integration**
-- Reliable email delivery via boto3
+**SendGrid Integration**
+- Reliable email delivery via SendGrid API
 - HTML email support
 - Automatic message ID tracking
 - **Async, non-blocking** email sending (uses `asyncio.to_thread`)
@@ -526,7 +522,7 @@ When a new client is created, the system automatically creates 5 follow-up tasks
 
 **Webhook Integration** (Future)
 - Secure webhook processing for engagement events
-- Automatic status updates from SES events
+- Automatic status updates from SendGrid webhook events
 - Full event history stored in JSON array
 
 ### Dashboard & Analytics
@@ -649,7 +645,7 @@ This automated script creates all Azure resources, builds/pushes images, deploys
 - [ ] Set `ENVIRONMENT=production` and `DEBUG=false`
 - [ ] Use strong `SECRET_KEY` (minimum 32 characters)
 - [ ] Configure production PostgreSQL database
-- [ ] Set up AWS SES (verify sender email, configure credentials)
+- [ ] Set up SendGrid (verify sender email, configure API key)
 - [ ] Configure OpenAI API key
 - [ ] Configure CORS origins for production domain
 - [ ] Run database migrations (`alembic upgrade head`)
@@ -671,7 +667,7 @@ This automated script creates all Azure resources, builds/pushes images, deploys
 - **Backend**: AWS ECS, DigitalOcean App Platform, Railway, Render, Fly.io
 - **Frontend**: Vercel (recommended), Netlify, Azure Static Web Apps
 - **Database**: Azure PostgreSQL, AWS RDS, Supabase
-- **Email**: AWS SES (current) or Azure Communication Services
+- **Email**: SendGrid (current) or Azure Communication Services
 
 ### Docker Compose
 
@@ -712,7 +708,7 @@ Tech Stack:
 - Backend: FastAPI with APScheduler (NOT Celery/Redis)
 - Frontend: Next.js 14 with App Router
 - Database: PostgreSQL 18
-- Email: AWS SES
+- Email: SendGrid
 - AI: OpenAI GPT-4 for email generation
 
 Deployment Resources:
@@ -756,7 +752,7 @@ Task: [YOUR SPECIFIC REQUEST]
 - Verify network connectivity in Docker containers
 
 **Issue: Email sending fails**
-- **Solution**: Verify AWS SES credentials are correct. Ensure sender email is verified in SES. Check AWS region matches configuration.
+- **Solution**: Verify SendGrid API key is correct. Ensure sender email is verified in SendGrid. Check API key has proper permissions.
 
 **Issue: Module not found errors in frontend**
 - **Solution**: Run `npm install` in the frontend directory. Ensure all dependencies are installed.
@@ -772,7 +768,7 @@ Task: [YOUR SPECIFIC REQUEST]
 - [x] Client management (CRUD operations) with tenant scoping
 - [x] Automated follow-up task creation
 - [x] AI-powered email generation (OpenAI)
-- [x] Email sending via AWS SES (async, non-blocking)
+- [x] Email sending via SendGrid (async, non-blocking)
 - [x] Dashboard analytics and KPIs (agent-scoped)
 - [x] Task management and scheduling (APScheduler)
 - [x] JWT authentication with Google OAuth support
@@ -781,7 +777,7 @@ Task: [YOUR SPECIFIC REQUEST]
 - [x] Email preview functionality
 
 ### 🚧 Phase 2 (In Progress)
-- [ ] AWS SES webhook integration for engagement tracking
+- [x] SendGrid webhook integration for engagement tracking
 - [ ] Advanced email analytics (charts, trends)
 - [ ] Bulk operations (import clients, bulk email)
 - [ ] Custom email templates

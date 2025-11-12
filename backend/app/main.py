@@ -5,14 +5,19 @@ This module initializes the FastAPI app with all routes, middleware,
 and configuration for the RealtorOS CRM system.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.config import settings
 from app.api.routes import clients, tasks, emails, dashboard, agents
-from app.utils.logger import setup_logging
+from app.utils.logger import setup_logging, get_logger
 from contextlib import asynccontextmanager
 from app.db.postgresql import init_db, close_db
 from app.scheduler import start_scheduler, stop_scheduler, get_scheduler_status
+
+logger = get_logger(__name__)
 
 # Initialize structured logging using LOG_LEVEL from settings
 setup_logging()
@@ -35,14 +40,41 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# CORS middleware - MUST be added before exception handlers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Global exception handlers - CORS middleware will add headers automatically
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Handle HTTP exceptions."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation errors."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors()}
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle all other exceptions."""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error", "error": str(exc) if settings.DEBUG else "An error occurred"}
+    )
 
 # Include routers
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])

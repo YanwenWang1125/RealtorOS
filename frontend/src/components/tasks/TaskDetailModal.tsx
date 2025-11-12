@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { Task } from '@/lib/types/task.types';
 import { useClient } from '@/lib/hooks/queries/useClients';
 import { useEmail } from '@/lib/hooks/queries/useEmails';
+import { useTask } from '@/lib/hooks/queries/useTasks';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -30,10 +30,15 @@ interface TaskDetailModalProps {
 
 export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalProps) {
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
-  const { data: client, isLoading: clientLoading } = useClient(task.client_id);
+  // Use useTask hook to get the latest task data, which will auto-refresh when task is updated
+  const { data: latestTask } = useTask(task.id, { enabled: open });
+  // Use latest task data if available, otherwise fall back to prop
+  const currentTask = latestTask || task;
+  
+  const { data: client, isLoading: clientLoading } = useClient(currentTask.client_id);
   const { data: email, isLoading: emailLoading } = useEmail(
-    task.email_sent_id || 0,
-    { enabled: !!task.email_sent_id }
+    currentTask.email_sent_id || 0,
+    { enabled: !!currentTask.email_sent_id }
   );
 
   return (
@@ -42,10 +47,9 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
         <DialogHeader>
           <div className="flex justify-between items-start">
             <div>
-              <DialogTitle className="text-2xl">{task.followup_type}</DialogTitle>
-              <DialogDescription>Task #{task.id}</DialogDescription>
+              <DialogTitle className="text-2xl">{currentTask.followup_type}</DialogTitle>
             </div>
-            <TaskActionsMenu task={task} />
+            <TaskActionsMenu task={currentTask} />
           </div>
         </DialogHeader>
 
@@ -59,33 +63,33 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Scheduled:</span>
-                <span className="text-sm">{formatDateTime(task.scheduled_for)}</span>
+                <span className="text-sm">{formatDateTime(currentTask.scheduled_for)}</span>
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Status:</span>
-                <TaskStatusBadge status={task.status} />
+                <TaskStatusBadge status={currentTask.status} />
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Priority:</span>
-                <TaskPriorityBadge priority={task.priority} />
+                <TaskPriorityBadge priority={currentTask.priority} />
               </div>
 
-              {task.notes && (
+              {currentTask.notes && (
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Notes:</span>
                   </div>
-                  <p className="text-sm text-muted-foreground pl-6">{task.notes}</p>
+                  <p className="text-sm text-muted-foreground pl-6">{currentTask.notes}</p>
                 </div>
               )}
 
-              {task.completed_at && (
+              {currentTask.completed_at && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Completed:</span>
-                  <span className="text-sm">{formatDateTime(task.completed_at)}</span>
+                  <span className="text-sm">{formatDateTime(currentTask.completed_at)}</span>
                 </div>
               )}
             </CardContent>
@@ -121,7 +125,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
           </Card>
 
           {/* Email Preview (if pending) */}
-          {task.status === 'pending' && !task.email_sent_id && client && client.email && (
+          {currentTask.status === 'pending' && !currentTask.email_sent_id && client && client.email && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Email Preview</CardTitle>
@@ -145,7 +149,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
           )}
 
           {/* Email Info (if sent) */}
-          {task.email_sent_id && (
+          {currentTask.email_sent_id && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Email Sent</CardTitle>
@@ -196,10 +200,10 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
           <EmailPreviewModal
             open={emailPreviewOpen}
             onOpenChange={setEmailPreviewOpen}
-            clientId={task.client_id}
+            clientId={currentTask.client_id}
             clientEmail={client.email}
             clientName={client.name}
-            taskId={task.id}
+            taskId={currentTask.id}
           />
         )}
       </DialogContent>

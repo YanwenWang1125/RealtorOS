@@ -28,7 +28,7 @@ class DashboardService:
             select(func.count(Client.id)).where(
                 Client.agent_id == agent_id,
                 Client.is_deleted == False,  # noqa: E712
-                Client.stage.in_(["lead", "negotiating", "under_contract"])
+                Client.stage.in_(["lead", "negotiating"])
             )
         )
         pending_tasks = await self._scalar(
@@ -149,7 +149,7 @@ class DashboardService:
         return activities
 
     async def get_client_stats(self, agent_id: int) -> Dict[str, int]:
-        stages = ["lead", "negotiating", "under_contract", "closed", "lost"]
+        stages = ["lead", "negotiating", "closed", "lost"]
         stats: Dict[str, int] = {}
         for s in stages:
             count = await self._scalar(

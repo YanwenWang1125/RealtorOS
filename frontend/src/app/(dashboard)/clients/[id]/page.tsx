@@ -6,7 +6,6 @@ import { useClient, useClientTasks } from '@/lib/hooks/queries/useClients';
 import { useEmails } from '@/lib/hooks/queries/useEmails';
 import { Button } from '@/components/ui/Button';
 import { ClientHeader } from '@/components/clients/ClientHeader';
-import { ClientStagePipeline } from '@/components/clients/ClientStagePipeline';
 import { ClientInfoCard } from '@/components/clients/ClientInfoCard';
 import { ClientTimeline } from '@/components/clients/ClientTimeline';
 import { ClientEmailHistory } from '@/components/clients/ClientEmailHistory';
@@ -107,9 +106,6 @@ export default function ClientDetailPage() {
           />
         </div>
       </div>
-
-      {/* Stage Pipeline */}
-      <ClientStagePipeline client={client} />
 
       {/* Info Card */}
       <ClientInfoCard client={client} />

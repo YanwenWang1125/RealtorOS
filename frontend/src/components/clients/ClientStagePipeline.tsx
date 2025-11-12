@@ -5,8 +5,10 @@ import { CLIENT_STAGE_LABELS } from '@/lib/constants/client.constants';
 import { cn } from '@/lib/utils/index';
 
 export function ClientStagePipeline({ client }: { client: Client }) {
-  const stages: ClientStage[] = ['lead', 'negotiating', 'under_contract', 'closed'];
-  const currentIndex = stages.indexOf(client.stage);
+  const stages: ClientStage[] = ['lead', 'negotiating', 'closed'];
+  // Handle deprecated 'under_contract' stage by mapping it to 'closed'
+  const displayStage = client.stage === 'under_contract' ? 'closed' : client.stage;
+  const currentIndex = stages.indexOf(displayStage);
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-2">

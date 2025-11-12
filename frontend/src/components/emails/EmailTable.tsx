@@ -18,9 +18,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EmailStatusBadge } from '@/components/emails/EmailStatusBadge';
 import { EmailEngagementIcons } from '@/components/emails/EmailEngagementIcons';
+import { Checkbox } from '@/components/ui/checkbox';
 import { formatRelativeTime } from '@/lib/utils/format';
 import { truncateText } from '@/lib/utils/formatters';
-import { Mail, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { useBulkDeleteEmails } from '@/lib/hooks/mutations';
+import { useToast } from '@/lib/hooks/ui/useToast';
+import { Mail, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
 
 interface EmailTableProps {
   emails: Email[];
@@ -42,8 +45,11 @@ export function EmailTable({
   onLimitChange
 }: EmailTableProps) {
   const router = useRouter();
+  const { toast } = useToast();
+  const bulkDeleteEmails = useBulkDeleteEmails();
   const [sortColumn, setSortColumn] = useState<keyof Email>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const handleSort = (column: keyof Email) => {
     if (sortColumn === column) {
@@ -70,6 +76,49 @@ export function EmailTable({
     });
   }, [emails, sortColumn, sortDirection]);
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(sortedEmails.map(e => e.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} email(s)?`)) {
+      return;
+    }
+
+    try {
+      const result = await bulkDeleteEmails.mutateAsync(Array.from(selectedIds));
+      toast({
+        title: "Emails deleted",
+        description: `Successfully deleted ${result.deleted_count} email(s).${result.failed_ids.length > 0 ? ` ${result.failed_ids.length} failed.` : ''}`,
+      });
+      setSelectedIds(new Set());
+    } catch (error: any) {
+      toast({
+        title: "Error deleting emails",
+        description: error.response?.data?.detail || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const allSelected = sortedEmails.length > 0 && selectedIds.size === sortedEmails.length;
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -92,10 +141,33 @@ export function EmailTable({
 
   return (
     <>
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg mb-4">
+          <span className="text-sm font-medium">
+            {selectedIds.size} email(s) selected
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteEmails.isPending}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {bulkDeleteEmails.isPending ? 'Deleting...' : `Delete ${selectedIds.size}`}
+          </Button>
+        </div>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
               <TableHead
                 className="cursor-pointer"
                 onClick={() => handleSort('client_id')}
@@ -132,10 +204,19 @@ export function EmailTable({
               return (
                 <TableRow
                   key={email.id}
-                  className="cursor-pointer hover:bg-secondary/10 hover:text-secondary transition-colors"
-                  onClick={() => router.push(`/emails/${email.id}`)}
+                  className="hover:bg-secondary/10 hover:text-secondary transition-colors"
                 >
-                  <TableCell className="font-medium">
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(email.id)}
+                      onCheckedChange={(checked) => handleSelectOne(email.id, checked as boolean)}
+                      aria-label={`Select email ${email.id}`}
+                    />
+                  </TableCell>
+                  <TableCell 
+                    className="font-medium cursor-pointer"
+                    onClick={() => router.push(`/emails/${email.id}`)}
+                  >
                     {client ? (
                       <Link
                         href={`/clients/${client.id}`}
@@ -148,15 +229,24 @@ export function EmailTable({
                       `Client #${email.client_id}`
                     )}
                   </TableCell>
-                  <TableCell className="max-w-md">
+                  <TableCell 
+                    className="max-w-md cursor-pointer"
+                    onClick={() => router.push(`/emails/${email.id}`)}
+                  >
                     <span title={email.subject}>
                       {truncateText(email.subject, 60)}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell 
+                    className="text-sm text-muted-foreground cursor-pointer"
+                    onClick={() => router.push(`/emails/${email.id}`)}
+                  >
                     {email.to_email}
                   </TableCell>
-                  <TableCell>
+                  <TableCell 
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/emails/${email.id}`)}
+                  >
                     <div className="flex items-center gap-2">
                       <EmailStatusBadge status={email.status} />
                       {email.status === 'failed' && email.error_message && (
@@ -169,7 +259,10 @@ export function EmailTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell 
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/emails/${email.id}`)}
+                  >
                     {email.sent_at ? (
                       <span className="text-sm">
                         {formatRelativeTime(email.sent_at)}
@@ -178,7 +271,10 @@ export function EmailTable({
                       <span className="text-sm text-muted-foreground">Not sent</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell 
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/emails/${email.id}`)}
+                  >
                     <EmailEngagementIcons email={email} />
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>

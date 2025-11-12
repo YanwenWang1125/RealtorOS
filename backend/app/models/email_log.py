@@ -34,7 +34,7 @@ class EmailLog(Base):
     subject = Column(String(200), nullable=False)
     body = Column(Text, nullable=False)
     status = Column(String(50), nullable=False, index=True)
-    ses_message_id = Column(String(255), nullable=True, index=True)
+    sendgrid_message_id = Column(String(255), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
     sent_at = Column(DateTime(timezone=True), nullable=True)
     opened_at = Column(DateTime(timezone=True), nullable=True)

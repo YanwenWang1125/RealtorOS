@@ -1,15 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ClientForm from '@/components/clients/ClientForm';
 import { useCreateClient } from '@/lib/hooks/mutations/useCreateClient';
 import { useToast } from '@/lib/hooks/ui/useToast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { TaskSelectionDialog } from '@/components/tasks/TaskSelectionDialog';
 
 export default function ClientCreatePage() {
   const router = useRouter();
   const { toast } = useToast();
   const createClient = useCreateClient();
+  const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [newClientId, setNewClientId] = useState<number | null>(null);
+  const [newClientName, setNewClientName] = useState<string>('');
 
   const handleSave = async (clientData: any) => {
     try {
@@ -42,11 +47,20 @@ export default function ClientCreatePage() {
 
       toast({
         title: "Client created!",
-        description: "Follow-up tasks are being scheduled in the background.",
+        description: clientData.create_tasks 
+          ? "Now select which follow-up tasks to create."
+          : "Client created successfully.",
       });
 
-      // Navigate to client detail page
-      router.push(`/clients/${newClient.id}`);
+      // If user wants to create tasks, show the task selection dialog
+      if (clientData.create_tasks) {
+        setNewClientId(newClient.id);
+        setNewClientName(newClient.name);
+        setShowTaskDialog(true);
+      } else {
+        // Navigate to client detail page
+        router.push(`/clients/${newClient.id}`);
+      }
     } catch (error: any) {
       console.error('Error creating client:', error);
       const errorMessage = 
@@ -63,6 +77,14 @@ export default function ClientCreatePage() {
     }
   };
 
+  const handleTaskDialogClose = (open: boolean) => {
+    setShowTaskDialog(open);
+    if (!open && newClientId) {
+      // Navigate to client detail page after dialog closes
+      router.push(`/clients/${newClientId}`);
+    }
+  };
+
   const handleCancel = () => {
     router.push('/clients');
   };
@@ -73,7 +95,7 @@ export default function ClientCreatePage() {
         <CardHeader>
           <CardTitle>Create New Client</CardTitle>
           <CardDescription>
-            Add a new client to your CRM. Follow-up tasks will be automatically created.
+            Add a new client to your CRM. You can optionally create follow-up tasks after saving.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -84,6 +106,15 @@ export default function ClientCreatePage() {
           />
         </CardContent>
       </Card>
+
+      {newClientId && newClientName && (
+        <TaskSelectionDialog
+          open={showTaskDialog}
+          onOpenChange={handleTaskDialogClose}
+          clientId={newClientId}
+          clientName={newClientName}
+        />
+      )}
     </div>
   );
 }

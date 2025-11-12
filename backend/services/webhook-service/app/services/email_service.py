@@ -15,22 +15,18 @@ class EmailService:
         self.session = session
 
     async def process_webhook_event(self, event_data: Dict[str, Any]) -> bool:
-        # Support both SES SNS format and legacy SendGrid format
+        # SendGrid webhook format
         message_id = (
-            event_data.get("mail", {}).get("messageId") or  # SES SNS format
-            event_data.get("ses_message_id") or  # Legacy format
-            event_data.get("sg_message_id") or  # Legacy SendGrid format
+            event_data.get("sg_message_id") or  # SendGrid message ID
             event_data.get("message_id")
         )
-        event_type = (
-            event_data.get("eventType", "").lower() or  # SES SNS format
-            event_data.get("event", "").lower()  # Legacy format
-        )
+        event_type = event_data.get("event", "").lower()
         
         if not message_id or not event_type:
+            logger.warning(f"Invalid webhook event: missing message_id or event. Data: {event_data}")
             return False
         
-        stmt = select(EmailLog).where(EmailLog.ses_message_id == message_id)
+        stmt = select(EmailLog).where(EmailLog.sendgrid_message_id == message_id)
         result = await self.session.execute(stmt)
         email_log = result.scalar_one_or_none()
         

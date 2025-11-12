@@ -5,10 +5,11 @@ Scheduler service for task and follow-up management (SQLAlchemy).
 import logging
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.task import Task
 from app.models.client import Client
+from app.models.email_log import EmailLog
 from app.schemas.task_schema import TaskCreate, TaskUpdate, TaskResponse
 from app.schemas.email_schema import EmailSendRequest
 from app.constants.followup_schedules import FOLLOWUP_SCHEDULE
@@ -98,6 +99,35 @@ class SchedulerService:
         await self.session.commit()
         return await self.get_task(task_id, agent_id)
 
+    async def delete_task(self, task_id: int, agent_id: int) -> bool:
+        """
+        Delete a task and all associated email logs.
+        Returns True if task was found and deleted, False otherwise.
+        """
+        # First check if task exists and belongs to the agent
+        task = await self.get_task(task_id, agent_id)
+        if task is None:
+            return False
+        
+        # Delete email logs associated with this task
+        await self.session.execute(
+            delete(EmailLog).where(
+                EmailLog.task_id == task_id,
+                EmailLog.agent_id == agent_id
+            )
+        )
+        
+        # Delete the task itself
+        await self.session.execute(
+            delete(Task).where(
+                Task.id == task_id,
+                Task.agent_id == agent_id
+            )
+        )
+        
+        await self.session.commit()
+        return True
+
     async def create_task(self, task_data: TaskCreate, agent_id: int) -> TaskResponse:
         task = Task(
             agent_id=agent_id,
@@ -166,6 +196,13 @@ class SchedulerService:
         # Process each task
         for task in due_tasks:
             try:
+                # Double-check task status to ensure it's still pending
+                # This prevents sending emails for tasks that were completed between query and processing
+                await self.session.refresh(task)
+                if task.status != "pending":
+                    logger.info(f"Skipping task_id={task.id} - status is '{task.status}', not 'pending'")
+                    continue
+                
                 logger.info(f"Processing task_id={task.id}, client_id={task.client_id}, followup_type={task.followup_type}")
                 
                 # Fetch the client
@@ -212,6 +249,15 @@ class SchedulerService:
                 logger.info(f"Sending email for task_id={task.id}, client_id={client.id}, to={client.email}")
                 email_response = await email_service.send_email(email_request, agent)
                 
+                # Check if email was actually sent successfully
+                if email_response.status != "sent":
+                    logger.warning(
+                        f"Email not sent successfully for task_id={task.id}. "
+                        f"Status: {email_response.status}, Error: {email_response.error_message}"
+                    )
+                    # Still mark as completed if email was logged (even if sending failed)
+                    # This prevents the task from being retried indefinitely
+                
                 # Update task: status="completed", email_sent_id, completed_at
                 stmt = (
                     update(Task)
@@ -226,7 +272,10 @@ class SchedulerService:
                 await self.session.execute(stmt)
                 await self.session.commit()
                 
-                logger.info(f"Successfully processed task_id={task.id}, client_id={client.id}, email_id={email_response.id}")
+                logger.info(
+                    f"Successfully processed task_id={task.id}, client_id={client.id}, "
+                    f"email_id={email_response.id}, email_status={email_response.status}"
+                )
                 success_count += 1
                 
             except Exception as e:

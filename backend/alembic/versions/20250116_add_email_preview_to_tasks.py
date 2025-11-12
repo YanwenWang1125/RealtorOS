@@ -1,7 +1,7 @@
 """add email_preview to tasks
 
 Revision ID: 20250116_add_email_preview
-Revises: 20250115_rename_ses_id
+Revises: 5190413f17b0
 Create Date: 2025-01-16 12:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '20250116_add_email_preview'
-down_revision = '20250115_rename_ses_id'
+down_revision = '5190413f17b0'
 branch_labels = None
 depends_on = None
 

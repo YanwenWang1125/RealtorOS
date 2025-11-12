@@ -16,7 +16,7 @@ class ClientBase(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     property_address: str = Field(..., min_length=1, max_length=200)
     property_type: str = Field(..., pattern=r'^(residential|commercial|land|other)$')
-    stage: str = Field(..., pattern=r'^(lead|negotiating|under_contract|closed|lost)$')
+    stage: str = Field(..., pattern=r'^(lead|negotiating|closed|lost)$')
     notes: Optional[str] = Field(None, max_length=1000)
     custom_fields: Dict[str, Any] = Field(default_factory=dict)
 
@@ -31,7 +31,7 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     property_address: Optional[str] = Field(None, min_length=1, max_length=200)
     property_type: Optional[str] = Field(None, pattern=r'^(residential|commercial|land|other)$')
-    stage: Optional[str] = Field(None, pattern=r'^(lead|negotiating|under_contract|closed|lost)$')
+    stage: Optional[str] = Field(None, pattern=r'^(lead|negotiating|closed|lost)$')
     notes: Optional[str] = Field(None, max_length=1000)
     custom_fields: Optional[Dict[str, Any]] = None
 

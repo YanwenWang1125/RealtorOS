@@ -5,8 +5,9 @@ This module provides endpoints for email generation, sending, and history
 in the RealtorOS CRM system.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from typing import List, Optional
+from pydantic import BaseModel
 from app.schemas.email_schema import EmailPreviewRequest, EmailSendRequest, EmailResponse
 from app.services.ai_agent import AIAgent
 from app.services.email_service import EmailService
@@ -87,6 +88,13 @@ async def send_email(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # Check if task is already completed - don't send email if it is
+    if task.status == "completed":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Task {request.task_id} is already completed. Cannot send email for completed tasks."
+        )
+    
     # Send the email
     email_response = await email_service.send_email(request, agent)
     
@@ -113,7 +121,41 @@ async def send_email(
     
     return email_response
 
-# This route must be LAST to avoid matching /preview or /send as email_id
+class BulkDeleteRequest(BaseModel):
+    ids: List[int]
+
+@router.delete("/bulk")
+async def bulk_delete_emails(
+    request: BulkDeleteRequest = Body(...),
+    agent: Agent = Depends(get_current_agent),
+    email_service: EmailService = Depends(get_email_service)
+):
+    """Bulk delete multiple email logs."""
+    if not request.ids:
+        raise HTTPException(status_code=400, detail="No email IDs provided")
+    
+    deleted_count = 0
+    failed_ids = []
+    
+    for email_id in request.ids:
+        try:
+            deleted = await email_service.delete_email(email_id, agent.id)
+            if deleted:
+                deleted_count += 1
+            else:
+                failed_ids.append(email_id)
+        except Exception as e:
+            logger.error(f"Error deleting email {email_id}: {str(e)}")
+            failed_ids.append(email_id)
+    
+    return {
+        "success": True,
+        "deleted_count": deleted_count,
+        "failed_ids": failed_ids,
+        "total_requested": len(request.ids)
+    }
+
+# This route must be LAST to avoid matching /preview, /send, or /bulk as email_id
 @router.get("/{email_id}", response_model=EmailResponse)
 async def get_email(
     email_id: int,
@@ -125,5 +167,17 @@ async def get_email(
     if not email:
         raise HTTPException(status_code=404, detail="Email not found")
     return email
+
+@router.delete("/{email_id}")
+async def delete_email(
+    email_id: int,
+    agent: Agent = Depends(get_current_agent),
+    email_service: EmailService = Depends(get_email_service)
+):
+    """Delete an email log."""
+    deleted = await email_service.delete_email(email_id, agent.id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Email not found")
+    return {"success": True}
 
 

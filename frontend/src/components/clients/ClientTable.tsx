@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Table,
@@ -12,11 +13,14 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Client } from '@/lib/types/client.types';
 import { CLIENT_STAGE_COLORS, CLIENT_STAGE_LABELS, PROPERTY_TYPE_LABELS } from '@/lib/constants/client.constants';
 import { formatRelativeTime } from '@/lib/utils/format';
 import { normalizeClientStage } from '@/lib/utils/formatters';
-import { Eye } from 'lucide-react';
+import { useBulkDeleteClients } from '@/lib/hooks/mutations';
+import { useToast } from '@/lib/hooks/ui/useToast';
+import { Eye, Trash2 } from 'lucide-react';
 
 interface ClientTableProps {
   clients: Client[];
@@ -34,6 +38,53 @@ interface ClientTableWithSortProps extends ClientTableProps {
 
 export function ClientTable({ clients, loading, sortColumn, sortDirection, onSort }: ClientTableWithSortProps) {
   const router = useRouter();
+  const { toast } = useToast();
+  const bulkDeleteClients = useBulkDeleteClients();
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(clients.map(c => c.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} client(s)? This will also delete all associated tasks and emails.`)) {
+      return;
+    }
+
+    try {
+      const result = await bulkDeleteClients.mutateAsync(Array.from(selectedIds));
+      toast({
+        title: "Clients deleted",
+        description: `Successfully deleted ${result.deleted_count} client(s).${result.failed_ids.length > 0 ? ` ${result.failed_ids.length} failed.` : ''}`,
+      });
+      setSelectedIds(new Set());
+    } catch (error: any) {
+      toast({
+        title: "Error deleting clients",
+        description: error.response?.data?.detail || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const allSelected = clients.length > 0 && selectedIds.size === clients.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < clients.length;
 
   const handleSort = (column: SortColumn) => {
     if (onSort) {
@@ -64,6 +115,7 @@ export function ClientTable({ clients, loading, sortColumn, sortDirection, onSor
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12"></TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Property Address</TableHead>
@@ -95,12 +147,36 @@ export function ClientTable({ clients, loading, sortColumn, sortDirection, onSor
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>
-            <SortButton column="name">Name</SortButton>
-          </TableHead>
+    <div className="space-y-4">
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedIds.size} client(s) selected
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteClients.isPending}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {bulkDeleteClients.isPending ? 'Deleting...' : `Delete ${selectedIds.size}`}
+          </Button>
+        </div>
+      )}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={handleSelectAll}
+                aria-label="Select all"
+              />
+            </TableHead>
+            <TableHead>
+              <SortButton column="name">Name</SortButton>
+            </TableHead>
           <TableHead>
             <SortButton column="email">Email</SortButton>
           </TableHead>
@@ -123,14 +199,43 @@ export function ClientTable({ clients, loading, sortColumn, sortDirection, onSor
         {clients.map((client) => (
           <TableRow 
             key={client.id} 
-            className="hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors"
-            onClick={() => router.push(`/clients/${client.id}`)}
+            className="hover:bg-secondary/10 hover:text-secondary transition-colors"
           >
-            <TableCell className="font-medium">{client.name}</TableCell>
-            <TableCell>{client.email}</TableCell>
-            <TableCell>{client.property_address}</TableCell>
-            <TableCell>{PROPERTY_TYPE_LABELS[client.property_type]}</TableCell>
-            <TableCell>
+            <TableCell onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                checked={selectedIds.has(client.id)}
+                onCheckedChange={(checked) => handleSelectOne(client.id, checked as boolean)}
+                aria-label={`Select ${client.name}`}
+              />
+            </TableCell>
+            <TableCell 
+              className="font-medium cursor-pointer"
+              onClick={() => router.push(`/clients/${client.id}`)}
+            >
+              {client.name}
+            </TableCell>
+            <TableCell 
+              className="cursor-pointer"
+              onClick={() => router.push(`/clients/${client.id}`)}
+            >
+              {client.email}
+            </TableCell>
+            <TableCell 
+              className="cursor-pointer"
+              onClick={() => router.push(`/clients/${client.id}`)}
+            >
+              {client.property_address}
+            </TableCell>
+            <TableCell 
+              className="cursor-pointer"
+              onClick={() => router.push(`/clients/${client.id}`)}
+            >
+              {PROPERTY_TYPE_LABELS[client.property_type]}
+            </TableCell>
+            <TableCell 
+              className="cursor-pointer"
+              onClick={() => router.push(`/clients/${client.id}`)}
+            >
               {(() => {
                 // Normalize the stage value
                 const normalizedStage = normalizeClientStage(client.stage);
@@ -148,7 +253,10 @@ export function ClientTable({ clients, loading, sortColumn, sortDirection, onSor
                 );
               })()}
             </TableCell>
-            <TableCell>
+            <TableCell 
+              className="cursor-pointer"
+              onClick={() => router.push(`/clients/${client.id}`)}
+            >
               {client.last_contacted
                 ? formatRelativeTime(client.last_contacted)
                 : 'Never'}
@@ -170,6 +278,7 @@ export function ClientTable({ clients, loading, sortColumn, sortDirection, onSor
         ))}
       </TableBody>
     </Table>
+    </div>
   );
 }
 

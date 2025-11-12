@@ -5,8 +5,9 @@ This module provides CRUD endpoints for managing real estate clients
 in the RealtorOS CRM system.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from typing import List, Optional
+from pydantic import BaseModel
 from app.schemas.client_schema import ClientCreate, ClientUpdate, ClientResponse
 from app.schemas.task_schema import TaskResponse
 from app.services.crm_service import CRMService
@@ -22,21 +23,23 @@ logger = logging.getLogger(__name__)
 @router.post("/", response_model=ClientResponse)
 async def create_client(
     client_data: ClientCreate,
+    create_tasks: bool = Query(False, description="Whether to automatically create follow-up tasks"),
     agent: Agent = Depends(get_current_agent),
     crm_service: CRMService = Depends(get_crm_service),
     scheduler_service: SchedulerService = Depends(get_scheduler_service)
 ):
-    """Create a new client and automatically create follow-up tasks."""
+    """Create a new client. Optionally create follow-up tasks."""
     try:
         created = await crm_service.create_client(client_data, agent.id)
         
-        # Create follow-up tasks synchronously
-        try:
-            tasks = await scheduler_service.create_followup_tasks(created.id, agent.id)
-            logger.info(f"Created {len(tasks)} follow-up tasks for client {created.id}")
-        except Exception as e:
-            # Log error but don't fail client creation if task creation fails
-            logger.error(f"Failed to create follow-up tasks for client {created.id}: {str(e)}", exc_info=True)
+        # Create follow-up tasks only if requested
+        if create_tasks:
+            try:
+                tasks = await scheduler_service.create_followup_tasks(created.id, agent.id)
+                logger.info(f"Created {len(tasks)} follow-up tasks for client {created.id}")
+            except Exception as e:
+                # Log error but don't fail client creation if task creation fails
+                logger.error(f"Failed to create follow-up tasks for client {created.id}: {str(e)}", exc_info=True)
         
         return created
     except IntegrityError as e:
@@ -78,6 +81,40 @@ async def update_client(
     if not updated:
         raise HTTPException(status_code=404, detail="Client not found")
     return updated
+
+class BulkDeleteRequest(BaseModel):
+    ids: List[int]
+
+@router.delete("/bulk")
+async def bulk_delete_clients(
+    request: BulkDeleteRequest = Body(...),
+    agent: Agent = Depends(get_current_agent),
+    crm_service: CRMService = Depends(get_crm_service)
+):
+    """Bulk delete multiple clients."""
+    if not request.ids:
+        raise HTTPException(status_code=400, detail="No client IDs provided")
+    
+    deleted_count = 0
+    failed_ids = []
+    
+    for client_id in request.ids:
+        try:
+            ok = await crm_service.delete_client(client_id, agent.id)
+            if ok:
+                deleted_count += 1
+            else:
+                failed_ids.append(client_id)
+        except Exception as e:
+            logger.error(f"Error deleting client {client_id}: {str(e)}")
+            failed_ids.append(client_id)
+    
+    return {
+        "success": True,
+        "deleted_count": deleted_count,
+        "failed_ids": failed_ids,
+        "total_requested": len(request.ids)
+    }
 
 @router.delete("/{client_id}")
 async def delete_client(

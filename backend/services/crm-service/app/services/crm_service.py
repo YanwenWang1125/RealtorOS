@@ -3,10 +3,11 @@ CRM service for client management (SQLAlchemy + AsyncSession).
 """
 
 from typing import List, Optional, Dict, Any
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from shared.models.client import Client
 from shared.models.task import Task
+from shared.models.email_log import EmailLog
 from shared.schemas.client_schema import ClientCreate, ClientUpdate, ClientResponse
 
 
@@ -82,7 +83,41 @@ class CRMService:
         return await self.get_client(client_id, agent_id)
 
     async def delete_client(self, client_id: int, agent_id: int) -> bool:
-        # Only delete if client exists and is not already deleted
+        # First check if client exists and is not already deleted
+        client = await self.get_client(client_id, agent_id)
+        if client is None:
+            return False
+        
+        # Delete related records in the correct order to handle foreign key constraints
+        # 1. First, clear the circular reference: set Task.email_sent_id to NULL for tasks of this client
+        #    This breaks the circular dependency between Task and EmailLog
+        await self.session.execute(
+            update(Task)
+            .where(
+                Task.client_id == client_id,
+                Task.agent_id == agent_id,
+                Task.email_sent_id.isnot(None)
+            )
+            .values(email_sent_id=None)
+        )
+        
+        # 2. Delete EmailLogs associated with this client
+        await self.session.execute(
+            delete(EmailLog).where(
+                EmailLog.client_id == client_id,
+                EmailLog.agent_id == agent_id
+            )
+        )
+        
+        # 3. Delete Tasks associated with this client
+        await self.session.execute(
+            delete(Task).where(
+                Task.client_id == client_id,
+                Task.agent_id == agent_id
+            )
+        )
+        
+        # 4. Finally, soft delete the client
         stmt = (
             update(Client)
             .where(

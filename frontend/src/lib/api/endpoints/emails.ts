@@ -27,4 +27,18 @@ export const emailsApi = {
     const { data } = await emailClient.post<Email>(path, request);
     return data;
   },
+
+  delete: async (id: number) => {
+    const path = getApiPath(emailClient.defaults.baseURL, `/emails/${id}`);
+    const { data } = await emailClient.delete<{ success: boolean }>(path);
+    return data;
+  },
+
+  bulkDelete: async (ids: number[]) => {
+    const path = getApiPath(emailClient.defaults.baseURL, '/emails/bulk');
+    const { data } = await emailClient.delete<{ success: boolean; deleted_count: number; failed_ids: number[]; total_requested: number }>(path, {
+      data: { ids }
+    });
+    return data;
+  },
 };

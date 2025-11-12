@@ -24,4 +24,3 @@ bcrypt
 sendgrid
 google-auth
 google-auth-oauthlib
-boto3

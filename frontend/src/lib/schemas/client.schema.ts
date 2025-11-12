@@ -6,7 +6,7 @@ export const clientCreateSchema = z.object({
   phone: z.string().max(20, 'Phone must be less than 20 characters').optional(),
   property_address: z.string().min(1, 'Property address is required').max(200, 'Address must be less than 200 characters'),
   property_type: z.enum(['residential', 'commercial', 'land', 'other']),
-  stage: z.enum(['lead', 'negotiating', 'under_contract', 'closed', 'lost']),
+  stage: z.enum(['lead', 'negotiating', 'closed', 'lost']),
   notes: z.string().max(1000, 'Notes must be less than 1000 characters').optional(),
   custom_fields: z.record(z.string(), z.any()).optional()
 });

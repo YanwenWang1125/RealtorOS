@@ -30,7 +30,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups', // Allows popups and postMessage for OAuth
+            value: 'unsafe-none', // Allows postMessage for Google OAuth (required for @react-oauth/google)
           },
           {
             key: 'Cross-Origin-Embedder-Policy',

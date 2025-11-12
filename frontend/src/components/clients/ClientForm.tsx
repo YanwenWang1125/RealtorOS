@@ -45,7 +45,8 @@ export default function ClientForm({
     notes: client?.notes || '',
     last_contacted: client?.last_contacted 
       ? new Date(client.last_contacted).toISOString().slice(0, 16)
-      : getCurrentDateTimeLocal()
+      : getCurrentDateTimeLocal(),
+    create_tasks: false // Only for new clients
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -262,6 +263,27 @@ export default function ClientForm({
           placeholder="Any additional notes about this client..."
         />
       </div>
+
+      {!client && (
+        <div className="flex items-start space-x-3">
+          <input
+            type="checkbox"
+            id="create_tasks"
+            name="create_tasks"
+            checked={formData.create_tasks}
+            onChange={(e) => setFormData(prev => ({ ...prev, create_tasks: e.target.checked }))}
+            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <div className="flex-1">
+            <label htmlFor="create_tasks" className="text-sm font-medium text-foreground cursor-pointer">
+              Create follow-up tasks
+            </label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Select this to create follow-up tasks for this client. You'll be able to choose which tasks to create after saving.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end space-x-3 pt-6 border-t border-border">
         <button

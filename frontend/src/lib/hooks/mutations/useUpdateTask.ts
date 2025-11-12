@@ -9,7 +9,8 @@ export function useUpdateTask() {
     mutationFn: ({ id, data }: { id: number; data: TaskUpdate }) => 
       tasksApi.update(id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['task', variables.id] });
+      // Invalidate all task queries (including those with agent_id in the key)
+      queryClient.invalidateQueries({ queryKey: ['task'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },

@@ -18,10 +18,13 @@ import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
 import { TaskActionsMenu } from '@/components/tasks/TaskActionsMenu';
 import { TaskDetailModal } from '@/components/tasks/TaskDetailModal';
+import { Checkbox } from '@/components/ui/checkbox';
 import { formatDateTime } from '@/lib/utils/format';
 import { truncateText } from '@/lib/utils/formatters';
 import { cn } from '@/lib/utils/index';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useBulkDeleteTasks } from '@/lib/hooks/mutations';
+import { useToast } from '@/lib/hooks/ui/useToast';
+import { Calendar, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useClients } from '@/lib/hooks/queries/useClients';
 
 interface TaskTableProps {
@@ -44,6 +47,9 @@ export function TaskTable({
   const [sortColumn, setSortColumn] = useState<keyof Task>('scheduled_for');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const { toast } = useToast();
+  const bulkDeleteTasks = useBulkDeleteTasks();
 
   // Fetch clients for name mapping (or include in task response)
   // Backend enforces limit <= 100
@@ -78,6 +84,49 @@ export function TaskTable({
       return 0;
     });
   }, [tasks, sortColumn, sortDirection]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(sortedTasks.map(t => t.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} task(s)? This will also delete all associated emails.`)) {
+      return;
+    }
+
+    try {
+      const result = await bulkDeleteTasks.mutateAsync(Array.from(selectedIds));
+      toast({
+        title: "Tasks deleted",
+        description: `Successfully deleted ${result.deleted_count} task(s).${result.failed_ids.length > 0 ? ` ${result.failed_ids.length} failed.` : ''}`,
+      });
+      setSelectedIds(new Set());
+    } catch (error: any) {
+      toast({
+        title: "Error deleting tasks",
+        description: error.response?.data?.detail || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const allSelected = sortedTasks.length > 0 && selectedIds.size === sortedTasks.length;
 
   // Determine if task is overdue or due today
   const getTaskDateStatus = (scheduledFor: string) => {
@@ -114,10 +163,33 @@ export function TaskTable({
 
   return (
     <>
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg mb-4">
+          <span className="text-sm font-medium">
+            {selectedIds.size} task(s) selected
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteTasks.isPending}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {bulkDeleteTasks.isPending ? 'Deleting...' : `Delete ${selectedIds.size}`}
+          </Button>
+        </div>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
               <TableHead
                 className="cursor-pointer"
                 onClick={() => handleSort('client_id')}
@@ -161,16 +233,25 @@ export function TaskTable({
                 <TableRow
                   key={task.id}
                   className={cn(
-                    'cursor-pointer transition-colors',
+                    'transition-colors',
                     dateStatus === 'overdue' && task.status === 'pending' && 'hover:bg-red-50',
                     dateStatus === 'today' && task.status === 'pending' && 'hover:bg-secondary/10 hover:text-secondary',
                     !(dateStatus === 'overdue' && task.status === 'pending') && 
                     !(dateStatus === 'today' && task.status === 'pending') && 
                     'hover:bg-secondary/10 hover:text-secondary'
                   )}
-                  onClick={() => setSelectedTask(task)}
                 >
-                  <TableCell className="font-medium">
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(task.id)}
+                      onCheckedChange={(checked) => handleSelectOne(task.id, checked as boolean)}
+                      aria-label={`Select task ${task.id}`}
+                    />
+                  </TableCell>
+                  <TableCell 
+                    className="font-medium cursor-pointer"
+                    onClick={() => setSelectedTask(task)}
+                  >
                     {client ? (
                       <Link
                         href={`/clients/${client.id}`}
@@ -183,12 +264,18 @@ export function TaskTable({
                       `Client #${task.client_id}`
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell 
+                    className="cursor-pointer"
+                    onClick={() => setSelectedTask(task)}
+                  >
                     <span className="text-sm font-medium">
                       {task.followup_type}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell 
+                    className="cursor-pointer"
+                    onClick={() => setSelectedTask(task)}
+                  >
                     <div className={cn(
                       dateStatus === 'overdue' && task.status === 'pending' && 'text-red-600 font-medium',
                       dateStatus === 'today' && task.status === 'pending' && 'text-yellow-700 font-medium'
@@ -196,13 +283,22 @@ export function TaskTable({
                       {formatDateTime(task.scheduled_for)}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell 
+                    className="cursor-pointer"
+                    onClick={() => setSelectedTask(task)}
+                  >
                     <TaskStatusBadge status={task.status} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell 
+                    className="cursor-pointer"
+                    onClick={() => setSelectedTask(task)}
+                  >
                     <TaskPriorityBadge priority={task.priority} />
                   </TableCell>
-                  <TableCell className="max-w-xs">
+                  <TableCell 
+                    className="max-w-xs cursor-pointer"
+                    onClick={() => setSelectedTask(task)}
+                  >
                     {task.notes ? (
                       <span className="text-sm text-muted-foreground" title={task.notes}>
                         {truncateText(task.notes, 50)}

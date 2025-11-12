@@ -164,21 +164,23 @@ class TestSchedulerService:
         mock_email.send_email.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.boto3')
+    @patch('app.services.email_service.SendGridAPIClient')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_multiple_tasks(self, mock_ai_class, mock_boto3, test_session):
+    async def test_process_and_send_due_emails_multiple_tasks(self, mock_ai_class, mock_sendgrid_class, test_session):
         """Test processing multiple due tasks successfully."""
-        # Mock SES (boto3)
-        mock_ses_client = Mock()
-        mock_ses_client.send_email = Mock(return_value={'MessageId': 'ses-123'})
-        mock_boto3.client.return_value = mock_ses_client
+        # Mock SendGrid
+        mock_sendgrid_response = Mock()
+        mock_sendgrid_response.status_code = 202
+        mock_sendgrid_response.body = None
+        mock_sendgrid_client = Mock()
+        mock_sendgrid_client.send = Mock(return_value=mock_sendgrid_response)
+        mock_sendgrid_class.return_value = mock_sendgrid_client
         
-        with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.AWS_REGION = "us-east-1"
-            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
-            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
-            mock_settings.SES_FROM_EMAIL = "from@example.com"
-            mock_settings.SES_FROM_NAME = "Test From"
+        with patch.dict('os.environ', {
+            'SENDGRID_API_KEY': 'test-api-key',
+            'SENDGRID_FROM_EMAIL': 'from@example.com',
+            'SENDGRID_FROM_NAME': 'Test From'
+        }):
             
             # Create agent first
             from app.models.agent import Agent
@@ -398,7 +400,7 @@ class TestSchedulerService:
         
         # Mock EmailService - fails
         mock_email = Mock()
-        mock_email.send_email = AsyncMock(side_effect=Exception("SES error"))
+        mock_email.send_email = AsyncMock(side_effect=Exception("SendGrid error"))
         mock_email_class.return_value = mock_email
         
         # Process - should handle exception gracefully
@@ -426,29 +428,32 @@ class TestSchedulerService:
         assert db_task.status == "pending"
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.boto3')
+    @patch('app.services.email_service.SendGridAPIClient')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_partial_success(self, mock_ai_class, mock_boto3, test_session):
+    async def test_process_and_send_due_emails_partial_success(self, mock_ai_class, mock_sendgrid_class, test_session):
         """Test processing multiple tasks where some succeed and some fail."""
-        # Mock SES to fail on second call
+        # Mock SendGrid to fail on second call
         call_count = 0
-        def send_email_side_effect(*args, **kwargs):
+        def send_side_effect(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second call fails
-                raise Exception("SES error")
-            return {'MessageId': f'ses-{call_count}'}
+                from sendgrid.exceptions import SendGridException
+                raise SendGridException("SendGrid error")
+            mock_response = Mock()
+            mock_response.status_code = 202
+            mock_response.body = None
+            return mock_response
         
-        mock_ses_client = Mock()
-        mock_ses_client.send_email = Mock(side_effect=send_email_side_effect)
-        mock_boto3.client.return_value = mock_ses_client
+        mock_sendgrid_client = Mock()
+        mock_sendgrid_client.send = Mock(side_effect=send_side_effect)
+        mock_sendgrid_class.return_value = mock_sendgrid_client
         
-        with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.AWS_REGION = "us-east-1"
-            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
-            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
-            mock_settings.SES_FROM_EMAIL = "from@example.com"
-            mock_settings.SES_FROM_NAME = "Test From"
+        with patch.dict('os.environ', {
+            'SENDGRID_API_KEY': 'test-api-key',
+            'SENDGRID_FROM_EMAIL': 'from@example.com',
+            'SENDGRID_FROM_NAME': 'Test From'
+        }):
             
             # Create agent first
             from app.models.agent import Agent
@@ -491,7 +496,7 @@ class TestSchedulerService:
             ])
             mock_ai_class.return_value = mock_ai
             
-            # Process due emails (using real EmailService, which will fail on second SES call)
+            # Process due emails (using real EmailService, which will fail on second SendGrid call)
             count = await svc.process_and_send_due_emails()
             
             # All 3 tasks should be processed (EmailService still returns response even on failure)
@@ -518,21 +523,23 @@ class TestSchedulerService:
             assert task2_email.status == "failed"  # Email sending failed
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.boto3')
+    @patch('app.services.email_service.SendGridAPIClient')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_verifies_email_log(self, mock_ai_class, mock_boto3, test_session):
+    async def test_process_and_send_due_emails_verifies_email_log(self, mock_ai_class, mock_sendgrid_class, test_session):
         """Test that email logs are created when processing due tasks."""
-        # Mock SES (boto3)
-        mock_ses_client = Mock()
-        mock_ses_client.send_email = Mock(return_value={'MessageId': 'ses-test-123'})
-        mock_boto3.client.return_value = mock_ses_client
+        # Mock SendGrid
+        mock_sendgrid_response = Mock()
+        mock_sendgrid_response.status_code = 202
+        mock_sendgrid_response.body = None
+        mock_sendgrid_client = Mock()
+        mock_sendgrid_client.send = Mock(return_value=mock_sendgrid_response)
+        mock_sendgrid_class.return_value = mock_sendgrid_client
         
-        with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.AWS_REGION = "us-east-1"
-            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
-            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
-            mock_settings.SES_FROM_EMAIL = "from@example.com"
-            mock_settings.SES_FROM_NAME = "Test From"
+        with patch.dict('os.environ', {
+            'SENDGRID_API_KEY': 'test-api-key',
+            'SENDGRID_FROM_EMAIL': 'from@example.com',
+            'SENDGRID_FROM_NAME': 'Test From'
+        }):
             
             # Create agent first
             from app.models.agent import Agent
@@ -585,21 +592,23 @@ class TestSchedulerService:
             assert email_logs[0].subject == "Test Subject"
 
     @pytest.mark.asyncio
-    @patch('app.services.email_service.boto3')
+    @patch('app.services.email_service.SendGridAPIClient')
     @patch('app.services.scheduler_service.AIAgent')
-    async def test_process_and_send_due_emails_only_processes_due_tasks(self, mock_ai_class, mock_boto3, test_session):
+    async def test_process_and_send_due_emails_only_processes_due_tasks(self, mock_ai_class, mock_sendgrid_class, test_session):
         """Test that only due tasks are processed, not future tasks."""
-        # Mock SES (boto3)
-        mock_ses_client = Mock()
-        mock_ses_client.send_email = Mock(return_value={'MessageId': 'ses-123'})
-        mock_boto3.client.return_value = mock_ses_client
+        # Mock SendGrid
+        mock_sendgrid_response = Mock()
+        mock_sendgrid_response.status_code = 202
+        mock_sendgrid_response.body = None
+        mock_sendgrid_client = Mock()
+        mock_sendgrid_client.send = Mock(return_value=mock_sendgrid_response)
+        mock_sendgrid_class.return_value = mock_sendgrid_client
         
-        with patch('app.services.email_service.settings') as mock_settings:
-            mock_settings.AWS_REGION = "us-east-1"
-            mock_settings.AWS_ACCESS_KEY_ID = "test-key"
-            mock_settings.AWS_SECRET_ACCESS_KEY = "test-secret"
-            mock_settings.SES_FROM_EMAIL = "from@example.com"
-            mock_settings.SES_FROM_NAME = "Test From"
+        with patch.dict('os.environ', {
+            'SENDGRID_API_KEY': 'test-api-key',
+            'SENDGRID_FROM_EMAIL': 'from@example.com',
+            'SENDGRID_FROM_NAME': 'Test From'
+        }):
             
             # Create agent first
             from app.models.agent import Agent

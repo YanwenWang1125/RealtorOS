@@ -31,4 +31,18 @@ export const tasksApi = {
     const { data } = await taskClient.patch<Task>(path, task);
     return data;
   },
+
+  delete: async (id: number) => {
+    const path = getApiPath(taskClient.defaults.baseURL, `/tasks/${id}`);
+    const { data } = await taskClient.delete<{ success: boolean }>(path);
+    return data;
+  },
+
+  bulkDelete: async (ids: number[]) => {
+    const path = getApiPath(taskClient.defaults.baseURL, '/tasks/bulk');
+    const { data } = await taskClient.delete<{ success: boolean; deleted_count: number; failed_ids: number[]; total_requested: number }>(path, {
+      data: { ids }
+    });
+    return data;
+  },
 };

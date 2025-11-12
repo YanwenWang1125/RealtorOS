@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Task } from '@/lib/types/task.types';
-import { useUpdateTask } from '@/lib/hooks/mutations/useUpdateTask';
+import { useDeleteTask } from '@/lib/hooks/mutations/useDeleteTask';
 import { useClient } from '@/lib/hooks/queries/useClients';
 import { useToast } from '@/lib/hooks/ui/useToast';
 import {
@@ -12,10 +12,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/Button';
 import { TaskRescheduleDialog } from '@/components/tasks/TaskRescheduleDialog';
 import { EmailPreviewModal } from '@/components/emails/EmailPreviewModal';
-import { MoreVertical, Calendar, CheckCircle, XCircle, SkipForward, Mail } from 'lucide-react';
+import { MoreVertical, Calendar, Mail, Trash2 } from 'lucide-react';
 
 interface TaskActionsMenuProps {
   task: Task;
@@ -23,27 +33,26 @@ interface TaskActionsMenuProps {
 
 export function TaskActionsMenu({ task }: TaskActionsMenuProps) {
   const { toast } = useToast();
-  const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   // Fetch client data eagerly if email can be sent (to reduce delay when user clicks)
   const { data: client } = useClient(task.client_id, { 
     enabled: !task.email_sent_id || emailModalOpen 
   });
 
-  const handleStatusChange = async (status: 'completed' | 'skipped' | 'cancelled') => {
+  const handleDelete = async () => {
     try {
-      await updateTask.mutateAsync({
-        id: task.id,
-        data: { status }
-      });
+      await deleteTask.mutateAsync(task.id);
       toast({
-        title: "Task updated",
-        description: `Task marked as ${status}`,
+        title: "Task deleted",
+        description: "Task and associated emails have been deleted.",
       });
+      setDeleteDialogOpen(false);
     } catch (error: any) {
       toast({
-        title: "Error updating task",
+        title: "Error deleting task",
         description: error.response?.data?.detail || "Please try again.",
         variant: "destructive",
       });
@@ -76,36 +85,24 @@ export function TaskActionsMenu({ task }: TaskActionsMenuProps) {
             Reschedule
           </DropdownMenuItem>
 
-          {task.status === 'pending' && (
+          {task.status === 'pending' && !task.email_sent_id && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Mark Complete
+              <DropdownMenuItem onClick={handleSendEmail}>
+                <Mail className="h-4 w-4 mr-2" />
+                Send Email
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusChange('skipped')}>
-                <SkipForward className="h-4 w-4 mr-2" />
-                Skip Task
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange('cancelled')}
-                className="text-destructive"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Cancel Task
-              </DropdownMenuItem>
-
-              {!task.email_sent_id && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSendEmail}>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send Email
-                  </DropdownMenuItem>
-                </>
-              )}
             </>
           )}
+
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setDeleteDialogOpen(true)}
+            className="text-destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -125,6 +122,27 @@ export function TaskActionsMenu({ task }: TaskActionsMenuProps) {
           taskId={task.id}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task? This will also delete all associated emails. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteTask.isPending}
+            >
+              {deleteTask.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

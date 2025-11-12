@@ -270,6 +270,68 @@ class EmailService:
             update_values["clicked_at"] = event_timestamp
             logger.info(f"Email {email_log.id} clicked at {event_timestamp}")
         
+        # Handle unsubscribe event - mark client as unsubscribed
+        client_unsubscribed = False
+        client_resubscribed = False
+        if event_type in ["unsubscribe", "group_unsubscribe"]:
+            from sqlalchemy import select, update
+            from app.models.client import Client
+            
+            # Find client by email address
+            recipient_email = event_data.get("email")
+            if recipient_email:
+                client_stmt = select(Client).where(
+                    Client.email == recipient_email,
+                    Client.agent_id == email_log.agent_id,
+                    Client.is_deleted == False  # noqa: E712
+                )
+                client_result = await self.session.execute(client_stmt)
+                client = client_result.scalar_one_or_none()
+                
+                # Use getattr to safely check email_unsubscribed field
+                email_unsubscribed = getattr(client, 'email_unsubscribed', False) if client else False
+                if client and not email_unsubscribed:
+                    # Mark client as unsubscribed (will commit with email_log update)
+                    update_client_stmt = (
+                        update(Client)
+                        .where(Client.id == client.id)
+                        .values(email_unsubscribed=True)
+                        .execution_options(synchronize_session="fetch")
+                    )
+                    await self.session.execute(update_client_stmt)
+                    client_unsubscribed = True
+                    logger.info(f"Marking client {client.id} ({client.email}) as unsubscribed due to {event_type} event")
+        
+        # Handle resubscribe event - mark client as subscribed again
+        if event_type == "group_resubscribe":
+            from sqlalchemy import select, update
+            from app.models.client import Client
+            
+            # Find client by email address
+            recipient_email = event_data.get("email")
+            if recipient_email:
+                client_stmt = select(Client).where(
+                    Client.email == recipient_email,
+                    Client.agent_id == email_log.agent_id,
+                    Client.is_deleted == False  # noqa: E712
+                )
+                client_result = await self.session.execute(client_stmt)
+                client = client_result.scalar_one_or_none()
+                
+                # Use getattr to safely check email_unsubscribed field
+                email_unsubscribed = getattr(client, 'email_unsubscribed', False) if client else False
+                if client and email_unsubscribed:
+                    # Mark client as subscribed again (will commit with email_log update)
+                    update_client_stmt = (
+                        update(Client)
+                        .where(Client.id == client.id)
+                        .values(email_unsubscribed=False)
+                        .execution_options(synchronize_session="fetch")
+                    )
+                    await self.session.execute(update_client_stmt)
+                    client_resubscribed = True
+                    logger.info(f"Marking client {client.id} ({client.email}) as resubscribed")
+        
         # Append event to webhook_events JSON array
         current_events = email_log.webhook_events if email_log.webhook_events else []
         if not isinstance(current_events, list):

@@ -46,6 +46,7 @@ export default function ClientForm({
     last_contacted: client?.last_contacted 
       ? new Date(client.last_contacted).toISOString().slice(0, 16)
       : getCurrentDateTimeLocal(),
+    email_unsubscribed: client?.email_unsubscribed || false,
     create_tasks: false // Only for new clients
   })
 
@@ -95,7 +96,17 @@ export default function ClientForm({
       return
     }
 
-    onSave(formData)
+    // Prepare data to save - exclude create_tasks for edit mode
+    const dataToSave = client 
+      ? { ...formData, create_tasks: undefined }
+      : formData
+    
+    // Remove undefined values
+    const cleanedData = Object.fromEntries(
+      Object.entries(dataToSave).filter(([_, value]) => value !== undefined)
+    )
+
+    onSave(cleanedData)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -263,6 +274,27 @@ export default function ClientForm({
           placeholder="Any additional notes about this client..."
         />
       </div>
+
+      {client && (
+        <div className="flex items-start space-x-3">
+          <input
+            type="checkbox"
+            id="email_unsubscribed"
+            name="email_unsubscribed"
+            checked={formData.email_unsubscribed}
+            onChange={(e) => setFormData(prev => ({ ...prev, email_unsubscribed: e.target.checked }))}
+            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <div className="flex-1">
+            <label htmlFor="email_unsubscribed" className="text-sm font-medium text-foreground cursor-pointer">
+              Email Unsubscribed
+            </label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Check this if the client has unsubscribed from email follow-ups. No emails will be sent to this client.
+            </p>
+          </div>
+        </div>
+      )}
 
       {!client && (
         <div className="flex items-start space-x-3">

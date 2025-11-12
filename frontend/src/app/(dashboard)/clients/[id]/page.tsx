@@ -95,7 +95,12 @@ export default function ClientDetailPage() {
             <Pencil className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline" onClick={handleSendEmail}>
+          <Button 
+            variant="outline" 
+            onClick={handleSendEmail}
+            disabled={client.email_unsubscribed}
+            title={client.email_unsubscribed ? "This client has unsubscribed from emails" : ""}
+          >
             <Mail className="h-4 w-4 mr-2" />
             Send Email
           </Button>

@@ -218,6 +218,21 @@ class SchedulerService:
                     logger.error(f"Client {client.id} has no email address for task_id={task.id}")
                     continue
                 
+                # Check if client has unsubscribed from emails - use getattr to handle cases where field might not exist
+                email_unsubscribed = getattr(client, 'email_unsubscribed', False)
+                if email_unsubscribed:
+                    logger.info(f"Client {client.id} ({client.email}) has unsubscribed. Skipping email for task_id={task.id}")
+                    # Mark task as skipped instead of completed
+                    stmt = (
+                        update(Task)
+                        .where(Task.id == task.id)
+                        .values(status="skipped")
+                        .execution_options(synchronize_session="fetch")
+                    )
+                    await self.session.execute(stmt)
+                    await self.session.commit()
+                    continue
+                
                 # Get agent for this task
                 from app.models.agent import Agent
                 agent_stmt = select(Agent).where(Agent.id == task.agent_id)

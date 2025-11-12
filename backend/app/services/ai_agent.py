@@ -79,18 +79,8 @@ class AIAgent:
         prompt_parts.append(f"Agent Phone: {agent.phone or ''}")
         prompt_parts.append(f"Agent Email: {agent.email}")
         prompt_parts.append("")
-        prompt_parts.append("IMPORTANT: Sign the email with the agent's name and details. Use a professional signature like:")
-        prompt_parts.append("")
-        prompt_parts.append("Best regards,")
-        prompt_parts.append(f"{agent.name}")
-        prompt_parts.append(f"{agent.title or 'Real Estate Agent'}")
-        if agent.company:
-            prompt_parts.append(f"{agent.company}")
-        if agent.phone:
-            prompt_parts.append(f"Phone: {agent.phone}")
-        prompt_parts.append(f"Email: {agent.email}")
-        prompt_parts.append("")
-        prompt_parts.append("DO NOT use placeholders like [Your Name] or [Your Company]. Use the actual agent information provided above.")
+        prompt_parts.append("NOTE: The agent's signature will be automatically added to the email template.")
+        prompt_parts.append("You should NOT include any closing, signature, or contact information in the body.")
         prompt_parts.append("")
         prompt_parts.append("=== FOLLOW-UP TYPE ===")
         
@@ -163,21 +153,23 @@ class AIAgent:
             prompt_parts.append("")
         
         prompt_parts.extend([
-            "- Write a friendly, professional email",
+            "- Write a friendly, professional email body",
             "- Keep it concise (3-5 short paragraphs)",
             "- Use the client's name naturally",
             "- Reference the specific property when relevant",
             "- Include a clear call-to-action",
-            "- End with a professional closing",
+            "- DO NOT include a closing or signature (e.g., 'Best regards', 'Sincerely', etc.)",
+            "- DO NOT include the agent's name or contact information",
+            "- The email body will be inserted into a professional template with header and signature",
             "",
             "=== OUTPUT FORMAT ===",
             "Return a JSON object with the following structure:",
             '{',
             '  "subject": "Brief subject line (5-10 words)",',
-            '  "body": "Full email body with paragraphs separated by \\n\\n"',
+            '  "body": "Email body content only (no greeting, no closing, no signature) with paragraphs separated by \\n\\n"',
             '}',
             "",
-            "Write the email now."
+            "Write the email body now."
         ])
         
         return "\n".join(prompt_parts)
@@ -274,7 +266,7 @@ class AIAgent:
             
             return {
                 "subject": subject,
-                "body": body,
+                "body": body,  # Plain text body for AI generation
                 "preview": preview
             }
             

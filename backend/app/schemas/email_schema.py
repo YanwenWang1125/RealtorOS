@@ -15,6 +15,13 @@ class EmailPreviewRequest(BaseModel):
     task_id: int = Field(..., description="Task ID")
     agent_instructions: Optional[str] = Field(None, max_length=500)
 
+class EmailPreviewResponse(BaseModel):
+    """Schema for email preview responses."""
+    subject: str = Field(..., description="Email subject")
+    body: str = Field(..., description="Email body (plain text)")
+    html_body: str = Field(..., description="Email body (HTML formatted)")
+    preview: Optional[str] = Field(None, description="Preview snippet")
+
 class EmailSendRequest(BaseModel):
     """Schema for email send requests."""
     client_id: int = Field(..., description="Client ID")

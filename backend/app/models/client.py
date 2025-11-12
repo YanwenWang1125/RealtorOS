@@ -39,6 +39,7 @@ class Client(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
     last_contacted = Column(DateTime(timezone=True), nullable=True)
     is_deleted = Column(Boolean, nullable=False, default=False, index=True)
+    email_unsubscribed = Column(Boolean, nullable=False, default=False, index=True)
 
 
 # Composite indexes

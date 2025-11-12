@@ -55,7 +55,8 @@ export function EmailPreviewModal({
   const { data: task } = useTask(taskId, { enabled: open });
 
   const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [body, setBody] = useState('');  // Plain text body for editing
+  const [htmlBody, setHtmlBody] = useState('');  // Complete HTML email with template
   const [customInstructions, setCustomInstructions] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
@@ -181,6 +182,7 @@ export function EmailPreviewModal({
 
       setSubject(preview.subject);
       setBody(preview.body);
+      setHtmlBody(preview.html_body || preview.body);  // Use HTML body if available, fallback to plain body
       setIsEditMode(false);
       // Save to database after generation, but skip invalidation to avoid triggering useEffect
       try {
@@ -400,12 +402,16 @@ export function EmailPreviewModal({
 
   const handleSend = async () => {
     try {
+      // Use HTML body if available, otherwise use plain body
+      // The backend will handle formatting if needed
+      const emailBody = htmlBody || body;
+      
       const sentEmail = await sendEmail.mutateAsync({
         client_id: clientId,
         task_id: taskId,
         to_email: clientEmail,
         subject,
-        body,
+        body: emailBody,
         agent_instructions: customInstructions || undefined
       });
 
@@ -549,18 +555,53 @@ export function EmailPreviewModal({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setIsEditMode(!isEditMode);
+                    onClick={async () => {
+                      if (isEditMode) {
+                        // Switching to preview mode - if body was edited, we need to regenerate HTML
+                        // Since EmailComposer returns HTML, we can use it directly
+                        // The backend will add the template wrapper when sending
+                        if (body) {
+                          // Body from EmailComposer is already HTML, but we need to wrap it in template
+                          // For preview, we'll show the HTML body as-is (template will be added on send)
+                          // In a full implementation, you could call backend API to regenerate with template
+                          setHtmlBody(body);
+                        }
+                        setIsEditMode(false);
+                      } else {
+                        setIsEditMode(true);
+                      }
                     }}
                   >
                     {isEditMode ? 'Preview' : 'Edit'}
                   </Button>
                 </div>
-                <EmailComposer
-                  value={body}
-                  onChange={setBody}
-                  readOnly={!isEditMode}
-                />
+                {isEditMode ? (
+                  <EmailComposer
+                    value={body}
+                    onChange={(newBody) => {
+                      setBody(newBody);
+                      // When editing, clear htmlBody so it will be regenerated on preview
+                      setHtmlBody('');
+                    }}
+                    readOnly={false}
+                  />
+                ) : (
+                  <div className="border rounded-md overflow-hidden bg-white">
+                    {htmlBody ? (
+                      <iframe
+                        srcDoc={htmlBody}
+                        className="w-full min-h-[400px] border-0"
+                        title="Email Preview"
+                        sandbox="allow-same-origin allow-scripts"
+                      />
+                    ) : (
+                      <div className="p-4 text-muted-foreground text-sm">
+                        <p>Generating preview...</p>
+                        <p className="text-xs mt-2">Click "Edit" to modify the email body.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Custom Instructions (Collapsible) */}

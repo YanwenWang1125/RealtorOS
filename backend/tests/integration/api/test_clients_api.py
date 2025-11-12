@@ -173,7 +173,7 @@ class TestCreateClient:
 
     @pytest.mark.asyncio
     async def test_create_client_triggers_task_creation(self, authenticated_client: AsyncClient, db_session):
-        """Test that creating a client automatically triggers follow-up task creation."""
+        """Test that creating a client with create_tasks=True triggers follow-up task creation."""
         client_data = {
             "name": "Task Trigger Client",
             "email": "tasktrigger@example.com",
@@ -182,7 +182,7 @@ class TestCreateClient:
             "property_type": "residential",
             "stage": "lead"
         }
-        response = await authenticated_client.post("/api/clients/", json=client_data)
+        response = await authenticated_client.post("/api/clients/?create_tasks=true", json=client_data)
         
         assert response.status_code == 200
         data = response.json()
@@ -201,7 +201,7 @@ class TestCreateClient:
 
     @pytest.mark.asyncio
     async def test_create_client_creates_followup_tasks(self, authenticated_client: AsyncClient, db_session):
-        """Test that creating a client results in follow-up tasks being created in database."""
+        """Test that creating a client with create_tasks=True results in follow-up tasks being created in database."""
         client_data = {
             "name": "Follow-up Client",
             "email": "followup@example.com",
@@ -210,7 +210,7 @@ class TestCreateClient:
             "property_type": "commercial",
             "stage": "lead"
         }
-        response = await authenticated_client.post("/api/clients/", json=client_data)
+        response = await authenticated_client.post("/api/clients/?create_tasks=true", json=client_data)
         
         assert response.status_code == 200
         data = response.json()
@@ -245,7 +245,7 @@ class TestCreateClient:
 
     @pytest.mark.asyncio
     async def test_create_client_task_creation_all_stages(self, authenticated_client: AsyncClient, db_session):
-        """Test that task creation works for clients in all stages."""
+        """Test that task creation works for clients in all stages when create_tasks=True."""
         from sqlalchemy import select
         from app.models.task import Task
         
@@ -261,7 +261,7 @@ class TestCreateClient:
                 "property_type": "residential",
                 "stage": stage
             }
-            response = await authenticated_client.post("/api/clients/", json=client_data)
+            response = await authenticated_client.post("/api/clients/?create_tasks=true", json=client_data)
             
             assert response.status_code == 200
             data = response.json()
@@ -679,7 +679,7 @@ class TestGetClientTasks:
 
     @pytest.mark.asyncio
     async def test_get_client_tasks_empty(self, authenticated_client: AsyncClient):
-        """Test getting tasks for a client - tasks are automatically created."""
+        """Test getting tasks for a client - no tasks by default."""
         # Create a client first
         client_data = {
             "name": "No Tasks Client",
@@ -692,14 +692,14 @@ class TestGetClientTasks:
         create_response = await authenticated_client.post("/api/clients/", json=client_data)
         client_id = create_response.json()["id"]
         
-        # Get tasks - should have 5 automatically created tasks
+        # Get tasks - should be empty by default (tasks are not auto-created)
         response = await authenticated_client.get(f"/api/clients/{client_id}/tasks")
         
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        # Tasks are automatically created when a client is created
-        assert len(data) == 5
+        # Tasks are not automatically created when a client is created
+        assert len(data) == 0
 
     @pytest.mark.asyncio
     async def test_get_client_tasks_with_tasks(self, authenticated_client: AsyncClient, db_session):
@@ -718,8 +718,7 @@ class TestGetClientTasks:
         client_id = client_json["id"]
         agent_id = client_json["agent_id"]
         
-        # Tasks are automatically created when client is created (5 tasks)
-        # Add 2 more tasks manually to verify the endpoint returns all tasks
+        # Tasks are not automatically created - add tasks manually to verify the endpoint returns all tasks
         # Use valid followup_type values that match the schema pattern
         task1 = Task(
             agent_id=agent_id,
@@ -740,12 +739,12 @@ class TestGetClientTasks:
         db_session.add_all([task1, task2])
         await db_session.commit()
         
-        # Get tasks - should have 5 automatic + 2 manual = 7 total
+        # Get tasks - should have 2 manual tasks
         response = await authenticated_client.get(f"/api/clients/{client_id}/tasks")
         
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 7  # 5 automatic tasks + 2 manual tasks
+        assert len(data) == 2  # 2 manual tasks
         assert all("id" in item for item in data)
         assert all("followup_type" in item for item in data)
         assert all("status" in item for item in data)
@@ -753,8 +752,8 @@ class TestGetClientTasks:
         
         # Verify task types
         followup_types = [item["followup_type"] for item in data]
-        assert "Day 1" in followup_types
-        assert "Week 1" in followup_types
+        assert "Custom" in followup_types
+        assert len(followup_types) == 2
 
     @pytest.mark.asyncio
     async def test_get_client_tasks_not_found(self, authenticated_client: AsyncClient):

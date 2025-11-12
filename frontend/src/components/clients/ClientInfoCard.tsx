@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Client } from '@/lib/types/client.types';
 import { PROPERTY_TYPE_LABELS } from '@/lib/constants/client.constants';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { MailX } from 'lucide-react';
 
 export function ClientInfoCard({ client }: { client: Client }) {
   return (
@@ -9,6 +11,14 @@ export function ClientInfoCard({ client }: { client: Client }) {
         <CardTitle>Client Information</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {client.email_unsubscribed && (
+          <Alert variant="destructive">
+            <MailX className="h-4 w-4" />
+            <AlertDescription>
+              This client has unsubscribed from email follow-ups. No emails will be sent to this client.
+            </AlertDescription>
+          </Alert>
+        )}
         <div>
           <label className="text-sm font-medium">Property Address</label>
           <p className="text-sm text-muted-foreground">{client.property_address}</p>

@@ -16,6 +16,7 @@ export interface Client {
   created_at: string;
   updated_at: string;
   last_contacted?: string;
+  email_unsubscribed?: boolean;
 }
 
 export interface ClientCreate {
@@ -38,4 +39,5 @@ export interface ClientUpdate {
   stage?: ClientStage;
   notes?: string;
   custom_fields?: Record<string, any>;
+  email_unsubscribed?: boolean;
 }

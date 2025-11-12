@@ -50,31 +50,46 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# Global exception handlers - CORS middleware will add headers automatically
+# Global exception handlers
+# CORS middleware will automatically add CORS headers to all responses
+# But we manually add them here to ensure they're always present
+def add_cors_headers(response: JSONResponse, request: Request) -> JSONResponse:
+    """Add CORS headers to a response."""
+    origin = request.headers.get("origin")
+    if origin and origin in settings.get_cors_origins():
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """Handle HTTP exceptions."""
-    return JSONResponse(
+    response = JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail}
     )
+    return add_cors_headers(response, request)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle validation errors."""
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": exc.errors()}
     )
+    return add_cors_headers(response, request)
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle all other exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error", "error": str(exc) if settings.DEBUG else "An error occurred"}
     )
+    return add_cors_headers(response, request)
 
 # Include routers
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])

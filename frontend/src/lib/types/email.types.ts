@@ -37,6 +37,7 @@ export interface EmailSendRequest {
 
 export interface EmailPreviewResponse {
   subject: string;
-  body: string;
+  body: string;  // Plain text body (for editing)
+  html_body?: string;  // Complete HTML email with template
   preview: string;
 }

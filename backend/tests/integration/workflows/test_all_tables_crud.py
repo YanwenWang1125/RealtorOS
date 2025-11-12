@@ -1564,8 +1564,8 @@ class TestCrossTableRelationships:
             assert email_log.client_id == client.id
 
     @pytest.mark.asyncio
-    async def test_r04_delete_client_keeps_tasks(self, services, sample_agent):
-        """Test 74: Delete client (soft delete) - tasks remain."""
+    async def test_r04_delete_client_deletes_tasks(self, services, sample_agent):
+        """Test 74: Delete client - tasks and emails are also deleted (cascade delete)."""
         client = await services["crm"].create_client(ClientCreate(
             name="Delete Client",
             email="deleteclient@example.com",
@@ -1580,10 +1580,24 @@ class TestCrossTableRelationships:
             scheduled_for=datetime.now(timezone.utc) + timedelta(days=1),
             priority="high"
         ), agent_id=client.agent_id)
+        # Create an email for the task
+        email = await services["email"].log_email(
+            task_id=task.id,
+            client_id=client.id,
+            agent_id=client.agent_id,
+            to_email=client.email,
+            subject="Test Email",
+            body="Test Body",
+            from_name="Test Agent",
+            from_email="test@example.com"
+        )
         await services["crm"].delete_client(client.id, agent_id=client.agent_id)
-        # Task should still exist
+        # Task should be deleted (cascade delete)
         fetched_task = await services["scheduler"].get_task(task.id, task.agent_id)
-        assert fetched_task is not None
+        assert fetched_task is None
+        # Email should also be deleted
+        fetched_email = await services["email"].get_email(email.id, client.agent_id)
+        assert fetched_email is None
 
     @pytest.mark.asyncio
     async def test_r05_get_client_tasks_via_crm(self, services, sample_client):
@@ -1937,7 +1951,7 @@ class TestAdvancedScenarios:
 
     @pytest.mark.asyncio
     async def test_a08_cascade_operations(self, services, sample_agent):
-        """Test 88: Cascade operations across tables."""
+        """Test 88: Cascade operations across tables - deleting client deletes tasks and emails."""
         client = await services["crm"].create_client(ClientCreate(
             name="Cascade Client",
             email="cascade@example.com",
@@ -1947,8 +1961,9 @@ class TestAdvancedScenarios:
             stage="lead"
         ), agent_id=sample_agent.id)
         tasks = await services["scheduler"].create_followup_tasks(client.id, client.agent_id)
+        emails = []
         for task in tasks[:3]:
-            await services["email"].log_email(
+            email = await services["email"].log_email(
                 task_id=task.id,
                 client_id=client.id,
                 agent_id=client.agent_id,
@@ -1958,14 +1973,20 @@ class TestAdvancedScenarios:
                 from_name="Test Agent",
                 from_email="test@example.com"
             )
+            emails.append(email)
         
-        # Soft delete client
+        # Delete client - should cascade delete tasks and emails
         await services["crm"].delete_client(client.id, agent_id=client.agent_id)
         
-        # Verify tasks and emails still exist
+        # Verify tasks are deleted (cascade delete)
         for task in tasks:
             fetched = await services["scheduler"].get_task(task.id, task.agent_id)
-            assert fetched is not None
+            assert fetched is None
+        
+        # Verify emails are also deleted
+        for email in emails:
+            fetched = await services["email"].get_email(email.id, client.agent_id)
+            assert fetched is None
 
     @pytest.mark.asyncio
     async def test_a09_search_and_filter_complex(self, services, sample_agent):

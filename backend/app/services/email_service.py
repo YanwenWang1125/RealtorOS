@@ -70,7 +70,14 @@ class EmailService:
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
             error_message = e.response.get('Error', {}).get('Message', str(e))
-            logger.error(f"AWS SES error ({error_code}): {error_message}")
+            
+            # For common SES sandbox errors (unverified email), log as warning instead of error
+            if error_code == 'MessageRejected' and ('not verified' in error_message or 'failed the check' in error_message):
+                # This is expected in sandbox mode, don't spam error logs
+                logger.debug(f"AWS SES sandbox restriction: {error_message}")
+            else:
+                logger.error(f"AWS SES error ({error_code}): {error_message}")
+            
             await self.update_email_status(email_log.id, "failed", error_message=f"{error_code}: {error_message}")
         except Exception as e:
             logger.error(f"Unexpected error sending email: {e}", exc_info=True)

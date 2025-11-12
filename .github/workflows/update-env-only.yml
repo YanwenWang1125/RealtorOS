@@ -62,6 +62,19 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --remove-env-vars AWS_SES_ACCESS_KEY_ID AWS_SES_SECRET_ACCESS_KEY 2>/dev/null || echo "Old AWS_SES_* variables not found (or already removed)"
             
+            # Build CORS_ORIGINS: include custom domain and any additional origins from secret
+            CORS_BASE="https://www.realtoros.pro"
+            if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
+              # Combine custom domain with secret values (comma-separated)
+              CORS_ORIGINS_VALUE="$CORS_BASE,${{ secrets.CORS_ORIGINS }}"
+              # Remove duplicates
+              CORS_ORIGINS_VALUE=$(echo "$CORS_ORIGINS_VALUE" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+            else
+              # If no secret, just use custom domain
+              CORS_ORIGINS_VALUE="$CORS_BASE"
+            fi
+            echo "Setting CORS_ORIGINS to: $CORS_ORIGINS_VALUE"
+            
             # Update with correct environment variables
             az containerapp update \
               --name ${{ env.BACKEND_APP_NAME }} \
@@ -85,7 +98,7 @@ jobs:
                 ALGORITHM="HS256" \
                 ACCESS_TOKEN_EXPIRE_MINUTES="1440" \
                 LOG_LEVEL=INFO \
-                CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
+                CORS_ORIGINS="$CORS_ORIGINS_VALUE" \
               --output table
             echo "✅ Backend environment variables updated"
 

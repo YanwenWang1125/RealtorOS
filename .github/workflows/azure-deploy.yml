@@ -481,17 +481,16 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --remove-env-vars AWS_SES_ACCESS_KEY_ID AWS_SES_SECRET_ACCESS_KEY 2>/dev/null || echo "Old AWS_SES_* variables not found (or already removed)"
               
-              # Get current CORS_ORIGINS to preserve it if secret is not set
-              CURRENT_CORS=$(az containerapp show \
-                --name ${{ env.BACKEND_APP_NAME }} \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --query "properties.template.containers[0].env[?name=='CORS_ORIGINS'].value" -o tsv)
-              
-              # Use secret if available, otherwise keep current value (will be updated by auto-update step)
+              # Build CORS_ORIGINS: include custom domain and any additional origins from secret
+              CORS_BASE="https://www.realtoros.pro"
               if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
-                CORS_VALUE="${{ secrets.CORS_ORIGINS }}"
+                # Combine custom domain with secret values (comma-separated)
+                CORS_VALUE="$CORS_BASE,${{ secrets.CORS_ORIGINS }}"
+                # Remove duplicates
+                CORS_VALUE=$(echo "$CORS_VALUE" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
               else
-                CORS_VALUE="${CURRENT_CORS:-https://realtoros-frontend.${{ env.LOCATION }}.azurecontainerapps.io}"
+                # If no secret, just use custom domain (will be updated by auto-update step with frontend URL)
+                CORS_VALUE="$CORS_BASE"
               fi
               
               # Update with correct environment variables
@@ -522,12 +521,17 @@ jobs:
                   CORS_ORIGINS="${CORS_VALUE}"
             else
               echo "Creating new backend container app..."
-              # Use placeholder CORS_ORIGINS if secret is not set - will be updated automatically after frontend deployment
+              # Build initial CORS_ORIGINS: include custom domain and any additional origins from secret
+              CORS_BASE="https://www.realtoros.pro"
               CORS_PLACEHOLDER="https://realtoros-frontend.${{ env.LOCATION }}.azurecontainerapps.io"
               if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
-                CORS_INITIAL_VALUE="${{ secrets.CORS_ORIGINS }}"
+                # Combine custom domain, placeholder, and secret values
+                CORS_INITIAL_VALUE="$CORS_BASE,$CORS_PLACEHOLDER,${{ secrets.CORS_ORIGINS }}"
+                # Remove duplicates
+                CORS_INITIAL_VALUE=$(echo "$CORS_INITIAL_VALUE" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
               else
-                CORS_INITIAL_VALUE="$CORS_PLACEHOLDER"
+                # If no secret, use custom domain and placeholder
+                CORS_INITIAL_VALUE="$CORS_BASE,$CORS_PLACEHOLDER"
               fi
               echo "Using CORS_ORIGINS: $CORS_INITIAL_VALUE (will be updated to actual frontend URL after deployment)"
               
@@ -823,15 +827,18 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --query "properties.template.containers[0].env[?name=='CORS_ORIGINS'].value" -o tsv)
             
-            # Build new CORS_ORIGINS: use frontend URL, append any additional origins from secret if provided
+            # Build new CORS_ORIGINS: include custom domain, frontend URL, and any additional origins from secret
+            CORS_CUSTOM_DOMAIN="https://www.realtoros.pro"
             if [ -n "${{ secrets.CORS_ORIGINS }}" ] && [ "${{ secrets.CORS_ORIGINS }}" != "" ]; then
-              # If secret exists, combine frontend URL with secret values (comma-separated)
-              NEW_CORS_ORIGINS="$FRONTEND_FULL_URL,${{ secrets.CORS_ORIGINS }}"
+              # Combine custom domain, frontend URL, and secret values (comma-separated)
+              NEW_CORS_ORIGINS="$CORS_CUSTOM_DOMAIN,$FRONTEND_FULL_URL,${{ secrets.CORS_ORIGINS }}"
               # Remove duplicates
               NEW_CORS_ORIGINS=$(echo "$NEW_CORS_ORIGINS" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
             else
-              # If no secret, just use frontend URL
-              NEW_CORS_ORIGINS="$FRONTEND_FULL_URL"
+              # If no secret, use custom domain and frontend URL
+              NEW_CORS_ORIGINS="$CORS_CUSTOM_DOMAIN,$FRONTEND_FULL_URL"
+              # Remove duplicates in case they're the same
+              NEW_CORS_ORIGINS=$(echo "$NEW_CORS_ORIGINS" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
             fi
             
             # Only update if CORS_ORIGINS has changed

@@ -112,16 +112,23 @@ def format_email_html(
         email_body = ""
     
     # Convert plain text body to HTML paragraphs if needed
+    import re
     email_body_str = str(email_body).strip()
-    if not email_body_str.startswith('<'):
+    
+    # Check if the body already contains HTML tags
+    # Look for HTML tags (e.g., <p>, <div>, <h1>, etc.)
+    has_html_tags = bool(re.search(r'<[a-z][\s\S]*?>', email_body_str, re.IGNORECASE))
+    
+    if has_html_tags:
+        # Already contains HTML tags, use as-is (don't wrap in <p> tags)
+        html_body = email_body_str
+    else:
         # Convert plain text to HTML paragraphs
         paragraphs = email_body_str.split('\n\n')
         html_body = '\n'.join([
             f'<p style="margin: 0 0 16px 0; color: #333333;">{p.replace(chr(10), "<br>")}</p>'
             for p in paragraphs if p.strip()
         ])
-    else:
-        html_body = email_body_str
     
     # Build agent title row if provided
     agent_title_row = ""

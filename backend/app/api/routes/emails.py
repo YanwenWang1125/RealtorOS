@@ -164,30 +164,42 @@ async def send_email(
                 detail="This client has unsubscribed from email follow-ups. Cannot send email."
             )
         
-        # Format email body with HTML template if it's plain text
-        from app.constants.email_html_template import format_email_html
+        # Convert HTML to plain text if needed (we only send plain text emails)
+        import re
+        from html import unescape
         
-        # Check if body is already HTML (contains HTML tags)
         body_text = request.body or ""
-        is_html = body_text.strip().startswith('<') and ('<html' in body_text.lower() or '<body' in body_text.lower() or '<p>' in body_text.lower() or '<div' in body_text.lower())
         
-        if not is_html:
-            try:
-                # Convert plain text body to HTML template
-                formatted_body = format_email_html(
-                    email_body=body_text,
-                    agent_name=agent.name or "Real Estate Agent",
-                    agent_title=agent.title,
-                    agent_company=agent.company,
-                    agent_phone=agent.phone,
-                    agent_email=agent.email or ""
-                )
-                # Update request body with formatted HTML
-                request.body = formatted_body
-            except Exception as e:
-                logger.error(f"Error formatting email HTML template: {str(e)}", exc_info=True)
-                # Continue with original body if formatting fails
-                pass
+        def _strip_html_tags(html_content):
+            """Strip HTML tags to create plain text version."""
+            if not html_content:
+                return ""
+            
+            # Remove HTML tags
+            text = re.sub(r'<[^>]+>', '', html_content)
+            # Decode HTML entities
+            text = unescape(text)
+            # Replace multiple newlines with double newlines (paragraph breaks)
+            text = re.sub(r'\n\s*\n+', '\n\n', text)
+            # Clean up extra whitespace
+            text = re.sub(r'[ \t]+', ' ', text)
+            # Remove leading/trailing whitespace from each line
+            lines = [line.strip() for line in text.split('\n')]
+            text = '\n'.join(lines)
+            return text.strip()
+        
+        # Check if body contains HTML tags
+        has_html_tags = bool(re.search(r'<[a-z][\s\S]*?>', body_text, re.IGNORECASE))
+        
+        if has_html_tags:
+            # Convert HTML to plain text
+            logger.info("Body contains HTML tags, converting to plain text")
+            plain_text_body = _strip_html_tags(body_text)
+            request.body = plain_text_body
+        else:
+            # Already plain text, use as-is
+            logger.debug("Body is already plain text, using as-is")
+            request.body = body_text
         
         # Send the email
         email_response = await email_service.send_email(request, agent)

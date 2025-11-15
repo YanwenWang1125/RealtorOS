@@ -65,13 +65,62 @@ class EmailService:
             
             # Send email via SendGrid using verified sender email (non-blocking)
             import asyncio
+            import re
+            from html import unescape
+            
+            def _strip_html_tags(html_content):
+                """Strip HTML tags to create plain text version."""
+                if not html_content:
+                    return ""
+                
+                # Remove HTML tags
+                text = re.sub(r'<[^>]+>', '', html_content)
+                # Decode HTML entities
+                text = unescape(text)
+                # Replace multiple newlines with double newlines (paragraph breaks)
+                text = re.sub(r'\n\s*\n+', '\n\n', text)
+                # Clean up extra whitespace
+                text = re.sub(r'[ \t]+', ' ', text)
+                # Remove leading/trailing whitespace from each line
+                lines = [line.strip() for line in text.split('\n')]
+                text = '\n'.join(lines)
+                return text.strip()
+            
             def _send_email():
+                # Convert HTML to plain text
+                plain_text_content = _strip_html_tags(email_data.body)
+                
+                if not plain_text_content:
+                    logger.error("Email body is empty after converting to plain text, cannot send email")
+                    raise ValueError("Email body cannot be empty")
+                
+                # Log the plain text content for debugging (first 500 chars)
+                text_preview = plain_text_content[:500] if plain_text_content else ""
+                logger.info(f"Sending email as plain text (preview): {text_preview}...")
+                logger.debug(f"Plain text content length: {len(plain_text_content)} characters")
+                
+                # Create Mail object with only plain text content (no HTML)
+                # Disable SendGrid's automatic unsubscribe footer
+                from sendgrid.helpers.mail import MailSettings, FooterSettings
+                
                 message = Mail(
                     from_email=(self.from_email, display_name),
                     to_emails=email_data.to_email,
                     subject=email_data.subject,
-                    html_content=email_data.body
+                    plain_text_content=plain_text_content
                 )
+                
+                # Disable SendGrid's automatic footer (unsubscribe link)
+                mail_settings = MailSettings()
+                footer_settings = FooterSettings()
+                footer_settings.enable = False
+                mail_settings.footer = footer_settings
+                message.mail_settings = mail_settings
+                
+                # Log message details for debugging
+                logger.debug(f"Mail object created: from={self.from_email}, to={email_data.to_email}, subject={email_data.subject}")
+                logger.debug(f"Sending as plain text only (no HTML content), footer disabled")
+                
                 response = self.sg.send(message)
                 return response
             # Run blocking SendGrid call in thread pool to avoid blocking event loop
